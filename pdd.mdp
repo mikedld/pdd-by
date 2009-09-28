@@ -1,0 +1,66 @@
+<Project name="pdd" fileversion="2.0" language="C" Target="Bin" ctype="CProject">
+  <Configurations active="Debug">
+    <Configuration name="Debug" SourceDirectory="." ctype="CProjectConfiguration">
+      <Output directory="bin/Debug" output="pdd" />
+      <Build debugmode="True" target="Bin" />
+      <Execution runwithwarnings="True" consolepause="True" />
+      <EnvironmentVariables />
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml" DefineSymbols="DEBUG MONODEVELOP" />
+    </Configuration>
+    <Configuration name="Release" SourceDirectory="." ctype="CProjectConfiguration">
+      <Output directory="bin/Release" output="pdd" />
+      <Build debugmode="False" target="Bin" />
+      <Execution runwithwarnings="True" consolepause="True" />
+      <EnvironmentVariables />
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="" ExtraLinkerArguments="" DefineSymbols="MONODEVELOP" />
+    </Configuration>
+  </Configurations>
+  <Contents>
+    <File name="main.c" subtype="Code" buildaction="Compile" />
+    <File name="main_window.h" subtype="Code" buildaction="Nothing" />
+    <File name="main_window.c" subtype="Code" buildaction="Compile" />
+    <File name="delphi_helper.h" subtype="Code" buildaction="Nothing" />
+    <File name="delphi_helper.c" subtype="Code" buildaction="Compile" />
+    <File name="decode.c" subtype="Code" buildaction="Compile" />
+    <File name="decode.h" subtype="Code" buildaction="Nothing" />
+    <File name="ui" subtype="Directory" buildaction="Nothing" />
+    <File name="ui/main_window.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="database.c" subtype="Code" buildaction="Compile" />
+    <File name="database.h" subtype="Code" buildaction="Nothing" />
+    <File name="chooser_dialog.c" subtype="Code" buildaction="Compile" />
+    <File name="chooser_dialog.h" subtype="Code" buildaction="Nothing" />
+    <File name="ui/chooser_dialog.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="comment.c" subtype="Code" buildaction="Compile" />
+    <File name="comment.h" subtype="Code" buildaction="Nothing" />
+    <File name="image.c" subtype="Code" buildaction="Compile" />
+    <File name="image.h" subtype="Code" buildaction="Nothing" />
+    <File name="traffreg.c" subtype="Code" buildaction="Compile" />
+    <File name="traffreg.h" subtype="Code" buildaction="Nothing" />
+    <File name="data" subtype="Directory" buildaction="Nothing" />
+    <File name="section.c" subtype="Code" buildaction="Compile" />
+    <File name="section.h" subtype="Code" buildaction="Nothing" />
+    <File name="question.c" subtype="Code" buildaction="Compile" />
+    <File name="question.h" subtype="Code" buildaction="Nothing" />
+    <File name="answer.c" subtype="Code" buildaction="Compile" />
+    <File name="answer.h" subtype="Code" buildaction="Nothing" />
+    <File name="data/10.yml" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="yaml_helper.c" subtype="Code" buildaction="Compile" />
+    <File name="yaml_helper.h" subtype="Code" buildaction="Nothing" />
+    <File name="topic.c" subtype="Code" buildaction="Compile" />
+    <File name="topic.h" subtype="Code" buildaction="Nothing" />
+    <File name="ui/question_window.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="question_window.h" subtype="Code" buildaction="Nothing" />
+    <File name="question_window.c" subtype="Code" buildaction="Compile" />
+    <File name="ui/ticket_dialog.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="data/11.yml" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="ticket_dialog.h" subtype="Code" buildaction="Nothing" />
+    <File name="ticket_dialog.c" subtype="Code" buildaction="Compile" />
+  </Contents>
+  <compiler ctype="GccCompiler" />
+  <Packages>
+    <Package file="/usr/lib/pkgconfig/glib-2.0.pc" name="GLib" IsProject="False" />
+    <Package file="/usr/lib/pkgconfig/sqlite3.pc" name="SQLite" IsProject="False" />
+    <Package file="/usr/lib/pkgconfig/gmodule-2.0.pc" name="GModule" IsProject="False" />
+    <Package file="/usr/lib/pkgconfig/gtk+-2.0.pc" name="GTK+" IsProject="False" />
+  </Packages>
+</Project>
