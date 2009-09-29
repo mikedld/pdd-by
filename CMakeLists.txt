@@ -30,3 +30,8 @@ add_executable(pdd
 )
 
 target_link_libraries(pdd ${PDD_LIBRARIES} ${YAML_LIBRARY})
+
+set_target_properties (pdd
+PROPERTIES
+    LINK_FLAGS "-export-dynamic"
+)
