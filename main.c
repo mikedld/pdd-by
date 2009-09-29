@@ -12,9 +12,19 @@ int main(int argc, char *argv[])
 {
 	gtk_init(&argc, &argv);
 
-	char *path = realpath(argv[0], NULL);
-	program_dir = g_path_get_dirname(path);
-	free(path);
+	gint path_max;
+#ifdef PATH_MAX
+	path_max = PATH_MAX;
+#else
+	path_max = pathconf(name, _PC_PATH_MAX);
+	if (path_max <= 0)
+	{
+		path_max = 1024;
+	}
+#endif
+	char *path = g_malloc(path_max);
+	program_dir = g_path_get_dirname(realpath(argv[0], path));
+	g_free(path);
 
 	if (!database_exists())
 	{
