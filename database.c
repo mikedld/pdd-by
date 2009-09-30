@@ -211,10 +211,10 @@ gboolean bootstrap_sections()
 		yaml_event_type_t event5 = yaml_get_event(&parser, NULL);
 
 		if (event1 != YAML_SCALAR_EVENT ||
-		    event2 != YAML_SEQUENCE_START_EVENT ||
-		    event3 != YAML_SCALAR_EVENT ||
-		    event4 != YAML_SCALAR_EVENT ||
-		    event5 != YAML_SEQUENCE_END_EVENT)
+			event2 != YAML_SEQUENCE_START_EVENT ||
+			event3 != YAML_SCALAR_EVENT ||
+			event4 != YAML_SCALAR_EVENT ||
+			event5 != YAML_SEQUENCE_END_EVENT)
 		{
 			g_error("malformed YAML\n");
 		}
@@ -261,7 +261,7 @@ gboolean bootstrap_topics()
 		yaml_event_type_t event2 = yaml_get_event(&parser, &title);
 
 		if (event1 != YAML_SCALAR_EVENT ||
-		    event2 != YAML_SCALAR_EVENT)
+			event2 != YAML_SCALAR_EVENT)
 		{
 			g_error("malformed YAML\n");
 		}

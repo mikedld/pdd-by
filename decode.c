@@ -43,19 +43,19 @@ gboolean decode(const gchar *root_path)
 		return FALSE;
 	}
 
-    if (!decode_comments(root_path))
-    {
-        return FALSE;
+	if (!decode_comments(root_path))
+	{
+		return FALSE;
 	}
 
 	if (!decode_traffregs(root_path))
-    {
-        return FALSE;
+	{
+		return FALSE;
 	}
 
 	if (!decode_questions(root_path))
-    {
-        return FALSE;
+	{
+		return FALSE;
 	}
 
 	return TRUE;

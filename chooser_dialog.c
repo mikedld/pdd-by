@@ -13,13 +13,13 @@ GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, "ui/chooser_dialog.ui", &err);
-    if (err)
+	if (err)
 	{
-	    g_error("%s\n", err->message);
+		g_error("%s\n", err->message);
 	}
 
-    gtk_builder_connect_signals(builder, NULL);
-    GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(builder, "chooser_dialog"));
+	gtk_builder_connect_signals(builder, NULL);
+	GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(builder, "chooser_dialog"));
 
 	g_object_set_data_full(G_OBJECT(dialog), "pdd-builder", builder, g_object_unref);
 
@@ -29,13 +29,13 @@ GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text
 		gtk_widget_hide(title_label);
 	}
 
-    GtkWidget *items_combo = GTK_WIDGET(gtk_builder_get_object(builder, "cb_items"));
-    GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
-    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(items_combo), renderer, TRUE);
-    gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(items_combo), renderer, "text", text_column, NULL);
-    gtk_combo_box_set_model(GTK_COMBO_BOX(items_combo), GTK_TREE_MODEL(model));
-    gtk_combo_box_set_active(GTK_COMBO_BOX(items_combo), index);
-    on_chooser_dialog_item_changed(items_combo);
+	GtkWidget *items_combo = GTK_WIDGET(gtk_builder_get_object(builder, "cb_items"));
+	GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(items_combo), renderer, TRUE);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(items_combo), renderer, "text", text_column, NULL);
+	gtk_combo_box_set_model(GTK_COMBO_BOX(items_combo), GTK_TREE_MODEL(model));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(items_combo), index);
+	on_chooser_dialog_item_changed(items_combo);
 
 	gtk_window_set_title(GTK_WINDOW(dialog), title);
 

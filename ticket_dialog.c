@@ -7,17 +7,17 @@ GtkWidget *ticket_dialog_new(gint maximum)
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, "ui/ticket_dialog.ui", &err);
-    if (err)
+	if (err)
 	{
-	    g_error("%s\n", err->message);
+		g_error("%s\n", err->message);
 	}
 
-    gtk_builder_connect_signals(builder, NULL);
-    GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(builder, "ticket_dialog"));
+	gtk_builder_connect_signals(builder, NULL);
+	GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(builder, "ticket_dialog"));
 
 	g_object_set_data_full(G_OBJECT(dialog), "pdd-builder", builder, g_object_unref);
 
-	GtkAdjustment *adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(builder, "spin_adjustment"));
+	GtkAdjustment *adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(builder, "number_adjustment"));
 	gtk_adjustment_set_upper(adjustment, maximum);
 	gtk_adjustment_set_value(adjustment, 1);
 

@@ -37,7 +37,7 @@
                 <property name="max_length">4</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="caps_lock_warning">False</property>
-                <property name="adjustment">spin_adjustment</property>
+                <property name="adjustment">number_adjustment</property>
                 <property name="numeric">True</property>
                 <property name="wrap">True</property>
               </object>
@@ -97,7 +97,7 @@
       <action-widget response="-6">btn_cancel</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkAdjustment" id="spin_adjustment">
+  <object class="GtkAdjustment" id="number_adjustment">
     <property name="lower">1</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>

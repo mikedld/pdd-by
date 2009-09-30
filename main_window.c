@@ -10,20 +10,20 @@ void on_quit();
 
 GtkWidget *main_window_new()
 {
-    GError *err = NULL;
-    GtkBuilder *builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, "ui/main_window.ui", &err);
-    if (err)
+	GError *err = NULL;
+	GtkBuilder *builder = gtk_builder_new();
+	gtk_builder_add_from_file(builder, "ui/main_window.ui", &err);
+	if (err)
 	{
-	    g_error("%s\n", err->message);
+		g_error("%s\n", err->message);
 	}
 
-    gtk_builder_connect_signals(builder, NULL);
-    GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
+	gtk_builder_connect_signals(builder, NULL);
+	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
 
 	g_object_set_data_full(G_OBJECT(window), "pdd-builder", builder, g_object_unref);
 
-    g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_quit), NULL);
+	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_quit), NULL);
 
 	return window;
 }
@@ -34,15 +34,16 @@ void on_training_section()
 	GtkWidget *dialog = chooser_dialog_new_with_sections();
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
 	{
+		gtk_widget_destroy(dialog);
 		pdd_section_t *section = section_find_by_id(chooser_dialog_get_id(dialog));
 		GtkWidget *question_window = question_window_new_with_section(section, FALSE);
 		gtk_widget_show(question_window);
 	}
 	else
 	{
+		gtk_widget_destroy(dialog);
 		gtk_widget_show(main_window);
 	}
-	gtk_widget_destroy(dialog);
 }
 
 void on_topic(gboolean is_exam)
@@ -59,15 +60,16 @@ once_again:
 			gtk_widget_destroy(ticket_dialog);
 			goto once_again;
 		}
-		GtkWidget *question_window = question_window_new_with_topic(topic, ticket_dialog_get_number(ticket_dialog), is_exam);
 		gtk_widget_destroy(ticket_dialog);
+		gtk_widget_destroy(dialog);
+		GtkWidget *question_window = question_window_new_with_topic(topic, ticket_dialog_get_number(ticket_dialog), is_exam);
 		gtk_widget_show(question_window);
 	}
 	else
 	{
+		gtk_widget_destroy(dialog);
 		gtk_widget_show(main_window);
 	}
-	gtk_widget_destroy(dialog);
 }
 
 void on_ticket(gboolean is_exam)
@@ -76,15 +78,16 @@ void on_ticket(gboolean is_exam)
 	GtkWidget *ticket_dialog = ticket_dialog_new(999);
 	if (gtk_dialog_run(GTK_DIALOG(ticket_dialog)) == GTK_RESPONSE_OK)
 	{
+		gtk_widget_destroy(ticket_dialog);
 		GtkWidget *question_window = question_window_new_with_ticket(ticket_dialog_get_number(ticket_dialog), is_exam);
 		gtk_widget_destroy(ticket_dialog);
 		gtk_widget_show(question_window);
 	}
 	else
 	{
+		gtk_widget_destroy(ticket_dialog);
 		gtk_widget_show(main_window);
 	}
-	gtk_widget_destroy(ticket_dialog);
 }
 
 void on_random_ticket(gboolean is_exam)

@@ -4,6 +4,9 @@
 #include "question.h"
 
 #include <gdk/gdkkeysyms.h>
+#include <math.h>
+
+#define EXAM_TIMEOUT (15 * 60)
 
 extern GtkWidget *main_window;
 
@@ -26,6 +29,8 @@ typedef struct statistics_s
 } statistics_t;
 
 gint questions_type = 0;
+GTimer *exam_timer = NULL;
+guint exam_timer_source_id = 0;
 
 void statistics_free(statistics_t *statistics);
 
@@ -38,22 +43,24 @@ void on_question_skip();
 void on_question_show_traffregs();
 void on_question_show_comment();
 
+gboolean on_exam_timer(GtkWindow *window);
+
 GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean is_exam)
 {
-    GError *err = NULL;
-    GtkBuilder *builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, "ui/question_window.ui", &err);
-    if (err)
+	GError *err = NULL;
+	GtkBuilder *builder = gtk_builder_new();
+	gtk_builder_add_from_file(builder, "ui/question_window.ui", &err);
+	if (err)
 	{
-	    g_error("%s\n", err->message);
+		g_error("%s\n", err->message);
 	}
 
-    gtk_builder_connect_signals(builder, NULL);
-    GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "question_window"));
+	gtk_builder_connect_signals(builder, NULL);
+	GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "question_window"));
 
 	g_object_set_data_full(G_OBJECT(window), "pdd-builder", builder, g_object_unref);
 
-    g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_question_real_quit), NULL);
+	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_question_real_quit), NULL);
 
 	gchar *window_title = g_strdup_printf("%s - Учебная программа ПДД", title);
 	g_free(title);
@@ -68,16 +75,6 @@ GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean
 	gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment, window, NULL));
 	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
-	GtkLabel *hint_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_hint"));
-	if (is_exam)
-	{
-		gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить");
-	}
-	else
-	{
-		gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить, <b>F1</b> - правила, <b>F2</b> - комментарий");
-	}
-
 	statistics_t *statistics = g_new(statistics_t, 1);
 	statistics->questions = quesions;
 	statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), quesions->len);
@@ -87,6 +84,26 @@ GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean
 	g_object_set_data_full(G_OBJECT(window), "pdd-statistics", statistics, (GDestroyNotify)statistics_free);
 
 	fetch_next_question(statistics, GTK_WINDOW(window));
+
+	GtkLabel *hint_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_hint"));
+	GtkWidget *time_bar = GTK_WIDGET(gtk_builder_get_object(builder, "pb_time"));
+	if (is_exam)
+	{
+		GtkAdjustment *adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(builder, "time_adjustment"));
+		gtk_adjustment_set_upper(adjustment, EXAM_TIMEOUT);
+
+		gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить");
+		gtk_widget_show(time_bar);
+		exam_timer = g_timer_new();
+		exam_timer_source_id = g_timeout_add_seconds(1, (GSourceFunc)on_exam_timer, window);
+		on_exam_timer(GTK_WINDOW(window));
+	}
+	else
+	{
+		gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить, <b>F1</b> - правила, <b>F2</b> - комментарий");
+		gtk_widget_hide(time_bar);
+		exam_timer_source_id = 0;
+	}
 
 	return window;
 }
@@ -155,9 +172,9 @@ void update_question(statistics_t *statistics, GtkWindow *window)
 		g_free(progress_text);
 		progress_text = new_progress_text;
 	}
-	GtkProgressBar *progressbar = GTK_PROGRESS_BAR(gtk_builder_get_object(builder, "pb_progress"));
-	gtk_progress_bar_set_text(progressbar, progress_text);
-	gtk_progress_bar_set_fraction(progressbar, (count[CorrectState] + count[IncorrectState]) * 1. / statistics->states->len);
+	GtkProgressBar *progress_bar = GTK_PROGRESS_BAR(gtk_builder_get_object(builder, "pb_progress"));
+	gtk_progress_bar_set_text(progress_bar, progress_text);
+	gtk_progress_bar_set_fraction(progress_bar, (count[CorrectState] + count[IncorrectState]) * 1. / statistics->states->len);
 	g_free(progress_text);
 
 	gchar *question_text = g_strdup_printf("<big><b>%s</b></big>", question->text);
@@ -166,6 +183,14 @@ void update_question(statistics_t *statistics, GtkWindow *window)
 	g_free(question_text);
 
 	GtkVBox *answers_box = GTK_VBOX(gtk_builder_get_object(builder, "box_answers"));
+
+	GList *list = gtk_container_get_children(GTK_CONTAINER(answers_box));
+	gint indicator_size, indicator_spacing, focus_padding, focus_line_width;
+	gtk_widget_style_get(GTK_WIDGET(list->data), "indicator-size", &indicator_size, "indicator-spacing",
+		&indicator_spacing, "focus-padding", &focus_padding, "focus-line-width", &focus_line_width, NULL);
+	gint delta = indicator_size + (indicator_spacing + focus_padding + focus_line_width) * 2;
+	g_list_free(list);
+
 	gtk_container_foreach(GTK_CONTAINER(answers_box), (GtkCallback)gtk_widget_destroy, NULL);
 	pdd_answers_t *answers = answer_find_by_question(question->id);
 	GtkWidget *answer_radio = NULL;
@@ -173,8 +198,9 @@ void update_question(statistics_t *statistics, GtkWindow *window)
 	{
 		pdd_answer_t *answer = g_ptr_array_index(answers, i);
 		GtkWidget *radio = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answer_radio), answer->text);
-		gtk_widget_set_size_request(radio, 400, -1);
 		gtk_label_set_line_wrap(GTK_LABEL(gtk_bin_get_child(GTK_BIN(radio))), TRUE);
+		gtk_widget_set_size_request(radio, 400, -1);
+		gtk_widget_set_size_request(gtk_bin_get_child(GTK_BIN(radio)), 400 - delta, -1);
 		gtk_box_pack_start(GTK_BOX(answers_box), radio, FALSE, TRUE, 0);
 		g_object_set_data(G_OBJECT(radio), "pdd-answer", (gpointer)(answer->is_correct ? radio : NULL));
 		if (answer->is_correct)
@@ -220,6 +246,36 @@ void update_question(statistics_t *statistics, GtkWindow *window)
 	}
 }
 
+void show_results(GtkWindow *window, statistics_t *statistics)
+{
+	if (exam_timer_source_id)
+	{
+		g_source_destroy(g_main_context_find_source_by_id(NULL, exam_timer_source_id));
+		g_timer_destroy(exam_timer);
+	}
+	gtk_widget_hide(GTK_WIDGET(window));
+
+	gsize i;
+	gint count[4] = {0, 0, 0, 0};
+	for (i = 0; i < statistics->states->len; i++)
+	{
+		count[g_array_index(statistics->states, gint8, i)]++;
+	}
+
+	gchar *count_text = g_strdup_printf("Правильно: %d\nНеправильно: %d\nНе отвечено: %d", count[CorrectState],
+		count[IncorrectState], count[UnknownState] + count[SkippedState]);
+	GtkWidget *results_dialog = gtk_message_dialog_new_with_markup(window, GTK_DIALOG_MODAL,
+		GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE, "<span size='large' weight='bold'>%s</span>",
+		count[IncorrectState] > 1 ? "Тест не пройден" : "Тест пройден");
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(results_dialog), "%s", count_text);
+	g_free(count_text);
+	gtk_window_set_title(GTK_WINDOW(results_dialog), "Результат");
+	gtk_dialog_run(GTK_DIALOG(results_dialog));
+	gtk_widget_destroy(results_dialog);
+
+	gtk_widget_destroy(GTK_WIDGET(window));
+}
+
 void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 {
 	gint old_index = statistics->index;
@@ -235,26 +291,7 @@ void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 
 	if (statistics->index == old_index)
 	{
-		gtk_widget_set_sensitive(GTK_WIDGET(window), FALSE);
-
-		gsize i;
-		gint count[4] = {0, 0, 0, 0};
-		for (i = 0; i < statistics->states->len; i++)
-		{
-			count[g_array_index(statistics->states, gint8, i)]++;
-		}
-
-		gchar *count_text = g_strdup_printf("Правильно: %d\nНеправильно: %d", count[CorrectState], count[IncorrectState]);
-		GtkWidget *results_dialog = gtk_message_dialog_new_with_markup(window, GTK_DIALOG_MODAL,
-			GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE, "<span size='large' weight='bold'>%s</span>",
-			count[IncorrectState] > 1 ? "Тест не пройден" : "Тест пройден");
-		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(results_dialog), "%s", count_text);
-		g_free(count_text);
-		gtk_window_set_title(GTK_WINDOW(results_dialog), "Результат");
-		gtk_dialog_run(GTK_DIALOG(results_dialog));
-		gtk_widget_destroy(results_dialog);
-
-		gtk_widget_destroy(GTK_WIDGET(window));
+		show_results(window, statistics);
 		return;
 	}
 
@@ -309,15 +346,14 @@ void on_question_answer(gpointer unused, GtkWindow *window)
 	GtkVBox *answers_box = GTK_VBOX(gtk_builder_get_object(builder, "box_answers"));
 	GList *answer_radios = gtk_container_get_children(GTK_CONTAINER(answers_box));
 	GtkRadioButton *answer_radio = NULL;
-	GList *ar = answer_radios;
 	do
 	{
-		answer_radio = (GtkRadioButton *)ar->data;
+		answer_radio = GTK_RADIO_BUTTON(answer_radios->data);
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(answer_radio)))
 		{
 			break;
 		}
-	} while ((ar = g_list_next(ar)) != NULL);
+	} while ((answer_radios = g_list_next(answer_radios)) != NULL);
 	g_list_free(answer_radios);
 	if (g_object_get_data(G_OBJECT(answer_radio), "pdd-answer") == answer_radio)
 	{
@@ -380,4 +416,79 @@ void on_question_show_comment(gpointer unused, GtkWindow *window)
 		return;
 	}
 	g_print("on_question_show_comment (%p)\n", window);
+}
+
+void on_question_pause(GtkWidget *widget)
+{
+	GtkWidget *window = gtk_widget_get_toplevel(widget);
+	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
+	if (!statistics->is_exam)
+	{
+		return;
+	}
+
+	g_timer_stop(exam_timer);
+
+	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
+	GtkWidget *question_widget = GTK_WIDGET(gtk_builder_get_object(builder, "question_widget"));
+	GtkWidget *resume_widget = GTK_WIDGET(gtk_builder_get_object(builder, "resume_widget"));
+	GtkAllocation allocation;
+#if GTK_MAJOR_VERSION >= 2 && GTK_MINOR_VERSION >= 18
+	gtk_widget_get_allocation(question_widget, &allocation);
+#else
+	allocation = question_widget->allocation;
+#endif
+	gtk_widget_set_size_request(resume_widget, allocation.width, allocation.height);
+	gtk_widget_hide(question_widget);
+	gtk_widget_show(resume_widget);
+
+	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "btn_resume")));
+}
+
+void on_question_resume(GtkWidget *widget)
+{
+	GtkWidget *window = gtk_widget_get_toplevel(widget);
+	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
+	if (!statistics->is_exam)
+	{
+		return;
+	}
+	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
+	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "resume_widget")));
+	gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "question_widget")));
+
+	GtkVBox *answers_box = GTK_VBOX(gtk_builder_get_object(builder, "box_answers"));
+	GList *answer_radios = gtk_container_get_children(GTK_CONTAINER(answers_box));
+	do
+	{
+		GtkRadioButton *answer_radio = GTK_RADIO_BUTTON(answer_radios->data);
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(answer_radio)))
+		{
+			gtk_widget_grab_focus(GTK_WIDGET(answer_radio));
+			break;
+		}
+	} while ((answer_radios = g_list_next(answer_radios)) != NULL);
+	g_list_free(answer_radios);
+
+	g_timer_continue(exam_timer);
+}
+
+gboolean on_exam_timer(GtkWindow *window)
+{
+	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
+	GtkWidget *time_bar = GTK_WIDGET(gtk_builder_get_object(builder, "pb_time"));
+	gdouble elapsed = g_timer_elapsed(exam_timer, NULL);
+	gdouble remaining = EXAM_TIMEOUT - elapsed;
+	gint approx_remaining = round(remaining);
+	if (!approx_remaining)
+	{
+		statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
+		show_results(window, statistics);
+		return FALSE;
+	}
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(time_bar), remaining / EXAM_TIMEOUT);
+	gchar *time_text = g_strdup_printf("Осталось времени: %02d:%02d", approx_remaining / 60, approx_remaining % 60);
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(time_bar), time_text);
+	g_free(time_text);
+	return TRUE;
 }

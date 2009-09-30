@@ -5,14 +5,14 @@
       <Build debugmode="True" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml" DefineSymbols="DEBUG MONODEVELOP" />
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml -export-dynamic" DefineSymbols="DEBUG MONODEVELOP" />
     </Configuration>
     <Configuration name="Release" SourceDirectory="." ctype="CProjectConfiguration">
       <Output directory="bin/Release" output="pdd" />
       <Build debugmode="False" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="" ExtraLinkerArguments="" DefineSymbols="MONODEVELOP" />
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml -export-dynamic" DefineSymbols="MONODEVELOP" />
     </Configuration>
   </Configurations>
   <Contents>
