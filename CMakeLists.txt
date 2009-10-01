@@ -31,7 +31,9 @@ add_executable(pdd
 
 target_link_libraries(pdd ${PDD_LIBRARIES} ${YAML_LIBRARY})
 
+if(NOT APPLE)
 set_target_properties (pdd
 PROPERTIES
     LINK_FLAGS "-export-dynamic"
 )
+endif(NOT APPLE)
