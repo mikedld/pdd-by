@@ -29,31 +29,26 @@ gboolean decode_comments(const gchar *root_path);
 gboolean decode_traffregs(const gchar *root_path);
 gboolean decode_questions(const gchar *root_path);
 
+typedef gboolean (*decode_stage_t) (const gchar *root_path);
+
+static const decode_stage_t decode_stages[] =
+{
+	&init_magic,
+	&decode_images,
+	&decode_comments,
+	&decode_traffregs,
+	&decode_questions,
+	NULL
+};
+
 gboolean decode(const gchar *root_path)
 {
-	if (!init_magic(root_path))
-	{
-		return FALSE;
-	}
+	const decode_stage_t *stage;
 
-	if (!decode_images(root_path))
+	for (stage = decode_stages; NULL != stage; stage++)
 	{
-		return FALSE;
-	}
-
-	if (!decode_comments(root_path))
-	{
-		return FALSE;
-	}
-
-	if (!decode_traffregs(root_path))
-	{
-		return FALSE;
-	}
-
-	if (!decode_questions(root_path))
-	{
-		return FALSE;
+		if (!(*stage)(root_path))
+			return FALSE;
 	}
 
 	return TRUE;
@@ -327,7 +322,7 @@ gchar *decode_string(const gchar *path, gsize *str_size, gint8 topic_number)
 		g_error("%s\n", err->message);
 	}
 
-	gint32 i;
+	guint32 i;
 	for (i = 0; i < *str_size; i++)
 	{
 		// TODO: magic numbers?
@@ -556,7 +551,7 @@ gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_
 		pdd_traffregs_t *question_traffregs = g_ptr_array_new();
 		pdd_sections_t *question_sections = g_ptr_array_new();
 		pdd_answers_t *question_answers = g_ptr_array_new();
-		gint answer_number = 0;
+		gsize answer_number = 0;
 		while (*p)
 		{
 			switch ((*p)[0])

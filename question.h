@@ -18,6 +18,9 @@ typedef struct pdd_question_s
 
 typedef GPtrArray pdd_questions_t;
 
+GHashTable *get_questions_sections();
+pdd_questions_t *get_questions();
+
 pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id);
 void question_free(pdd_question_t *question);
 

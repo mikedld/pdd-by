@@ -3,8 +3,6 @@
 #include "database.h"
 #include "question.h"
 
-extern inline pdd_questions_t *get_questions();
-
 inline pdd_topics_t *get_topics()
 {
 	static pdd_topics_t *topics = NULL;

@@ -2,7 +2,7 @@
 #include "common.h"
 #include "database.h"
 
-inline pdd_comments_t *get_comments()
+static inline pdd_comments_t *get_comments()
 {
 	static pdd_comments_t *comments = NULL;
 	if (!comments)

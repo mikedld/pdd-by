@@ -25,7 +25,7 @@ inline GHashTable *get_questions_sections()
 	return questions_sections;
 }
 
-inline GHashTable *get_questions_traffregs()
+static inline GHashTable *get_questions_traffregs()
 {
 	static GHashTable *questions_traffregs = NULL;
 	if (!questions_traffregs)
@@ -395,7 +395,7 @@ pdd_questions_t *question_find_with_offset(gint64 topic_id, gint offset, gint co
 					continue;
 				}
 				g_ptr_array_add(questions, question_copy(question));
-				if (questions->len == count)
+				if ((gint)questions->len == count)
 				{
 					break;
 				}
@@ -479,7 +479,8 @@ pdd_questions_t *question_find_by_topic(gint64 topic_id, gint ticket_number)
 pdd_questions_t *question_find_by_ticket(gint ticket_number)
 {
 	pdd_topics_t *topics = topic_find_all();
-	gsize i, j;
+	gsize i;
+	gint j;
 	pdd_questions_t *questions = g_ptr_array_new();
 	for (i = 0; i < topics->len; i++)
 	{
@@ -498,7 +499,8 @@ pdd_questions_t *question_find_by_ticket(gint ticket_number)
 pdd_questions_t *question_find_random()
 {
 	pdd_topics_t *topics = topic_find_all();
-	gsize i, j;
+	gsize i;
+	gint j;
 	pdd_questions_t *questions = g_ptr_array_new();
 	for (i = 0; i < topics->len; i++)
 	{

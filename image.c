@@ -2,7 +2,7 @@
 #include "common.h"
 #include "database.h"
 
-inline pdd_images_t *get_images()
+static inline pdd_images_t *get_images()
 {
 	static pdd_images_t *images = NULL;
 	if (!images)

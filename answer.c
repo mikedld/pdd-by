@@ -2,7 +2,7 @@
 #include "common.h"
 #include "database.h"
 
-inline pdd_answers_t *get_answers()
+static inline pdd_answers_t *get_answers()
 {
 	static pdd_answers_t *answers = NULL;
 	if (!answers)

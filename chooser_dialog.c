@@ -1,3 +1,4 @@
+#include <string.h>
 #include "chooser_dialog.h"
 #include "common.h"
 #include "section.h"
@@ -60,7 +61,8 @@ gint64 chooser_dialog_get_id(GtkWidget *dialog)
 	GtkListStore *model = GTK_LIST_STORE(gtk_combo_box_get_model(items_combo));
 	GtkTreeIter iter;
 	gtk_combo_box_get_active_iter(items_combo, &iter);
-	GValue id = {0};
+	GValue id;
+	memset(&id, 0, sizeof(id));
 	gtk_tree_model_get_value(GTK_TREE_MODEL(model), &iter, 0, &id);
 	return g_value_get_int64(&id);
 }
@@ -116,7 +118,8 @@ void on_chooser_dialog_item_changed(GtkWidget *widget)
 	GtkLabel *title_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_title"));
 	if (GTK_WIDGET_VISIBLE(title_label))
 	{
-		GValue title = {0};
+		GValue title;
+		memset(&title, 0, sizeof(title));
 		gtk_tree_model_get_value(GTK_TREE_MODEL(model), &iter, 3, &title);
 		gchar *title_text = g_strdup_printf("<big><b>%s</b></big>", g_value_get_string(&title));
 		gtk_label_set_markup(title_label, title_text);
@@ -124,7 +127,8 @@ void on_chooser_dialog_item_changed(GtkWidget *widget)
 	}
 
 	GtkLabel *count_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_count"));
-	GValue count = {0};
+	GValue count;
+	memset(&count, 0, sizeof(count));
 	gchar *count_text = NULL;
 	if (GTK_WIDGET_VISIBLE(title_label))
 	{

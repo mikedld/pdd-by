@@ -3,9 +3,7 @@
 #include "database.h"
 #include "question.h"
 
-inline GHashTable *get_questions_sections();
-
-inline pdd_sections_t *get_sections()
+static inline pdd_sections_t *get_sections()
 {
 	static pdd_sections_t *sections = NULL;
 	if (!sections)
@@ -286,7 +284,7 @@ void section_free_all(pdd_sections_t *sections)
 	g_ptr_array_free(sections, TRUE);
 }
 
-void count_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
+void count_questions_by_section(G_GNUC_UNUSED pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
 {
 	gsize i;
 	for (i = 0; i < sections->len; i++)

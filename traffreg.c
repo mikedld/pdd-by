@@ -2,7 +2,7 @@
 #include "common.h"
 #include "database.h"
 
-inline pdd_traffregs_t *get_traffregs()
+static inline pdd_traffregs_t *get_traffregs()
 {
 	static pdd_traffregs_t *traffregs = NULL;
 	if (!traffregs)
@@ -12,7 +12,7 @@ inline pdd_traffregs_t *get_traffregs()
 	return traffregs;
 }
 
-inline GHashTable *get_traffregs_images()
+static inline GHashTable *get_traffregs_images()
 {
 	static GHashTable *traffregs_images = NULL;
 	if (!traffregs_images)

@@ -12,6 +12,8 @@ typedef struct pdd_topic_s
 
 typedef GPtrArray pdd_topics_t;
 
+pdd_topics_t *get_topics();
+
 pdd_topic_t *topic_new(gint number, const gchar *title);
 void topic_free(pdd_topic_t *topic);
 
