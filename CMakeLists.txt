@@ -12,6 +12,12 @@ link_directories(${PDD_LIBRARY_DIRS} ${YAML_LIBRARY_DIR})
 
 add_definitions(-W -Wall -Wextra -std=c99 -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/share/pdd-by")
 
+option(DEBUG "debug build" OFF)
+
+if(DEBUG)
+    add_definitions(-g -ggdb)
+endif(DEBUG)
+
 add_executable(pdd
     answer.c
     chooser_dialog.c
