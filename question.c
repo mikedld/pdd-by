@@ -35,7 +35,7 @@ static inline GHashTable *get_questions_traffregs()
 	return questions_traffregs;
 }
 
-pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
+static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
 {
 	pdd_question_t *question = g_new(pdd_question_t, 1);
 	question->id = id;
@@ -47,7 +47,7 @@ pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *te
 	return question;
 }
 
-pdd_question_t *question_copy(pdd_question_t *question)
+static pdd_question_t *question_copy(pdd_question_t *question)
 {
 	return question_new_with_id(question->id, question->topic_id, question->text, question->image_id, question->advice, question->comment_id);
 }

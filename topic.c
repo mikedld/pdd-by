@@ -13,7 +13,7 @@ inline pdd_topics_t *get_topics()
 	return topics;
 }
 
-pdd_topic_t *topic_new_with_id(gint64 id, gint number, const gchar *title)
+static pdd_topic_t *topic_new_with_id(gint64 id, gint number, const gchar *title)
 {
 	pdd_topic_t *topic = g_new(pdd_topic_t, 1);
 	topic->id = id;
@@ -22,12 +22,12 @@ pdd_topic_t *topic_new_with_id(gint64 id, gint number, const gchar *title)
 	return topic;
 }
 
-pdd_topic_t *topic_copy(pdd_topic_t *topic)
+static pdd_topic_t *topic_copy(pdd_topic_t *topic)
 {
 	return topic_new_with_id(topic->id, topic->number, topic->title);
 }
 
-pdd_topics_t *topic_copy_all(pdd_topics_t *topics)
+static pdd_topics_t *topic_copy_all(pdd_topics_t *topics)
 {
 	pdd_topics_t *topics_copy = g_ptr_array_new();
 	gsize i;

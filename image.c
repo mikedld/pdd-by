@@ -12,7 +12,7 @@ static inline pdd_images_t *get_images()
 	return images;
 }
 
-pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data, gsize data_length)
+static pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data, gsize data_length)
 {
 	pdd_image_t *image = g_new(pdd_image_t, 1);
 	image->id = id;
@@ -22,7 +22,7 @@ pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data,
 	return image;
 }
 
-pdd_image_t *image_copy(pdd_image_t *image)
+static pdd_image_t *image_copy(pdd_image_t *image)
 {
 	return image_new_with_id(image->id, image->name, image->data, image->data_length);
 }

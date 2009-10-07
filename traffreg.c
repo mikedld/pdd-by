@@ -22,7 +22,7 @@ static inline GHashTable *get_traffregs_images()
 	return traffregs_images;
 }
 
-pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gchar *text)
+static pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gchar *text)
 {
 	pdd_traffreg_t *traffreg = g_new(pdd_traffreg_t, 1);
 	traffreg->id = id;
@@ -31,7 +31,7 @@ pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gchar *text
 	return traffreg;
 }
 
-pdd_traffreg_t *traffreg_copy(pdd_traffreg_t *traffreg)
+static pdd_traffreg_t *traffreg_copy(pdd_traffreg_t *traffreg)
 {
 	return traffreg_new_with_id(traffreg->id, traffreg->number, traffreg->text);
 }

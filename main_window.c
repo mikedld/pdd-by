@@ -47,7 +47,7 @@ void on_training_section()
 	}
 }
 
-void on_topic(gboolean is_exam)
+static void on_topic(gboolean is_exam)
 {
 	gtk_widget_hide(main_window);
 	GtkWidget *dialog = chooser_dialog_new_with_topics();
@@ -73,7 +73,7 @@ once_again:
 	}
 }
 
-void on_ticket(gboolean is_exam)
+static void on_ticket(gboolean is_exam)
 {
 	gtk_widget_hide(main_window);
 	GtkWidget *ticket_dialog = ticket_dialog_new(999);
@@ -91,7 +91,7 @@ void on_ticket(gboolean is_exam)
 	}
 }
 
-void on_random_ticket(gboolean is_exam)
+static void on_random_ticket(gboolean is_exam)
 {
 	gtk_widget_hide(main_window);
 	GtkWidget *question_window = question_window_new_with_random_ticket(is_exam);

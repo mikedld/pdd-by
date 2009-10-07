@@ -12,7 +12,7 @@ static inline pdd_answers_t *get_answers()
 	return answers;
 }
 
-pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gchar *text, gboolean is_correct)
+static pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gchar *text, gboolean is_correct)
 {
 	pdd_answer_t *answer = g_new(pdd_answer_t, 1);
 	answer->id = id;
@@ -22,7 +22,7 @@ pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gchar *tex
 	return answer;
 }
 
-pdd_answer_t *answer_copy(pdd_answer_t *answer)
+static pdd_answer_t *answer_copy(pdd_answer_t *answer)
 {
 	return answer_new_with_id(answer->id, answer->question_id, answer->text, answer->is_correct);
 }

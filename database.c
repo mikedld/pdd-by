@@ -261,7 +261,7 @@ gboolean bootstrap_sections()
 		g_free(title_prefix);
 		g_free(name);
 	}
-	void database_tx_commit();
+	database_tx_commit();
 	yaml_parser_delete(&parser);
 	fclose(f);
 	return TRUE;
@@ -307,7 +307,7 @@ gboolean bootstrap_topics()
 		g_free(number);
 		g_free(title);
 	}
-	void database_tx_commit();
+	database_tx_commit();
 	yaml_parser_delete(&parser);
 	fclose(f);
 	return TRUE;

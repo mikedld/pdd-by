@@ -12,7 +12,7 @@ static inline pdd_comments_t *get_comments()
 	return comments;
 }
 
-pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
+static pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
 {
 	pdd_comment_t *comment = g_new(pdd_comment_t, 1);
 	comment->id = id;
@@ -21,7 +21,7 @@ pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
 	return comment;
 }
 
-pdd_comment_t *comment_copy(pdd_comment_t *comment)
+static pdd_comment_t *comment_copy(pdd_comment_t *comment)
 {
 	return comment_new_with_id(comment->id, comment->number, comment->text);
 }

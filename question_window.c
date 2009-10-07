@@ -33,18 +33,18 @@ gint questions_type = 0;
 GTimer *exam_timer = NULL;
 guint exam_timer_source_id = 0;
 
-void statistics_free(statistics_t *statistics);
+static void statistics_free(statistics_t *statistics);
 
-void fetch_next_question(statistics_t *statistics, GtkWindow *window);
+static void fetch_next_question(statistics_t *statistics, GtkWindow *window);
 
-void on_question_real_quit();
-void on_question_quit();
-void on_question_answer();
-void on_question_skip();
-void on_question_show_traffregs();
-void on_question_show_comment();
+static void on_question_real_quit();
+static void on_question_quit();
+static void on_question_answer();
+static void on_question_skip();
+static void on_question_show_traffregs();
+static void on_question_show_comment();
 
-gboolean on_exam_timer(GtkWindow *window);
+static gboolean on_exam_timer(GtkWindow *window);
 
 GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean is_exam)
 {
@@ -135,13 +135,13 @@ GtkWidget *question_window_new_with_random_ticket(gboolean is_exam)
 	return question_window_new(g_strdup("Случайный билет"), question_find_random(), is_exam);
 }
 
-void statistics_free(statistics_t *statistics)
+static void statistics_free(statistics_t *statistics)
 {
 	question_free_all(statistics->questions);
 	g_array_free(statistics->states, TRUE);
 }
 
-void update_question(statistics_t *statistics, GtkWindow *window)
+static void update_question(statistics_t *statistics, GtkWindow *window)
 {
 	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
 
@@ -247,7 +247,7 @@ void update_question(statistics_t *statistics, GtkWindow *window)
 	}
 }
 
-void show_results(GtkWindow *window, statistics_t *statistics)
+static void show_results(GtkWindow *window, statistics_t *statistics)
 {
 	if (exam_timer_source_id)
 	{
@@ -277,7 +277,7 @@ void show_results(GtkWindow *window, statistics_t *statistics)
 	gtk_widget_destroy(GTK_WIDGET(window));
 }
 
-void fetch_next_question(statistics_t *statistics, GtkWindow *window)
+static void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 {
 	gint old_index = statistics->index;
 	statistics->index = (statistics->index + 1) % statistics->questions->len;
@@ -300,7 +300,7 @@ void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 	update_question(statistics, window);
 }
 
-void on_question_real_quit(GtkWindow *window)
+static void on_question_real_quit(GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
 	gboolean is_exam = statistics->is_exam;
@@ -335,12 +335,12 @@ void on_question_real_quit(GtkWindow *window)
 	}
 }
 
-void on_question_quit(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
+static void on_question_quit(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	gtk_widget_destroy(GTK_WIDGET(window));
 }
 
-void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
+static void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
@@ -392,14 +392,14 @@ void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 	}
 }
 
-void on_question_skip(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
+static void on_question_skip(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
 	g_array_index(statistics->states, gint8, statistics->index) = SkippedState;
 	fetch_next_question(statistics, window);
 }
 
-void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
+static void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
 	if (statistics->is_exam)
@@ -409,7 +409,7 @@ void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow *window
 	g_print("on_question_show_traffregs (%p)\n", window);
 }
 
-void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
+static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
 	if (statistics->is_exam)
@@ -474,7 +474,7 @@ void on_question_resume(GtkWidget *widget)
 	g_timer_continue(exam_timer);
 }
 
-gboolean on_exam_timer(GtkWindow *window)
+static gboolean on_exam_timer(GtkWindow *window)
 {
 	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
 	GtkWidget *time_bar = GTK_WIDGET(gtk_builder_get_object(builder, "pb_time"));

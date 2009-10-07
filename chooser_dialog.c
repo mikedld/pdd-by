@@ -10,7 +10,7 @@ void on_chooser_dialog_item_changed(GtkWidget *widget);
 GtkListStore *sections_model_new();
 GtkListStore *topics_model_new();
 
-GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text_column, gint index, gboolean need_title)
+static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text_column, gint index, gboolean need_title)
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
@@ -67,7 +67,7 @@ gint64 chooser_dialog_get_id(GtkWidget *dialog)
 	return g_value_get_int64(&id);
 }
 
-void add_section_to_model(pdd_section_t *section, GtkListStore *model)
+static void add_section_to_model(pdd_section_t *section, GtkListStore *model)
 {
 	GtkTreeIter iter;
 	gtk_list_store_append(model, &iter);
@@ -83,7 +83,7 @@ GtkListStore *sections_model_new()
 	return model;
 }
 
-void add_topic_to_model(pdd_topic_t *topic, GtkListStore *model)
+static void add_topic_to_model(pdd_topic_t *topic, GtkListStore *model)
 {
 	GtkTreeIter iter;
 	gtk_list_store_append(model, &iter);

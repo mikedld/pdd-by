@@ -13,7 +13,7 @@ static inline pdd_sections_t *get_sections()
 	return sections;
 }
 
-pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *title_prefix, const gchar *title)
+static pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *title_prefix, const gchar *title)
 {
 	pdd_section_t *section = g_new(pdd_section_t, 1);
 	section->id = id;
@@ -23,7 +23,7 @@ pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *ti
 	return section;
 }
 
-pdd_section_t *section_copy(pdd_section_t *section)
+static pdd_section_t *section_copy(pdd_section_t *section)
 {
 	return section_new_with_id(section->id, section->name, section->title_prefix, section->title);
 }

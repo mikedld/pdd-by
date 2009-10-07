@@ -23,11 +23,11 @@ typedef struct topic_question_s
 
 guint16 magic = 0;
 
-gboolean init_magic(const gchar *root_path);
-gboolean decode_images(const gchar *root_path);
-gboolean decode_comments(const gchar *root_path);
-gboolean decode_traffregs(const gchar *root_path);
-gboolean decode_questions(const gchar *root_path);
+static gboolean init_magic(const gchar *root_path);
+static gboolean decode_images(const gchar *root_path);
+static gboolean decode_comments(const gchar *root_path);
+static gboolean decode_traffregs(const gchar *root_path);
+static gboolean decode_questions(const gchar *root_path);
 
 typedef gboolean (*decode_stage_t) (const gchar *root_path);
 
@@ -54,7 +54,7 @@ gboolean decode(const gchar *root_path)
 	return TRUE;
 }
 
-gchar *find_file_ci(const gchar *path, const gchar *fname)
+static gchar *find_file_ci(const gchar *path, const gchar *fname)
 {
 	GError *err;
 	GDir *dir = g_dir_open(path, 0, &err);
@@ -76,7 +76,7 @@ gchar *find_file_ci(const gchar *path, const gchar *fname)
 	return file_path;
 }
 
-gchar *make_path(const gchar *root_path, ...)
+static gchar *make_path(const gchar *root_path, ...)
 {
 	gchar *result = g_strdup(root_path);
 	va_list list;
@@ -97,7 +97,7 @@ gchar *make_path(const gchar *root_path, ...)
 	return result;
 }
 
-gboolean init_magic(const gchar *root_path)
+static gboolean init_magic(const gchar *root_path)
 {
 	gchar *pdd32_path = make_path(root_path, "pdd32.exe", NULL);
 	FILE *f = g_fopen(pdd32_path, "rb");
@@ -151,7 +151,7 @@ gboolean init_magic(const gchar *root_path)
 	return TRUE;
 }
 
-gboolean decode_image(const gchar *path)
+static gboolean decode_image(const gchar *path)
 {
 	gchar *basename = g_path_get_basename(path);
 	init_randseed_for_image(basename, magic);
@@ -189,7 +189,7 @@ gboolean decode_image(const gchar *path)
 	return result;
 }
 
-gboolean decode_images(const gchar *root_path)
+static gboolean decode_images(const gchar *root_path)
 {
 	yaml_parser_t parser;
 	FILE *f = yaml_open_file();
@@ -255,14 +255,17 @@ gboolean decode_images(const gchar *root_path)
 	return result;
 }
 
-gint32 *decode_table(const gchar *path, gsize *table_size)
+static gint32 *decode_table(const gchar *path, gsize *table_size)
 {
 	GError *err = NULL;
+        gchar *t;
 	gint32 *table;
-	if (!g_file_get_contents(path, (gchar **)&table, table_size, &err))
+	if (!g_file_get_contents(path, &t, table_size, &err))
 	{
 		g_error("%s\n", err->message);
 	}
+
+        table = (gint32 *)t;
 
 	if (*table_size % sizeof(gint32))
 	{
@@ -285,14 +288,17 @@ gint32 *decode_table(const gchar *path, gsize *table_size)
 	return table;
 }
 
-topic_question_t *decode_topic_questions_table(const gchar *path, gsize *table_size)
+static topic_question_t *decode_topic_questions_table(const gchar *path, gsize *table_size)
 {
 	GError *err = NULL;
+        gchar *t;
 	topic_question_t *table;
-	if (!g_file_get_contents(path, (gchar **)&table, table_size, &err))
+	if (!g_file_get_contents(path, &t, table_size, &err))
 	{
 		g_error("%s\n", err->message);
 	}
+
+        table = (topic_question_t *)t;
 
 	if (*table_size % sizeof(topic_question_t))
 	{
@@ -313,7 +319,7 @@ topic_question_t *decode_topic_questions_table(const gchar *path, gsize *table_s
 	return table;
 }
 
-gchar *decode_string(const gchar *path, gsize *str_size, gint8 topic_number)
+static gchar *decode_string(const gchar *path, gsize *str_size, gint8 topic_number)
 {
 	GError *err = NULL;
 	gchar *str;
@@ -337,7 +343,7 @@ typedef gboolean (*object_save_t)(gpointer *);
 typedef void (*object_free_t)(gpointer *);
 typedef void (*object_set_images_t)(gpointer *, pdd_images_t *images);
 
-gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
+static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
 	object_new_t object_new, object_save_t object_save, object_free_t object_free, object_set_images_t object_set_images)
 {
 	gsize table_size;
@@ -447,7 +453,7 @@ gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
 	return result;
 }
 
-gboolean decode_comments(const gchar *root_path)
+static gboolean decode_comments(const gchar *root_path)
 {
 	gchar *comments_dat_path = make_path(root_path, "tickets", "comments", "comments.dat", NULL);
 	gchar *comments_dbt_path = make_path(root_path, "tickets", "comments", "comments.dbt", NULL);
@@ -466,7 +472,7 @@ gboolean decode_comments(const gchar *root_path)
 	return result;
 }
 
-gboolean decode_traffregs(const gchar *root_path)
+static gboolean decode_traffregs(const gchar *root_path)
 {
 	gchar *traffreg_dat_path = make_path(root_path, "tickets", "traffreg", "traffreg.dat", NULL);
 	gchar *traffreg_dbt_path = make_path(root_path, "tickets", "traffreg", "traffreg.dbt", NULL);
@@ -486,7 +492,7 @@ gboolean decode_traffregs(const gchar *root_path)
 	return result;
 }
 
-gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_question_t *sections_data, gsize sections_data_size)
+static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_question_t *sections_data, gsize sections_data_size)
 {
 	topic_question_t *table = sections_data;
 	while (table->topic_number != topic_number)
@@ -782,7 +788,7 @@ gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_
 	return result;
 }
 
-int compare_topic_questions(const void *first, const void *second)
+static int compare_topic_questions(const void *first, const void *second)
 {
 	const topic_question_t *first_tq = (const topic_question_t *)first;
 	const topic_question_t *second_tq = (const topic_question_t *)second;
@@ -798,7 +804,7 @@ int compare_topic_questions(const void *first, const void *second)
 	return 0;
 }
 
-gboolean decode_questions(const gchar *root_path)
+static gboolean decode_questions(const gchar *root_path)
 {
 	pdd_sections_t *sections = section_find_all();
 	gsize i;
