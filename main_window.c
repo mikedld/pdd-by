@@ -138,7 +138,7 @@ void on_about()
 	gchar *authors[] = { "Mike `mike.dld` Semenyako <mike.dld@gmail.com>", NULL };
 	gtk_show_about_dialog(NULL,
 		"program-name", "Учебная программа ПДД",
-		"version", "0.2",
+		"version", "0.3",
 		"website", "http://mikedld.com/",
 		"copyright", "Copyright © 2009 Mike `mike.dld` Semenyako",
 		"comments", "Империя наносит ответный удар\n(привет ЧПУП \"Новый поворот\")",
