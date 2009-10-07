@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 	gconf_client_add_dir(conf, "/apps/pdd-by", GCONF_CLIENT_PRELOAD_NONE, NULL);
 	use_cache = gconf_client_get_bool(conf, "/apps/pdd-by/use-cache", NULL);
 
-	if (!use_cache || !database_exists())
+	if (!use_cache | !database_exists())
 	{
 		GtkWidget *directory_dialog = gtk_file_chooser_dialog_new("Укажите путь к директории Pdd32 на компакт-диске", NULL,
 			GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
