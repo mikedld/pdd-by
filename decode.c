@@ -258,14 +258,14 @@ static gboolean decode_images(const gchar *root_path)
 static gint32 *decode_table(const gchar *path, gsize *table_size)
 {
 	GError *err = NULL;
-        gchar *t;
+	gchar *t;
 	gint32 *table;
 	if (!g_file_get_contents(path, &t, table_size, &err))
 	{
 		g_error("%s\n", err->message);
 	}
 
-        table = (gint32 *)t;
+	table = (gint32 *)t;
 
 	if (*table_size % sizeof(gint32))
 	{
@@ -291,14 +291,14 @@ static gint32 *decode_table(const gchar *path, gsize *table_size)
 static topic_question_t *decode_topic_questions_table(const gchar *path, gsize *table_size)
 {
 	GError *err = NULL;
-        gchar *t;
+	gchar *t;
 	topic_question_t *table;
 	if (!g_file_get_contents(path, &t, table_size, &err))
 	{
 		g_error("%s\n", err->message);
 	}
 
-        table = (topic_question_t *)t;
+	table = (topic_question_t *)t;
 
 	if (*table_size % sizeof(topic_question_t))
 	{
