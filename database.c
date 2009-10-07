@@ -231,7 +231,7 @@ gboolean bootstrap_sections()
 	{
 		g_error("malformed YAML\n");
 	}
-	void database_tx_begin();
+	database_tx_begin();
 	while (TRUE)
 	{
 		gchar *name, *title_prefix, *title;
@@ -284,7 +284,7 @@ gboolean bootstrap_topics()
 	{
 		g_error("malformed YAML\n");
 	}
-	void database_tx_begin();
+	database_tx_begin();
 	while (TRUE)
 	{
 		gchar *number, *title;
