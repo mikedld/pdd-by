@@ -1,7 +1,19 @@
 #include "topic.h"
+#include "common.h"
 #include "database.h"
+#include "question.h"
 
-#include <glib.h>
+extern inline pdd_questions_t *get_questions();
+
+inline pdd_topics_t *get_topics()
+{
+	static pdd_topics_t *topics = NULL;
+	if (!topics)
+	{
+		topics = g_ptr_array_new();
+	}
+	return topics;
+}
 
 pdd_topic_t *topic_new_with_id(gint64 id, gint number, const gchar *title)
 {
@@ -10,6 +22,23 @@ pdd_topic_t *topic_new_with_id(gint64 id, gint number, const gchar *title)
 	topic->number = number;
 	topic->title = g_strdup(title);
 	return topic;
+}
+
+pdd_topic_t *topic_copy(pdd_topic_t *topic)
+{
+	return topic_new_with_id(topic->id, topic->number, topic->title);
+}
+
+pdd_topics_t *topic_copy_all(pdd_topics_t *topics)
+{
+	pdd_topics_t *topics_copy = g_ptr_array_new();
+	gsize i;
+	for (i = 0; i < topics->len; i++)
+	{
+		pdd_topic_t *topic = g_ptr_array_index(topics, i);
+		g_ptr_array_add(topics_copy, topic_copy(topic));
+	}
+	return topics_copy;
 }
 
 pdd_topic_t *topic_new(gint number, const gchar *title)
@@ -25,6 +54,14 @@ void topic_free(pdd_topic_t *topic)
 
 gboolean topic_save(pdd_topic_t *topic)
 {
+	if (!use_cache)
+	{
+		static gint64 id = 0;
+		topic->id = ++id;
+		g_ptr_array_add(get_topics(), topic_copy(topic));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -69,6 +106,20 @@ gboolean topic_save(pdd_topic_t *topic)
 
 pdd_topic_t *topic_find_by_id(gint64 id)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_topics()->len; i++)
+		{
+			pdd_topic_t *topic = g_ptr_array_index(get_topics(), i);
+			if (topic->id == id)
+			{
+				return topic_copy(topic);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -112,6 +163,20 @@ pdd_topic_t *topic_find_by_id(gint64 id)
 
 pdd_topic_t *topic_find_by_number(gint number)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_topics()->len; i++)
+		{
+			pdd_topic_t *topic = g_ptr_array_index(get_topics(), i);
+			if (topic->number == number)
+			{
+				return topic_copy(topic);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -154,6 +219,11 @@ pdd_topic_t *topic_find_by_number(gint number)
 
 pdd_topics_t *topic_find_all()
 {
+	if (!use_cache)
+	{
+		return topic_copy_all(get_topics());
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -207,6 +277,21 @@ void topic_free_all(pdd_topics_t *topics)
 
 gint32 topic_get_question_count(pdd_topic_t *topic)
 {
+	if (!use_cache)
+	{
+		gint32 count = 0;
+		gsize i;
+		for (i = 0; i < get_questions()->len; i++)
+		{
+			pdd_question_t *question = g_ptr_array_index(get_questions(), i);
+			if (question->topic_id == topic->id)
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;

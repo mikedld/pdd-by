@@ -21,8 +21,6 @@ typedef struct topic_question_s
 	gint32 question_offset;
 } __attribute__((__packed__)) topic_question_t;
 
-extern gchar *program_dir;
-
 guint16 magic = 0;
 
 gboolean init_magic(const gchar *root_path);

@@ -1,7 +1,7 @@
 #ifndef COMMENT_H
 #define COMMENT_H
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_comment_s
 {
@@ -9,6 +9,8 @@ typedef struct pdd_comment_s
 	gint32 number;
 	gchar *text;
 } pdd_comment_t;
+
+typedef GPtrArray pdd_comments_t;
 
 pdd_comment_t *comment_new(gint32 number, const gchar *text);
 void comment_free(pdd_comment_t *comment);

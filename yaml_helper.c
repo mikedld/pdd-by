@@ -1,4 +1,5 @@
 #include "yaml_helper.h"
+#include "common.h"
 
 #include <glib/gstdio.h>
 
@@ -6,7 +7,7 @@ extern gchar *program_dir;
 
 FILE *yaml_open_file()
 {
-	gchar *path = g_build_filename(program_dir, "data", "10.yml", NULL);
+	gchar *path = g_build_filename(PDD_SHARE_DIR, "data", "10.yml", NULL);
 	FILE *f = g_fopen(path, "r");
 	g_free(path);
 	return f;

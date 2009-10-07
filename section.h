@@ -1,7 +1,7 @@
 #ifndef SECTION_H
 #define SECTION_H
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_section_s
 {
@@ -22,6 +22,7 @@ pdd_section_t *section_find_by_id(gint64 id);
 pdd_section_t *section_find_by_name(const gchar *name);
 
 pdd_sections_t *section_find_all();
+pdd_sections_t *section_copy_all(pdd_sections_t *sections);
 void section_free_all(pdd_sections_t *sections);
 
 gint32 section_get_question_count(pdd_section_t *section);

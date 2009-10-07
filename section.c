@@ -1,7 +1,19 @@
 #include "section.h"
+#include "common.h"
 #include "database.h"
+#include "question.h"
 
-#include <glib.h>
+inline GHashTable *get_questions_sections();
+
+inline pdd_sections_t *get_sections()
+{
+	static pdd_sections_t *sections = NULL;
+	if (!sections)
+	{
+		sections = g_ptr_array_new();
+	}
+	return sections;
+}
 
 pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *title_prefix, const gchar *title)
 {
@@ -11,6 +23,11 @@ pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *ti
 	section->title_prefix = g_strdup(title_prefix);
 	section->title = g_strdup(title);
 	return section;
+}
+
+pdd_section_t *section_copy(pdd_section_t *section)
+{
+	return section_new_with_id(section->id, section->name, section->title_prefix, section->title);
 }
 
 pdd_section_t *section_new(const gchar *name, const gchar *title_prefix, const gchar *title)
@@ -28,6 +45,14 @@ void section_free(pdd_section_t *section)
 
 gboolean section_save(pdd_section_t *section)
 {
+	if (!use_cache)
+	{
+		static gint64 id = 0;
+		section->id = ++id;
+		g_ptr_array_add(get_sections(), section_copy(section));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -78,6 +103,20 @@ gboolean section_save(pdd_section_t *section)
 
 pdd_section_t *section_find_by_id(gint64 id)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_sections()->len; i++)
+		{
+			pdd_section_t *section = g_ptr_array_index(get_sections(), i);
+			if (section->id == id)
+			{
+				return section_copy(section);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -122,6 +161,20 @@ pdd_section_t *section_find_by_id(gint64 id)
 
 pdd_section_t *section_find_by_name(const gchar *name)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_sections()->len; i++)
+		{
+			pdd_section_t *section = g_ptr_array_index(get_sections(), i);
+			if (!g_strcmp0(section->name, name))
+			{
+				return section_copy(section);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -166,6 +219,11 @@ pdd_section_t *section_find_by_name(const gchar *name)
 
 pdd_sections_t *section_find_all()
 {
+	if (!use_cache)
+	{
+		return section_copy_all(get_sections());
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -210,14 +268,48 @@ pdd_sections_t *section_find_all()
 	return sections;
 }
 
+pdd_sections_t *section_copy_all(pdd_sections_t *sections)
+{
+	pdd_sections_t *sections_copy = g_ptr_array_new();
+	gsize i;
+	for (i = 0; i < sections->len; i++)
+	{
+		pdd_section_t *section = g_ptr_array_index(sections, i);
+		g_ptr_array_add(sections_copy, section_copy(section));
+	}
+	return sections_copy;
+}
+
 void section_free_all(pdd_sections_t *sections)
 {
 	g_ptr_array_foreach(sections, (GFunc)section_free, NULL);
 	g_ptr_array_free(sections, TRUE);
 }
 
+void count_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
+{
+	gsize i;
+	for (i = 0; i < sections->len; i++)
+	{
+		pdd_section_t *section = g_ptr_array_index(sections, i);
+		if (section->id == id_ptr->id)
+		{
+			(*(gint32 *)id_ptr->ptr)++;
+			break;
+		}
+	}
+}
+
 gint32 section_get_question_count(pdd_section_t *section)
 {
+	if (!use_cache)
+	{
+		gint32 count = 0;
+		id_pointer_t id_ptr = {section->id, &count};
+		g_hash_table_foreach(get_questions_sections(), (GHFunc)count_questions_by_section, &id_ptr);
+		return count;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;

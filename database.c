@@ -1,4 +1,5 @@
 #include "database.h"
+#include "common.h"
 #include "section.h"
 #include "topic.h"
 #include "yaml_helper.h"
@@ -21,8 +22,20 @@ gboolean database_exists()
 	if (database_file == NULL)
 	{
 		database_file = g_build_filename(g_get_user_cache_dir(), "pdd.db", NULL);
-		// for testing purposes
-		//g_unlink(database_file);
+		if (!use_cache)
+		{
+			if (!bootstrap_data())
+			{
+				g_free(database_file);
+				database_file = NULL;
+			}
+			return FALSE;
+		}
+	}
+
+	if (!use_cache)
+	{
+		return TRUE;
 	}
 
 	return g_access(database_file, R_OK) == 0;
@@ -30,6 +43,10 @@ gboolean database_exists()
 
 void database_cleanup()
 {
+	if (!use_cache)
+	{
+		return;
+	}
 	if (database)
 	{
 		sqlite3_close(database);
@@ -42,13 +59,21 @@ void database_cleanup()
 
 sqlite3 *database_get()
 {
+	if (!use_cache)
+	{
+		return (gpointer)TRUE;
+	}
+
 	if (database)
 	{
 		return database;
 	}
 	if (database_file == NULL)
 	{
-		g_error("tried getting database while not initialized\n");
+		if (database_exists())
+		{
+			g_error("tried getting database while not initialized\n");
+		}
 	}
 
 	gboolean is_new = !database_exists();
@@ -82,6 +107,11 @@ sqlite3 *database_get()
 
 void database_tx_begin()
 {
+	if (!use_cache)
+	{
+		return;
+	}
+
 	database_tx_count++;
 	if (database_tx_count > 1)
 	{
@@ -96,6 +126,11 @@ void database_tx_begin()
 
 void database_tx_commit()
 {
+	if (!use_cache)
+	{
+		return;
+	}
+
 	if (!database_tx_count)
 	{
 		g_error("unable to commit (no transaction in effect)\n");

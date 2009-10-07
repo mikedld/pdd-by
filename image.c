@@ -1,5 +1,16 @@
 #include "image.h"
+#include "common.h"
 #include "database.h"
+
+inline pdd_images_t *get_images()
+{
+	static pdd_images_t *images = NULL;
+	if (!images)
+	{
+		images = g_ptr_array_new();
+	}
+	return images;
+}
 
 pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data, gsize data_length)
 {
@@ -9,6 +20,11 @@ pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data,
 	image->data = g_memdup(data, data_length);
 	image->data_length = data_length;
 	return image;
+}
+
+pdd_image_t *image_copy(pdd_image_t *image)
+{
+	return image_new_with_id(image->id, image->name, image->data, image->data_length);
 }
 
 pdd_image_t *image_new(const gchar *name, gconstpointer data, gsize data_length)
@@ -25,6 +41,14 @@ void image_free(pdd_image_t *image)
 
 gboolean image_save(pdd_image_t *image)
 {
+	if (!use_cache)
+	{
+		static gint64 id = 0;
+		image->id = ++id;
+		g_ptr_array_add(get_images(), image_copy(image));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -72,6 +96,20 @@ gboolean image_save(pdd_image_t *image)
 
 pdd_image_t *image_find_by_id(gint64 id)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_images()->len; i++)
+		{
+			pdd_image_t *image = g_ptr_array_index(get_images(), i);
+			if (image->id == id)
+			{
+				return image_copy(image);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -116,6 +154,20 @@ pdd_image_t *image_find_by_id(gint64 id)
 
 pdd_image_t *image_find_by_name(const gchar *name)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_images()->len; i++)
+		{
+			pdd_image_t *image = g_ptr_array_index(get_images(), i);
+			if (!g_strcmp0(image->name, name))
+			{
+				return image_copy(image);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -161,6 +213,18 @@ pdd_image_t *image_find_by_name(const gchar *name)
 	g_free(image_name);
 
 	return image;
+}
+
+pdd_images_t *image_copy_all(pdd_images_t *images)
+{
+	pdd_images_t *images_copy = g_ptr_array_new();
+	gsize i;
+	for (i = 0; i < images->len; i++)
+	{
+		pdd_image_t *image = g_ptr_array_index(images, i);
+		g_ptr_array_add(images_copy, image_copy(image));
+	}
+	return images_copy;
 }
 
 void image_free_all(pdd_images_t *images)

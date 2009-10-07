@@ -5,7 +5,7 @@
 #include "image.h"
 #include "section.h"
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_answer_s
 {

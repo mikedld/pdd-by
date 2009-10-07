@@ -4,7 +4,7 @@
 #include "section.h"
 #include "traffreg.h"
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_question_s
 {

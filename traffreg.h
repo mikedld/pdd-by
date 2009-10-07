@@ -3,7 +3,7 @@
 
 #include "image.h"
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_traffreg_s
 {
@@ -24,6 +24,7 @@ gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images);
 pdd_traffreg_t *traffreg_find_by_id(gint64 id);
 pdd_traffreg_t *traffreg_find_by_number(gint32 number);
 
+pdd_traffregs_t *traffreg_copy_all(pdd_traffregs_t *traffregs);
 void traffreg_free_all(pdd_traffregs_t *traffregs);
 
 #endif // TRAFFREG_H

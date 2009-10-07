@@ -1,7 +1,7 @@
 #ifndef DELPHI_HELPER_H
 #define DELPHI_HELPER_H
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 inline guint64 delphi_random(guint32 limit);
 

@@ -1,7 +1,7 @@
 #ifndef TOPIC_H
 #define TOPIC_H
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 typedef struct pdd_topic_s
 {

@@ -1,5 +1,16 @@
 #include "comment.h"
+#include "common.h"
 #include "database.h"
+
+inline pdd_comments_t *get_comments()
+{
+	static pdd_comments_t *comments = NULL;
+	if (!comments)
+	{
+		comments = g_ptr_array_new();
+	}
+	return comments;
+}
 
 pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
 {
@@ -8,6 +19,11 @@ pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
 	comment->number = number;
 	comment->text = g_strdup(text);
 	return comment;
+}
+
+pdd_comment_t *comment_copy(pdd_comment_t *comment)
+{
+	return comment_new_with_id(comment->id, comment->number, comment->text);
 }
 
 pdd_comment_t *comment_new(gint32 number, const gchar *text)
@@ -23,6 +39,14 @@ void comment_free(pdd_comment_t *comment)
 
 gboolean comment_save(pdd_comment_t *comment)
 {
+	if (!use_cache)
+	{
+		static gint64 id = 0;
+		comment->id = ++id;
+		g_ptr_array_add(get_comments(), comment_copy(comment));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -67,6 +91,20 @@ gboolean comment_save(pdd_comment_t *comment)
 
 pdd_comment_t *comment_find_by_id(gint64 id)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_comments()->len; i++)
+		{
+			pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
+			if (comment->id == id)
+			{
+				return comment_copy(comment);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -110,6 +148,20 @@ pdd_comment_t *comment_find_by_id(gint64 id)
 
 pdd_comment_t *comment_find_by_number(gint32 number)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_comments()->len; i++)
+		{
+			pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
+			if (comment->number == number)
+			{
+				return comment_copy(comment);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;

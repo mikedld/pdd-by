@@ -1,5 +1,6 @@
 #include "question_window.h"
 #include "answer.h"
+#include "common.h"
 #include "main_window.h"
 #include "question.h"
 
@@ -49,7 +50,7 @@ GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, "ui/question_window.ui", &err);
+	gtk_builder_add_from_file(builder, PDD_SHARE_DIR "/ui/question_window.ui", &err);
 	if (err)
 	{
 		g_error("%s\n", err->message);

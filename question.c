@@ -1,8 +1,39 @@
 #include "question.h"
+#include "common.h"
 #include "database.h"
 #include "topic.h"
 
 const gint ticket_topics_distribution[] = {1, 2, 2, 2, 1, 1, 1};
+
+inline pdd_questions_t *get_questions()
+{
+	static pdd_questions_t *questions = NULL;
+	if (!questions)
+	{
+		questions = g_ptr_array_new();
+	}
+	return questions;
+}
+
+inline GHashTable *get_questions_sections()
+{
+	static GHashTable *questions_sections = NULL;
+	if (!questions_sections)
+	{
+		questions_sections = g_hash_table_new(NULL, NULL);
+	}
+	return questions_sections;
+}
+
+inline GHashTable *get_questions_traffregs()
+{
+	static GHashTable *questions_traffregs = NULL;
+	if (!questions_traffregs)
+	{
+		questions_traffregs = g_hash_table_new(NULL, NULL);
+	}
+	return questions_traffregs;
+}
 
 pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
 {
@@ -14,6 +45,11 @@ pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *te
 	question->advice = g_strdup(advice);
 	question->comment_id = comment_id;
 	return question;
+}
+
+pdd_question_t *question_copy(pdd_question_t *question)
+{
+	return question_new_with_id(question->id, question->topic_id, question->text, question->image_id, question->advice, question->comment_id);
 }
 
 pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
@@ -30,6 +66,14 @@ void question_free(pdd_question_t *question)
 
 gboolean question_save(pdd_question_t *question)
 {
+	if (!use_cache)
+	{
+		static gint64 id = 0;
+		question->id = ++id;
+		g_ptr_array_add(get_questions(), question_copy(question));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -92,6 +136,12 @@ gboolean question_save(pdd_question_t *question)
 
 gboolean question_set_sections(pdd_question_t *question, pdd_sections_t *sections)
 {
+	if (!use_cache)
+	{
+		g_hash_table_insert(get_questions_sections(), question_copy(question), section_copy_all(sections));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -140,6 +190,12 @@ gboolean question_set_sections(pdd_question_t *question, pdd_sections_t *section
 
 gboolean question_set_traffregs(pdd_question_t *question, pdd_traffregs_t *traffregs)
 {
+	if (!use_cache)
+	{
+		g_hash_table_insert(get_questions_traffregs(), question_copy(question), traffreg_copy_all(traffregs));
+		return TRUE;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -188,6 +244,20 @@ gboolean question_set_traffregs(pdd_question_t *question, pdd_traffregs_t *traff
 
 pdd_question_t *question_find_by_id(gint64 id)
 {
+	if (!use_cache)
+	{
+		gsize i;
+		for (i = 0; i < get_questions()->len; i++)
+		{
+			pdd_question_t *question = g_ptr_array_index(get_questions(), i);
+			if (question->id == id)
+			{
+				return question_copy(question);
+			}
+		}
+		return NULL;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -232,8 +302,30 @@ pdd_question_t *question_find_by_id(gint64 id)
 	return question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
 }
 
+void find_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
+{
+	gsize i;
+	for (i = 0; i < sections->len; i++)
+	{
+		pdd_section_t *section = g_ptr_array_index(sections, i);
+		if (section->id == id_ptr->id)
+		{
+			g_ptr_array_add(id_ptr->ptr, question_copy(question));
+			break;
+		}
+	}
+}
+
 pdd_questions_t *question_find_by_section(gint64 section_id)
 {
+	if (!use_cache)
+	{
+		pdd_questions_t *questions = g_ptr_array_new();
+		id_pointer_t id_ptr = {section_id, questions};
+		g_hash_table_foreach(get_questions_sections(), (GHFunc)find_questions_by_section, &id_ptr);
+		return questions;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -288,6 +380,30 @@ pdd_questions_t *question_find_by_section(gint64 section_id)
 
 pdd_questions_t *question_find_with_offset(gint64 topic_id, gint offset, gint count)
 {
+	if (!use_cache)
+	{
+		pdd_questions_t *questions = g_ptr_array_new();
+		gsize i;
+		gint offs = 0;
+		for (i = 0; i < get_questions()->len; i++)
+		{
+			pdd_question_t *question = g_ptr_array_index(get_questions(), i);
+			if (question->topic_id == topic_id)
+			{
+				if (++offs < offset)
+				{
+					continue;
+				}
+				g_ptr_array_add(questions, question_copy(question));
+				if (questions->len == count)
+				{
+					break;
+				}
+			}
+		}
+		return questions;
+	}
+
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
