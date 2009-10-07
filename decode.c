@@ -11,7 +11,6 @@
 #include "yaml_helper.h"
 
 #include <glib/gstdio.h>
-#include <unistd.h>
 #include <yaml.h>
 
 typedef struct topic_question_s
