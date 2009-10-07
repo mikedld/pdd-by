@@ -11,7 +11,6 @@
 #include "yaml_helper.h"
 
 #include <glib/gstdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <yaml.h>
 
@@ -66,7 +65,7 @@ static gchar *find_file_ci(const gchar *path, const gchar *fname)
 	const gchar *name;
 	while ((name = g_dir_read_name(dir)))
 	{
-		if (!strcasecmp(name, fname))
+		if (!g_strcasecmp(name, fname))
 		{
 			file_path = g_build_filename(path, name, NULL);
 			break;
