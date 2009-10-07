@@ -45,7 +45,7 @@ gboolean decode(const gchar *root_path)
 {
 	const decode_stage_t *stage;
 
-	for (stage = decode_stages; NULL != stage; stage++)
+	for (stage = decode_stages; NULL != *stage; stage++)
 	{
 		if (!(*stage)(root_path))
 			return FALSE;
