@@ -10,6 +10,9 @@ GtkWidget *main_window = NULL;
 
 int main(int argc, char *argv[])
 {
+#ifdef WIN32
+	return 1;
+#else
 	gtk_init(&argc, &argv);
 
 	GConfClient *conf = gconf_client_get_default();
@@ -48,4 +51,5 @@ int main(int argc, char *argv[])
 	database_cleanup();
 	
 	return 0;
+#endif
 }
