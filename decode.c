@@ -46,7 +46,9 @@ gboolean decode(const gchar *root_path)
 	for (stage = decode_stages; NULL != *stage; stage++)
 	{
 		if (!(*stage)(root_path))
+		{
 			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -356,16 +358,58 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
 	{
 		g_error("%s\n", err->message);
 	}
-	/*GRegex *word_break_regex = g_regex_new("(?<!\\s)-\\s+", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
-	if (err)
+
+	struct
 	{
-		g_error("%s\n", err->message);
-	}
-	GRegex *spaces_regex = g_regex_new("\\s{2,}", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
-	if (err)
+		GRegex *regex;
+		const gchar *replacement;
+	} markup_regexes[] =
 	{
-		g_error("%s\n", err->message);
-	}*/
+		{
+			g_regex_new("@(.+?)@", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span underline='single' underline_color='#ff0000'>\\1</span>"
+		},
+		{
+			g_regex_new("^~\\s*.+?$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			""
+		},
+		{
+			g_regex_new("^\\^R\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span underline='single' underline_color='#cc0000'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("^\\^G\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span underline='single' underline_color='#00cc00'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("^\\^B\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span underline='single' underline_color='#0000cc'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("\\^R(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span color='#cc0000'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("\\^G(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span color='#00cc00'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("\\^B(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"<span color='#0000cc'><b>\\1</b></span>"
+		},
+		{
+			g_regex_new("-\\s*$\\s*", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			""
+		},
+		{
+			g_regex_new("([^.> \t])\\s*$\\s*", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			"\\1 "
+		},
+		{
+			g_regex_new("[ \t]{2,}", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
+			" "
+		},
+	};
 
 	gsize i, j;
 	gboolean result = TRUE;
@@ -418,6 +462,16 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
 				}
 				g_strfreev(image_names);
 			}
+			for (j = 0; j < sizeof(markup_regexes) / sizeof(*markup_regexes); j++)
+			{
+				gchar *new_text = g_regex_replace(markup_regexes[j].regex, text, -1, 0, markup_regexes[j].replacement, 0, &err);
+				if (err)
+				{
+					g_error("%s\n", err->message);
+				}
+				g_free(text);
+				text = new_text;
+			}
 			object = object_new(atoi(number), g_strchomp(text));
 			g_free(text);
 			g_free(images);
@@ -442,8 +496,11 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
 
 	g_print("\n");
 
-	//g_regex_unref(spaces_regex);
-	//g_regex_unref(word_break_regex);
+	for (i = 0; i < sizeof(markup_regexes) / sizeof(*markup_regexes); i++)
+	{
+		g_regex_unref(markup_regexes[i].regex);
+	}
+
 	g_regex_unref(simple_data_regex);
 	g_free(str);
 	g_free(table);

@@ -1,8 +1,9 @@
-#include <string.h>
 #include "chooser_dialog.h"
 #include "common.h"
 #include "section.h"
 #include "topic.h"
+
+#include <string.h>
 
 gint last_index[2] = {0, 0};
 

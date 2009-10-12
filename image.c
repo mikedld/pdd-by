@@ -1,6 +1,7 @@
 #include "image.h"
 #include "common.h"
 #include "database.h"
+#include "traffreg.h"
 
 static inline pdd_images_t *get_images()
 {
@@ -213,6 +214,78 @@ pdd_image_t *image_find_by_name(const gchar *name)
 	g_free(image_name);
 
 	return image;
+}
+
+static void find_images_by_traffreg(pdd_traffreg_t *traffreg, pdd_images_t *images, id_pointer_t *id_ptr)
+{
+	if (traffreg->id == id_ptr->id)
+	{
+		*((pdd_images_t **)id_ptr->ptr) = image_copy_all(images);
+	}
+}
+
+pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
+{
+	if (!use_cache)
+	{
+		pdd_images_t *images = NULL;
+		id_pointer_t id_ptr = {traffreg_id, &images};
+		g_hash_table_foreach(get_traffregs_images(), (GHFunc)find_images_by_traffreg, &id_ptr);
+		if (!images)
+		{
+			images = g_ptr_array_new();
+		}
+		return images;
+	}
+
+	static sqlite3_stmt *stmt = NULL;
+	sqlite3 *db = database_get();
+	int result;
+
+	if (!stmt)
+	{
+		result = sqlite3_prepare_v2(db, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN `images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?", -1, &stmt, NULL);
+		if (result != SQLITE_OK)
+		{
+			g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
+		}
+	}
+
+	result = sqlite3_reset(stmt);
+	if (result != SQLITE_OK)
+	{
+		g_error("question: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
+	}
+
+	result = sqlite3_bind_int64(stmt, 1, traffreg_id);
+	if (result != SQLITE_OK)
+	{
+		g_error("question: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
+	}
+
+	pdd_images_t *images = g_ptr_array_new();
+
+	while (TRUE)
+	{
+		result = sqlite3_step(stmt);
+		if (result == SQLITE_DONE)
+		{
+			break;
+		}
+		if (result != SQLITE_ROW)
+		{
+			g_error("question: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
+		}
+
+		gint64 id = sqlite3_column_int64(stmt, 0);
+		const gchar *name = (const gchar *)sqlite3_column_text(stmt, 1);
+		gconstpointer data = sqlite3_column_blob(stmt, 2);
+		gsize data_length = sqlite3_column_bytes(stmt, 2);
+
+		g_ptr_array_add(images, image_new_with_id(id, name, data, data_length));
+	}
+
+	return images;
 }
 
 pdd_images_t *image_copy_all(pdd_images_t *images)

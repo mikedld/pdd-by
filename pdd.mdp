@@ -5,14 +5,20 @@
       <Build debugmode="True" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml -export-dynamic" DefineSymbols="DEBUG MONODEVELOP" />
+      <Libs>
+        <Lib>yaml</Lib>
+      </Libs>
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="-W -Wextra -std=c99" ExtraLinkerArguments="" DefineSymbols="DEBUG MONODEVELOP" />
     </Configuration>
     <Configuration name="Release" SourceDirectory="." ctype="CProjectConfiguration">
       <Output directory="bin/Release" output="pdd" />
       <Build debugmode="False" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="" ExtraLinkerArguments="-lyaml -export-dynamic" DefineSymbols="MONODEVELOP" />
+      <Libs>
+        <Lib>yaml</Lib>
+      </Libs>
+      <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="-W -Wextra -std=c99" ExtraLinkerArguments="" DefineSymbols="MONODEVELOP" />
     </Configuration>
   </Configurations>
   <Contents>
@@ -56,6 +62,9 @@
     <File name="ticket_dialog.h" subtype="Code" buildaction="Nothing" />
     <File name="ticket_dialog.c" subtype="Code" buildaction="Compile" />
     <File name="common.h" subtype="Code" buildaction="Nothing" />
+    <File name="help_dialog.c" subtype="Code" buildaction="Compile" />
+    <File name="help_dialog.h" subtype="Code" buildaction="Nothing" />
+    <File name="ui/help_dialog.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
   </Contents>
   <compiler ctype="GccCompiler" />
   <Packages>

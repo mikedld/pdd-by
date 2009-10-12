@@ -1,6 +1,7 @@
 #include "question_window.h"
 #include "answer.h"
 #include "common.h"
+#include "help_dialog.h"
 #include "main_window.h"
 #include "question.h"
 
@@ -46,7 +47,7 @@ static void on_question_show_comment();
 
 static gboolean on_exam_timer(GtkWindow *window);
 
-GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean is_exam)
+static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean is_exam)
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
@@ -69,11 +70,14 @@ GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean
 	g_free(window_title);
 
 	GtkAccelGroup *accel_group = gtk_accel_group_new();
-	gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window, NULL));
 	gtk_accel_group_connect(accel_group, GDK_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer, window, NULL));
 	gtk_accel_group_connect(accel_group, GDK_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window, NULL));
-	gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs, window, NULL));
-	gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment, window, NULL));
+	if (!is_exam)
+	{
+		gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window, NULL));
+		gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs, window, NULL));
+		gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment, window, NULL));
+	}
 	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
 	statistics_t *statistics = g_new(statistics_t, 1);
@@ -402,21 +406,19 @@ static void on_question_skip(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 static void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-	if (statistics->is_exam)
-	{
-		return;
-	}
-	g_print("on_question_show_traffregs (%p)\n", window);
+	pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+	GtkWidget *dialog = help_dialog_new_with_traffregs(question);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
 }
 
 static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-	if (statistics->is_exam)
-	{
-		return;
-	}
-	g_print("on_question_show_comment (%p)\n", window);
+	pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+	GtkWidget *dialog = help_dialog_new_with_comment(question);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
 }
 
 void on_question_pause(GtkWidget *widget)

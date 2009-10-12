@@ -25,6 +25,7 @@ add_executable(pdd
     database.c
     decode.c
     delphi_helper.c
+    help_dialog.c
     image.c
     main.c
     main_window.c

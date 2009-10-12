@@ -21,6 +21,7 @@ gboolean image_save(pdd_image_t *image);
 pdd_image_t *image_find_by_id(gint64 id);
 pdd_image_t *image_find_by_name(const gchar *name);
 
+pdd_images_t *image_find_by_traffreg(gint64 traffreg_id);
 pdd_images_t *image_copy_all(pdd_images_t *images);
 void image_free_all(pdd_images_t *images);
 

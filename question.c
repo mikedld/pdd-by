@@ -25,7 +25,7 @@ inline GHashTable *get_questions_sections()
 	return questions_sections;
 }
 
-static inline GHashTable *get_questions_traffregs()
+inline GHashTable *get_questions_traffregs()
 {
 	static GHashTable *questions_traffregs = NULL;
 	if (!questions_traffregs)
@@ -302,7 +302,7 @@ pdd_question_t *question_find_by_id(gint64 id)
 	return question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
 }
 
-void find_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
+static void find_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
 {
 	gsize i;
 	for (i = 0; i < sections->len; i++)

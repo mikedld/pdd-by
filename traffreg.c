@@ -1,6 +1,7 @@
 #include "traffreg.h"
 #include "common.h"
 #include "database.h"
+#include "question.h"
 
 static inline pdd_traffregs_t *get_traffregs()
 {
@@ -12,7 +13,7 @@ static inline pdd_traffregs_t *get_traffregs()
 	return traffregs;
 }
 
-static inline GHashTable *get_traffregs_images()
+inline GHashTable *get_traffregs_images()
 {
 	static GHashTable *traffregs_images = NULL;
 	if (!traffregs_images)
@@ -265,6 +266,77 @@ pdd_traffreg_t *traffreg_find_by_number(gint32 number)
 	const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
 
 	return traffreg_new_with_id(id, number, text);
+}
+
+static void find_traffregs_by_question(pdd_question_t *question, pdd_traffregs_t *traffregs, id_pointer_t *id_ptr)
+{
+	if (question->id == id_ptr->id)
+	{
+		*((pdd_traffregs_t **)id_ptr->ptr) = traffreg_copy_all(traffregs);
+	}
+}
+
+pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
+{
+	if (!use_cache)
+	{
+		pdd_traffregs_t *traffregs = NULL;
+		id_pointer_t id_ptr = {question_id, &traffregs};
+		g_hash_table_foreach(get_questions_traffregs(), (GHFunc)find_traffregs_by_question, &id_ptr);
+		if (!traffregs)
+		{
+			traffregs = g_ptr_array_new();
+		}
+		return traffregs;
+	}
+
+	static sqlite3_stmt *stmt = NULL;
+	sqlite3 *db = database_get();
+	int result;
+
+	if (!stmt)
+	{
+		result = sqlite3_prepare_v2(db, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN `questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?", -1, &stmt, NULL);
+		if (result != SQLITE_OK)
+		{
+			g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
+		}
+	}
+
+	result = sqlite3_reset(stmt);
+	if (result != SQLITE_OK)
+	{
+		g_error("question: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
+	}
+
+	result = sqlite3_bind_int64(stmt, 1, question_id);
+	if (result != SQLITE_OK)
+	{
+		g_error("question: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
+	}
+
+	pdd_traffregs_t *traffregs = g_ptr_array_new();
+
+	while (TRUE)
+	{
+		result = sqlite3_step(stmt);
+		if (result == SQLITE_DONE)
+		{
+			break;
+		}
+		if (result != SQLITE_ROW)
+		{
+			g_error("question: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
+		}
+
+		gint64 id = sqlite3_column_int64(stmt, 0);
+		gint number = sqlite3_column_int(stmt, 1);
+		const gchar *text = (const gchar *)sqlite3_column_text(stmt, 2);
+	
+		g_ptr_array_add(traffregs, traffreg_new_with_id(id, number, text));
+	}
+
+	return traffregs;
 }
 
 pdd_traffregs_t *traffreg_copy_all(pdd_traffregs_t *traffregs)
