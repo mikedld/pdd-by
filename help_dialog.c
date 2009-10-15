@@ -22,13 +22,13 @@ static GtkWidget *help_dialog_new(GtkBuilder **builder)
 	return dialog;
 }
 
-static void add_images_to_box(GtkWidget *box, pdd_images_t *images)
+static void add_images_to_box(GtkWidget *box, const pdd_images_t *images)
 {
 	GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
 	gsize i;
 	for (i = 0; i < images->len; i++)
 	{
-		pdd_image_t *image = g_ptr_array_index(images, i);
+		const pdd_image_t *image = g_ptr_array_index(images, i);
 		GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
 		GError *err = NULL;
 		if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
@@ -62,7 +62,7 @@ static void add_text_to_box(GtkWidget *box, const gchar *text)
 	gtk_box_pack_start(GTK_BOX(box), box_alignment, FALSE, TRUE, 0);
 }
 
-GtkWidget *help_dialog_new_with_comment(pdd_question_t *question)
+GtkWidget *help_dialog_new_with_comment(const pdd_question_t *question)
 {
 	GtkBuilder *builder;
 	GtkWidget *dialog = help_dialog_new(&builder);
@@ -76,7 +76,7 @@ GtkWidget *help_dialog_new_with_comment(pdd_question_t *question)
 	return dialog;
 }
 
-GtkWidget *help_dialog_new_with_traffregs(pdd_question_t *question)
+GtkWidget *help_dialog_new_with_traffregs(const pdd_question_t *question)
 {
 	GtkBuilder *builder;
 	GtkWidget *dialog = help_dialog_new(&builder);

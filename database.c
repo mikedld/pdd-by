@@ -10,9 +10,9 @@
 
 extern gchar *program_dir;
 
-gchar *database_file = NULL;
-sqlite3 *database = NULL;
-gint database_tx_count = 0;
+static gchar *database_file = NULL;
+static sqlite3 *database = NULL;
+static gint database_tx_count = 0;
 
 gboolean create_tables();
 gboolean bootstrap_data();

@@ -30,9 +30,9 @@ typedef struct statistics_s
 	gint correct_index;
 } statistics_t;
 
-gint questions_type = 0;
-GTimer *exam_timer = NULL;
-guint exam_timer_source_id = 0;
+static gint questions_type = 0;
+static GTimer *exam_timer = NULL;
+static guint exam_timer_source_id = 0;
 
 static void statistics_free(statistics_t *statistics);
 
@@ -148,8 +148,7 @@ static void statistics_free(statistics_t *statistics)
 static void update_question(statistics_t *statistics, GtkWindow *window)
 {
 	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
-
-	pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+	const pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
 
 	gsize i;
 	gint count[4] = {0, 0, 0, 0};
@@ -201,7 +200,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
 	GtkWidget *answer_radio = NULL;
 	for (i = 0; i < answers->len; i++)
 	{
-		pdd_answer_t *answer = g_ptr_array_index(answers, i);
+		const pdd_answer_t *answer = g_ptr_array_index(answers, i);
 		GtkWidget *radio = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answer_radio), answer->text);
 		gtk_label_set_line_wrap(GTK_LABEL(gtk_bin_get_child(GTK_BIN(radio))), TRUE);
 		gtk_widget_set_size_request(radio, 400, -1);
@@ -379,7 +378,7 @@ static void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 				GtkWidget *error_dialog = gtk_message_dialog_new_with_markup(window, GTK_DIALOG_MODAL,
 					GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
 					"<span size='large' weight='bold'>Правильный ответ: %d</span>", statistics->correct_index + 1);
-				gchar *advice = ((pdd_question_t *)g_ptr_array_index(statistics->questions, statistics->index))->advice;
+				const gchar *advice = ((pdd_question_t *)g_ptr_array_index(statistics->questions, statistics->index))->advice;
 				if (advice)
 				{
 					gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(error_dialog), "%s", advice);

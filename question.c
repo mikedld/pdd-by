@@ -47,7 +47,7 @@ static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gc
 	return question;
 }
 
-static pdd_question_t *question_copy(pdd_question_t *question)
+static pdd_question_t *question_copy(const pdd_question_t *question)
 {
 	return question_new_with_id(question->id, question->topic_id, question->text, question->image_id, question->advice, question->comment_id);
 }
@@ -249,7 +249,7 @@ pdd_question_t *question_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_questions()->len; i++)
 		{
-			pdd_question_t *question = g_ptr_array_index(get_questions(), i);
+			const pdd_question_t *question = g_ptr_array_index(get_questions(), i);
 			if (question->id == id)
 			{
 				return question_copy(question);
@@ -302,12 +302,12 @@ pdd_question_t *question_find_by_id(gint64 id)
 	return question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
 }
 
-static void find_questions_by_section(pdd_question_t *question, pdd_sections_t *sections, id_pointer_t *id_ptr)
+static void find_questions_by_section(const pdd_question_t *question, const pdd_sections_t *sections, id_pointer_t *id_ptr)
 {
 	gsize i;
 	for (i = 0; i < sections->len; i++)
 	{
-		pdd_section_t *section = g_ptr_array_index(sections, i);
+		const pdd_section_t *section = g_ptr_array_index(sections, i);
 		if (section->id == id_ptr->id)
 		{
 			g_ptr_array_add(id_ptr->ptr, question_copy(question));
@@ -387,7 +387,7 @@ pdd_questions_t *question_find_with_offset(gint64 topic_id, gint offset, gint co
 		gint offs = 0;
 		for (i = 0; i < get_questions()->len; i++)
 		{
-			pdd_question_t *question = g_ptr_array_index(get_questions(), i);
+			const pdd_question_t *question = g_ptr_array_index(get_questions(), i);
 			if (question->topic_id == topic_id)
 			{
 				if (++offs < offset)
@@ -478,13 +478,13 @@ pdd_questions_t *question_find_by_topic(gint64 topic_id, gint ticket_number)
 
 pdd_questions_t *question_find_by_ticket(gint ticket_number)
 {
-	pdd_topics_t *topics = topic_find_all();
+	const pdd_topics_t *topics = topic_find_all();
 	gsize i;
 	gint j;
 	pdd_questions_t *questions = g_ptr_array_new();
 	for (i = 0; i < topics->len; i++)
 	{
-		pdd_topic_t *topic = g_ptr_array_index(topics, i);
+		const pdd_topic_t *topic = g_ptr_array_index(topics, i);
 		gint32 count = topic_get_question_count(topic);
 		for (j = 0; j < ticket_topics_distribution[i]; j++)
 		{
@@ -498,13 +498,13 @@ pdd_questions_t *question_find_by_ticket(gint ticket_number)
 
 pdd_questions_t *question_find_random()
 {
-	pdd_topics_t *topics = topic_find_all();
+	const pdd_topics_t *topics = topic_find_all();
 	gsize i;
 	gint j;
 	pdd_questions_t *questions = g_ptr_array_new();
 	for (i = 0; i < topics->len; i++)
 	{
-		pdd_topic_t *topic = g_ptr_array_index(topics, i);
+		const pdd_topic_t *topic = g_ptr_array_index(topics, i);
 		gint32 count = topic_get_question_count(topic);
 		for (j = 0; j < ticket_topics_distribution[i]; j++)
 		{

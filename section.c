@@ -23,7 +23,7 @@ static pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gc
 	return section;
 }
 
-static pdd_section_t *section_copy(pdd_section_t *section)
+static pdd_section_t *section_copy(const pdd_section_t *section)
 {
 	return section_new_with_id(section->id, section->name, section->title_prefix, section->title);
 }
@@ -106,7 +106,7 @@ pdd_section_t *section_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_sections()->len; i++)
 		{
-			pdd_section_t *section = g_ptr_array_index(get_sections(), i);
+			const pdd_section_t *section = g_ptr_array_index(get_sections(), i);
 			if (section->id == id)
 			{
 				return section_copy(section);
@@ -164,7 +164,7 @@ pdd_section_t *section_find_by_name(const gchar *name)
 		gsize i;
 		for (i = 0; i < get_sections()->len; i++)
 		{
-			pdd_section_t *section = g_ptr_array_index(get_sections(), i);
+			const pdd_section_t *section = g_ptr_array_index(get_sections(), i);
 			if (!g_strcmp0(section->name, name))
 			{
 				return section_copy(section);
@@ -272,7 +272,7 @@ pdd_sections_t *section_copy_all(pdd_sections_t *sections)
 	gsize i;
 	for (i = 0; i < sections->len; i++)
 	{
-		pdd_section_t *section = g_ptr_array_index(sections, i);
+		const pdd_section_t *section = g_ptr_array_index(sections, i);
 		g_ptr_array_add(sections_copy, section_copy(section));
 	}
 	return sections_copy;

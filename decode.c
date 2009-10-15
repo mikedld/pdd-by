@@ -19,7 +19,7 @@ typedef struct topic_question_s
 	gint32 question_offset;
 } __attribute__((__packed__)) topic_question_t;
 
-guint16 magic = 0;
+static guint16 magic = 0;
 
 static gboolean init_magic(const gchar *root_path);
 static gboolean decode_images(const gchar *root_path);

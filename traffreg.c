@@ -32,7 +32,7 @@ static pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gcha
 	return traffreg;
 }
 
-static pdd_traffreg_t *traffreg_copy(pdd_traffreg_t *traffreg)
+static pdd_traffreg_t *traffreg_copy(const pdd_traffreg_t *traffreg)
 {
 	return traffreg_new_with_id(traffreg->id, traffreg->number, traffreg->text);
 }
@@ -161,7 +161,7 @@ pdd_traffreg_t *traffreg_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_traffregs()->len; i++)
 		{
-			pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
+			const pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
 			if (traffreg->id == id)
 			{
 				return traffreg_copy(traffreg);
@@ -218,7 +218,7 @@ pdd_traffreg_t *traffreg_find_by_number(gint32 number)
 		gsize i;
 		for (i = 0; i < get_traffregs()->len; i++)
 		{
-			pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
+			const pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
 			if (traffreg->number == number)
 			{
 				return traffreg_copy(traffreg);
@@ -345,7 +345,7 @@ pdd_traffregs_t *traffreg_copy_all(pdd_traffregs_t *traffregs)
 	gsize i;
 	for (i = 0; i < traffregs->len; i++)
 	{
-		pdd_traffreg_t *traffreg = g_ptr_array_index(traffregs, i);
+		const pdd_traffreg_t *traffreg = g_ptr_array_index(traffregs, i);
 		g_ptr_array_add(traffregs_copy, traffreg_copy(traffreg));
 	}
 	return traffregs_copy;

@@ -25,6 +25,6 @@ pdd_topic_t *topic_find_by_number(gint number);
 pdd_topics_t *topic_find_all();
 void topic_free_all(pdd_topics_t *topics);
 
-gint32 topic_get_question_count(pdd_topic_t *topic);
+gint32 topic_get_question_count(const pdd_topic_t *topic);
 
 #endif // TOPIC_H

@@ -21,7 +21,7 @@ static pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar 
 	return comment;
 }
 
-static pdd_comment_t *comment_copy(pdd_comment_t *comment)
+static pdd_comment_t *comment_copy(const pdd_comment_t *comment)
 {
 	return comment_new_with_id(comment->id, comment->number, comment->text);
 }
@@ -96,7 +96,7 @@ pdd_comment_t *comment_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_comments()->len; i++)
 		{
-			pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
+			const pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
 			if (comment->id == id)
 			{
 				return comment_copy(comment);
@@ -153,7 +153,7 @@ pdd_comment_t *comment_find_by_number(gint32 number)
 		gsize i;
 		for (i = 0; i < get_comments()->len; i++)
 		{
-			pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
+			const pdd_comment_t *comment = g_ptr_array_index(get_comments(), i);
 			if (comment->number == number)
 			{
 				return comment_copy(comment);

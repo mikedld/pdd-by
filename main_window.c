@@ -135,7 +135,7 @@ GNUC_VISIBLE void on_quit()
 
 GNUC_VISIBLE void on_about()
 {
-	gchar *authors[] = { "Mike `mike.dld` Semenyako <mike.dld@gmail.com>", NULL };
+	const gchar * const authors[] = { "Mike `mike.dld` Semenyako <mike.dld@gmail.com>", NULL };
 	gtk_show_about_dialog(NULL,
 		"program-name", "Учебная программа ПДД",
 		"version", "0.3",

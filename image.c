@@ -23,7 +23,7 @@ static pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointe
 	return image;
 }
 
-static pdd_image_t *image_copy(pdd_image_t *image)
+static pdd_image_t *image_copy(const pdd_image_t *image)
 {
 	return image_new_with_id(image->id, image->name, image->data, image->data_length);
 }
@@ -102,7 +102,7 @@ pdd_image_t *image_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_images()->len; i++)
 		{
-			pdd_image_t *image = g_ptr_array_index(get_images(), i);
+			const pdd_image_t *image = g_ptr_array_index(get_images(), i);
 			if (image->id == id)
 			{
 				return image_copy(image);
@@ -160,7 +160,7 @@ pdd_image_t *image_find_by_name(const gchar *name)
 		gsize i;
 		for (i = 0; i < get_images()->len; i++)
 		{
-			pdd_image_t *image = g_ptr_array_index(get_images(), i);
+			const pdd_image_t *image = g_ptr_array_index(get_images(), i);
 			if (!g_strcmp0(image->name, name))
 			{
 				return image_copy(image);
@@ -288,13 +288,13 @@ pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
 	return images;
 }
 
-pdd_images_t *image_copy_all(pdd_images_t *images)
+pdd_images_t *image_copy_all(const pdd_images_t *images)
 {
 	pdd_images_t *images_copy = g_ptr_array_new();
 	gsize i;
 	for (i = 0; i < images->len; i++)
 	{
-		pdd_image_t *image = g_ptr_array_index(images, i);
+		const pdd_image_t *image = g_ptr_array_index(images, i);
 		g_ptr_array_add(images_copy, image_copy(image));
 	}
 	return images_copy;

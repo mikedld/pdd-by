@@ -22,7 +22,7 @@ static pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gch
 	return answer;
 }
 
-static pdd_answer_t *answer_copy(pdd_answer_t *answer)
+static pdd_answer_t *answer_copy(const pdd_answer_t *answer)
 {
 	return answer_new_with_id(answer->id, answer->question_id, answer->text, answer->is_correct);
 }
@@ -103,7 +103,7 @@ pdd_answer_t *answer_find_by_id(gint64 id)
 		gsize i;
 		for (i = 0; i < get_answers()->len; i++)
 		{
-			pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
+			const pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
 			if (answer->id == id)
 			{
 				return answer_copy(answer);
@@ -162,7 +162,7 @@ pdd_answers_t *answer_find_by_question(gint64 question_id)
 		gsize i;
 		for (i = 0; i < get_answers()->len; i++)
 		{
-			pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
+			const pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
 			if (answer->question_id == question_id)
 			{
 				g_ptr_array_add(answers, answer_copy(answer));
