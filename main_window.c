@@ -29,7 +29,7 @@ GtkWidget *main_window_new()
 	return window;
 }
 
-void on_training_section()
+GNUC_VISIBLE void on_training_section()
 {
 	gtk_widget_hide(main_window);
 	GtkWidget *dialog = chooser_dialog_new_with_sections();
@@ -98,42 +98,42 @@ static void on_random_ticket(gboolean is_exam)
 	gtk_widget_show(question_window);
 }
 
-void on_training_topic()
+GNUC_VISIBLE void on_training_topic()
 {
 	on_topic(FALSE);
 }
 
-void on_training_ticket()
+GNUC_VISIBLE void on_training_ticket()
 {
 	on_ticket(FALSE);
 }
 
-void on_training_random_ticket()
+GNUC_VISIBLE void on_training_random_ticket()
 {
 	on_random_ticket(FALSE);
 }
 
-void on_exam_topic()
+GNUC_VISIBLE void on_exam_topic()
 {
 	on_topic(TRUE);
 }
 
-void on_exam_ticket()
+GNUC_VISIBLE void on_exam_ticket()
 {
 	on_ticket(TRUE);
 }
 
-void on_exam_random_ticket()
+GNUC_VISIBLE void on_exam_random_ticket()
 {
 	on_random_ticket(TRUE);
 }
 
-void on_quit()
+GNUC_VISIBLE void on_quit()
 {
 	gtk_main_quit();
 }
 
-void on_about()
+GNUC_VISIBLE void on_about()
 {
 	gchar *authors[] = { "Mike `mike.dld` Semenyako <mike.dld@gmail.com>", NULL };
 	gtk_show_about_dialog(NULL,

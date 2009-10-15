@@ -421,7 +421,7 @@ static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *w
 	gtk_widget_destroy(dialog);
 }
 
-void on_question_pause(GtkWidget *widget)
+GNUC_VISIBLE void on_question_pause(GtkWidget *widget)
 {
 	GtkWidget *window = gtk_widget_get_toplevel(widget);
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
@@ -448,7 +448,7 @@ void on_question_pause(GtkWidget *widget)
 	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "btn_resume")));
 }
 
-void on_question_resume(GtkWidget *widget)
+GNUC_VISIBLE void on_question_resume(GtkWidget *widget)
 {
 	GtkWidget *window = gtk_widget_get_toplevel(widget);
 	statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");

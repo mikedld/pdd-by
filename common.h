@@ -5,6 +5,12 @@
 #define PDD_SHARE_DIR "."
 #endif
 
+#if __GNUC__ >= 4
+#define GNUC_VISIBLE __attribute__((visibility("default")))
+#else
+#define GNUC_VISIBLE
+#endif
+
 extern gboolean use_cache;
 
 typedef struct id_pointer_s

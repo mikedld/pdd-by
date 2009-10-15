@@ -10,7 +10,7 @@ find_library(YAML_LIBRARY yaml)
 include_directories(${PDD_INCLUDE_DIRS} ${YAML_INCLUDE_DIR})
 link_directories(${PDD_LIBRARY_DIRS} ${YAML_LIBRARY_DIR})
 
-add_definitions(-W -Wall -Wextra -std=c99 -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/share/pdd-by")
+add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/share/pdd-by")
 
 option(DEBUG "debug build" OFF)
 

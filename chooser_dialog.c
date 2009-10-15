@@ -100,7 +100,7 @@ GtkListStore *topics_model_new()
 	return model;
 }
 
-void on_chooser_dialog_destroy(GtkWidget *widget)
+GNUC_VISIBLE void on_chooser_dialog_destroy(GtkWidget *widget)
 {
 	GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(gtk_widget_get_toplevel(widget)), "pdd-builder"));
 	GtkComboBox *items_combo = GTK_COMBO_BOX(gtk_builder_get_object(builder, "cb_items"));
@@ -108,7 +108,7 @@ void on_chooser_dialog_destroy(GtkWidget *widget)
 	last_index[GTK_WIDGET_VISIBLE(title_label) ? 0 : 1] = gtk_combo_box_get_active(items_combo);
 }
 
-void on_chooser_dialog_item_changed(GtkWidget *widget)
+GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
 {
 	GtkListStore *model = GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(widget)));
 	GtkTreeIter iter;
