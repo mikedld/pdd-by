@@ -10,7 +10,18 @@ find_library(YAML_LIBRARY yaml)
 include_directories(${PDD_INCLUDE_DIRS} ${YAML_INCLUDE_DIR})
 link_directories(${PDD_LIBRARY_DIRS} ${YAML_LIBRARY_DIR})
 
-add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/share/pdd-by")
+if (APPLE)
+    set(PDD_TARGET_NAME "ПДД-Беларусь")
+    set(PDD_BINDIR_NAME MacOS)
+    set(PDD_SHAREDIR_NAME Resources)
+    set(CMAKE_INSTALL_PREFIX "/Applications/${PDD_TARGET_NAME}.app/Contents")
+else (APPLE)
+    set(PDD_TARGET_NAME pdd-by)
+    set(PDD_BINDIR_NAME bin)
+    set(PDD_SHAREDIR_NAME share/pdd-by)
+endif (APPLE)
+
+add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/${PDD_SHAREDIR_NAME}")
 
 option(DEBUG "debug build" OFF)
 
@@ -18,7 +29,7 @@ if(DEBUG)
     add_definitions(-g -ggdb)
 endif(DEBUG)
 
-add_executable(pdd
+add_executable(${PDD_TARGET_NAME}
     answer.c
     chooser_dialog.c
     comment.c
@@ -38,11 +49,11 @@ add_executable(pdd
     yaml_helper.c
 )
 
-target_link_libraries(pdd ${PDD_LIBRARIES} ${YAML_LIBRARY})
+target_link_libraries(${PDD_TARGET_NAME} ${PDD_LIBRARIES} ${YAML_LIBRARY})
 
 if (NOT APPLE)
-    set_target_properties(pdd PROPERTIES LINK_FLAGS "-export-dynamic")
+    set_target_properties(${PDD_TARGET_NAME} PROPERTIES LINK_FLAGS "-export-dynamic")
 endif (NOT APPLE)
 
-install(TARGETS pdd DESTINATION bin)
-install(DIRECTORY data ui DESTINATION share/pdd-by)
+install(TARGETS ${PDD_TARGET_NAME} DESTINATION ${PDD_BINDIR_NAME})
+install(DIRECTORY data ui DESTINATION ${PDD_SHAREDIR_NAME})
