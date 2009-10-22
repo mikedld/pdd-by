@@ -9,6 +9,7 @@
 #include <yaml.h>
 
 extern gchar *program_dir;
+extern gboolean use_cache;
 
 static gchar *database_file = NULL;
 static sqlite3 *database = NULL;
@@ -22,20 +23,11 @@ gboolean database_exists()
 	if (database_file == NULL)
 	{
 		database_file = g_build_filename(g_get_user_cache_dir(), "pdd.db", NULL);
-		if (!use_cache)
-		{
-			if (!bootstrap_data())
-			{
-				g_free(database_file);
-				database_file = NULL;
-			}
-			return FALSE;
-		}
 	}
 
 	if (!use_cache)
 	{
-		return TRUE;
+		return database != NULL;
 	}
 
 	return g_access(database_file, R_OK) == 0;
@@ -43,10 +35,6 @@ gboolean database_exists()
 
 void database_cleanup()
 {
-	if (!use_cache)
-	{
-		return;
-	}
 	if (database)
 	{
 		sqlite3_close(database);
@@ -59,26 +47,22 @@ void database_cleanup()
 
 sqlite3 *database_get()
 {
-	if (!use_cache)
-	{
-		return (gpointer)TRUE;
-	}
-
 	if (database)
 	{
 		return database;
 	}
-	if (database_file == NULL)
+
+	if (use_cache && database_exists())
 	{
-		if (database_exists())
+		int result = sqlite3_open(database_file, &database);
+		if (result != SQLITE_OK)
 		{
-			g_error("tried getting database while not initialized\n");
+			g_error("unable to open database (%d)\n", result);
 		}
+		return database;
 	}
 
-	gboolean is_new = !database_exists();
-
-	int result = sqlite3_open(database_file, &database);
+	int result = sqlite3_open(use_cache ? database_file : ":memory:", &database);
 
 	if (result != SQLITE_OK)
 	{
@@ -90,7 +74,7 @@ sqlite3 *database_get()
 		g_unlink(database_file);
 		database = NULL;
 	}
-	else if (is_new && !bootstrap_data())
+	else if (!bootstrap_data())
 	{
 		sqlite3_close(database);
 		g_unlink(database_file);
@@ -107,11 +91,6 @@ sqlite3 *database_get()
 
 void database_tx_begin()
 {
-	if (!use_cache)
-	{
-		return;
-	}
-
 	database_tx_count++;
 	if (database_tx_count > 1)
 	{
@@ -126,11 +105,6 @@ void database_tx_begin()
 
 void database_tx_commit()
 {
-	if (!use_cache)
-	{
-		return;
-	}
-
 	if (!database_tx_count)
 	{
 		g_error("unable to commit (no transaction in effect)\n");

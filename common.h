@@ -11,12 +11,4 @@
 #define GNUC_VISIBLE
 #endif
 
-extern gboolean use_cache;
-
-typedef struct id_pointer_s
-{
-	gint64 id;
-	gpointer ptr;
-} id_pointer_t;
-
 #endif // CONFIG_H

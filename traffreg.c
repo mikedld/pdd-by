@@ -3,26 +3,6 @@
 #include "database.h"
 #include "question.h"
 
-static inline pdd_traffregs_t *get_traffregs()
-{
-	static pdd_traffregs_t *traffregs = NULL;
-	if (!traffregs)
-	{
-		traffregs = g_ptr_array_new();
-	}
-	return traffregs;
-}
-
-inline GHashTable *get_traffregs_images()
-{
-	static GHashTable *traffregs_images = NULL;
-	if (!traffregs_images)
-	{
-		traffregs_images = g_hash_table_new(NULL, NULL);
-	}
-	return traffregs_images;
-}
-
 static pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gchar *text)
 {
 	pdd_traffreg_t *traffreg = g_new(pdd_traffreg_t, 1);
@@ -50,14 +30,6 @@ void traffreg_free(pdd_traffreg_t *traffreg)
 
 gboolean traffreg_save(pdd_traffreg_t *traffreg)
 {
-	if (!use_cache)
-	{
-		static gint64 id = 0;
-		traffreg->id = ++id;
-		g_ptr_array_add(get_traffregs(), traffreg_copy(traffreg));
-		return TRUE;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -102,12 +74,6 @@ gboolean traffreg_save(pdd_traffreg_t *traffreg)
 
 gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
 {
-	if (!use_cache)
-	{
-		g_hash_table_insert(get_traffregs_images(), traffreg, image_copy_all(images));
-		return TRUE;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -156,20 +122,6 @@ gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
 
 pdd_traffreg_t *traffreg_find_by_id(gint64 id)
 {
-	if (!use_cache)
-	{
-		gsize i;
-		for (i = 0; i < get_traffregs()->len; i++)
-		{
-			const pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
-			if (traffreg->id == id)
-			{
-				return traffreg_copy(traffreg);
-			}
-		}
-		return NULL;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -213,20 +165,6 @@ pdd_traffreg_t *traffreg_find_by_id(gint64 id)
 
 pdd_traffreg_t *traffreg_find_by_number(gint32 number)
 {
-	if (!use_cache)
-	{
-		gsize i;
-		for (i = 0; i < get_traffregs()->len; i++)
-		{
-			const pdd_traffreg_t *traffreg = g_ptr_array_index(get_traffregs(), i);
-			if (traffreg->number == number)
-			{
-				return traffreg_copy(traffreg);
-			}
-		}
-		return NULL;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -268,28 +206,8 @@ pdd_traffreg_t *traffreg_find_by_number(gint32 number)
 	return traffreg_new_with_id(id, number, text);
 }
 
-static void find_traffregs_by_question(pdd_question_t *question, pdd_traffregs_t *traffregs, id_pointer_t *id_ptr)
-{
-	if (question->id == id_ptr->id)
-	{
-		*((pdd_traffregs_t **)id_ptr->ptr) = traffreg_copy_all(traffregs);
-	}
-}
-
 pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
 {
-	if (!use_cache)
-	{
-		pdd_traffregs_t *traffregs = NULL;
-		id_pointer_t id_ptr = {question_id, &traffregs};
-		g_hash_table_foreach(get_questions_traffregs(), (GHFunc)find_traffregs_by_question, &id_ptr);
-		if (!traffregs)
-		{
-			traffregs = g_ptr_array_new();
-		}
-		return traffregs;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;

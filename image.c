@@ -3,16 +3,6 @@
 #include "database.h"
 #include "traffreg.h"
 
-static inline pdd_images_t *get_images()
-{
-	static pdd_images_t *images = NULL;
-	if (!images)
-	{
-		images = g_ptr_array_new();
-	}
-	return images;
-}
-
 static pdd_image_t *image_new_with_id(gint64 id, const gchar *name, gconstpointer data, gsize data_length)
 {
 	pdd_image_t *image = g_new(pdd_image_t, 1);
@@ -42,14 +32,6 @@ void image_free(pdd_image_t *image)
 
 gboolean image_save(pdd_image_t *image)
 {
-	if (!use_cache)
-	{
-		static gint64 id = 0;
-		image->id = ++id;
-		g_ptr_array_add(get_images(), image_copy(image));
-		return TRUE;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -97,20 +79,6 @@ gboolean image_save(pdd_image_t *image)
 
 pdd_image_t *image_find_by_id(gint64 id)
 {
-	if (!use_cache)
-	{
-		gsize i;
-		for (i = 0; i < get_images()->len; i++)
-		{
-			const pdd_image_t *image = g_ptr_array_index(get_images(), i);
-			if (image->id == id)
-			{
-				return image_copy(image);
-			}
-		}
-		return NULL;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -155,20 +123,6 @@ pdd_image_t *image_find_by_id(gint64 id)
 
 pdd_image_t *image_find_by_name(const gchar *name)
 {
-	if (!use_cache)
-	{
-		gsize i;
-		for (i = 0; i < get_images()->len; i++)
-		{
-			const pdd_image_t *image = g_ptr_array_index(get_images(), i);
-			if (!g_strcmp0(image->name, name))
-			{
-				return image_copy(image);
-			}
-		}
-		return NULL;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -216,28 +170,8 @@ pdd_image_t *image_find_by_name(const gchar *name)
 	return image;
 }
 
-static void find_images_by_traffreg(pdd_traffreg_t *traffreg, pdd_images_t *images, id_pointer_t *id_ptr)
-{
-	if (traffreg->id == id_ptr->id)
-	{
-		*((pdd_images_t **)id_ptr->ptr) = image_copy_all(images);
-	}
-}
-
 pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
 {
-	if (!use_cache)
-	{
-		pdd_images_t *images = NULL;
-		id_pointer_t id_ptr = {traffreg_id, &images};
-		g_hash_table_foreach(get_traffregs_images(), (GHFunc)find_images_by_traffreg, &id_ptr);
-		if (!images)
-		{
-			images = g_ptr_array_new();
-		}
-		return images;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;

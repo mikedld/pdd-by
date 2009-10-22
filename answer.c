@@ -2,16 +2,6 @@
 #include "common.h"
 #include "database.h"
 
-static inline pdd_answers_t *get_answers()
-{
-	static pdd_answers_t *answers = NULL;
-	if (!answers)
-	{
-		answers = g_ptr_array_new();
-	}
-	return answers;
-}
-
 static pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gchar *text, gboolean is_correct)
 {
 	pdd_answer_t *answer = g_new(pdd_answer_t, 1);
@@ -20,11 +10,6 @@ static pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gch
 	answer->text = g_strdup(text);
 	answer->is_correct = is_correct;
 	return answer;
-}
-
-static pdd_answer_t *answer_copy(const pdd_answer_t *answer)
-{
-	return answer_new_with_id(answer->id, answer->question_id, answer->text, answer->is_correct);
 }
 
 pdd_answer_t *answer_new(gint64 question_id, const gchar *text, gboolean is_correct)
@@ -40,14 +25,6 @@ void answer_free(pdd_answer_t *answer)
 
 gboolean answer_save(pdd_answer_t *answer)
 {
-	if (!use_cache)
-	{
-		static gint64 id = 0;
-		answer->id = ++id;
-		g_ptr_array_add(get_answers(), answer_copy(answer));
-		return TRUE;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -98,20 +75,6 @@ gboolean answer_save(pdd_answer_t *answer)
 
 pdd_answer_t *answer_find_by_id(gint64 id)
 {
-	if (!use_cache)
-	{
-		gsize i;
-		for (i = 0; i < get_answers()->len; i++)
-		{
-			const pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
-			if (answer->id == id)
-			{
-				return answer_copy(answer);
-			}
-		}
-		return NULL;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
@@ -156,21 +119,6 @@ pdd_answer_t *answer_find_by_id(gint64 id)
 
 pdd_answers_t *answer_find_by_question(gint64 question_id)
 {
-	if (!use_cache)
-	{
-		pdd_answers_t *answers = g_ptr_array_new();
-		gsize i;
-		for (i = 0; i < get_answers()->len; i++)
-		{
-			const pdd_answer_t *answer = g_ptr_array_index(get_answers(), i);
-			if (answer->question_id == question_id)
-			{
-				g_ptr_array_add(answers, answer_copy(answer));
-			}
-		}
-		return answers;
-	}
-
 	static sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = database_get();
 	int result;
