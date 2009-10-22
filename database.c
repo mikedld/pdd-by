@@ -19,11 +19,6 @@ gboolean database_exists()
 		database_file = g_build_filename(g_get_user_cache_dir(), "pdd.db", NULL);
 	}
 
-	if (!use_cache)
-	{
-		return database != NULL;
-	}
-
 	return g_access(database_file, R_OK) == 0;
 }
 

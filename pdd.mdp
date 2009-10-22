@@ -66,6 +66,5 @@
     <Package file="/usr/lib/pkgconfig/sqlite3.pc" name="SQLite" IsProject="False" />
     <Package file="/usr/lib/pkgconfig/gmodule-2.0.pc" name="GModule" IsProject="False" />
     <Package file="/usr/lib/pkgconfig/gtk+-2.0.pc" name="GTK+" IsProject="False" />
-    <Package file="/usr/lib/pkgconfig/gconf-2.0.pc" name="gconf" IsProject="False" />
   </Packages>
 </Project>

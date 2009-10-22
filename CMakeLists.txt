@@ -3,7 +3,7 @@ project(PDD)
 
 include(FindPkgConfig)
 
-pkg_check_modules(PDD glib-2.0 sqlite3 gmodule-2.0 gtk+-2.0 gconf-2.0)
+pkg_check_modules(PDD glib-2.0 sqlite3 gmodule-2.0 gtk+-2.0)
 
 include_directories(${PDD_INCLUDE_DIRS})
 link_directories(${PDD_LIBRARY_DIRS})
