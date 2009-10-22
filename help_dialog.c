@@ -2,13 +2,16 @@
 #include "comment.h"
 #include "common.h"
 #include "image.h"
+#include "settings.h"
 #include "traffreg.h"
 
 static GtkWidget *help_dialog_new(GtkBuilder **builder)
 {
 	GError *err = NULL;
 	*builder = gtk_builder_new();
-	gtk_builder_add_from_file(*builder, PDD_SHARE_DIR "/ui/help_dialog.ui", &err);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "help_dialog.ui", NULL);
+	gtk_builder_add_from_file(*builder, ui_filename, &err);
+    g_free(ui_filename);
 	if (err)
 	{
 		g_error("%s\n", err->message);

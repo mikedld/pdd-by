@@ -1,0 +1,396 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		15409F750DCB9D6C00BC6E83 /* GLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 15409F740DCB9D6C00BC6E83 /* GLib.framework */; };
+		15409F790DCB9D7A00BC6E83 /* Gtk.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 15409F780DCB9D7A00BC6E83 /* Gtk.framework */; };
+		15409F7D0DCB9D8800BC6E83 /* Cairo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 15409F7C0DCB9D8800BC6E83 /* Cairo.framework */; };
+		C13B8EC3108FFC8500ADAA76 /* answer.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E7D108FFC8500ADAA76 /* answer.c */; };
+		C13B8EC4108FFC8500ADAA76 /* chooser_dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E7F108FFC8500ADAA76 /* chooser_dialog.c */; };
+		C13B8EC7108FFC8500ADAA76 /* comment.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E83108FFC8500ADAA76 /* comment.c */; };
+		C13B8ECB108FFC8500ADAA76 /* database.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E8A108FFC8500ADAA76 /* database.c */; };
+		C13B8ECC108FFC8500ADAA76 /* decode.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E8C108FFC8500ADAA76 /* decode.c */; };
+		C13B8ECD108FFC8500ADAA76 /* delphi_helper.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E8E108FFC8500ADAA76 /* delphi_helper.c */; };
+		C13B8ECE108FFC8500ADAA76 /* help_dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E90108FFC8500ADAA76 /* help_dialog.c */; };
+		C13B8ECF108FFC8500ADAA76 /* image.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8E92108FFC8500ADAA76 /* image.c */; };
+		C13B8EDC108FFC8500ADAA76 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EA8108FFC8500ADAA76 /* main.c */; };
+		C13B8EDD108FFC8500ADAA76 /* main_window.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EA9108FFC8500ADAA76 /* main_window.c */; };
+		C13B8EE0108FFC8500ADAA76 /* question.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EAD108FFC8500ADAA76 /* question.c */; };
+		C13B8EE1108FFC8500ADAA76 /* question_window.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EAF108FFC8500ADAA76 /* question_window.c */; };
+		C13B8EE4108FFC8500ADAA76 /* section.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EB3108FFC8500ADAA76 /* section.c */; };
+		C13B8EE5108FFC8500ADAA76 /* settings.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EB5108FFC8500ADAA76 /* settings.c */; };
+		C13B8EE6108FFC8500ADAA76 /* ticket_dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EB7108FFC8500ADAA76 /* ticket_dialog.c */; };
+		C13B8EE7108FFC8500ADAA76 /* topic.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EB9108FFC8500ADAA76 /* topic.c */; };
+		C13B8EE8108FFC8500ADAA76 /* traffreg.c in Sources */ = {isa = PBXBuildFile; fileRef = C13B8EBB108FFC8500ADAA76 /* traffreg.c */; };
+		C13B8F02108FFD0A00ADAA76 /* data in Resources */ = {isa = PBXBuildFile; fileRef = C13B8EFE108FFD0A00ADAA76 /* data */; };
+		C13B8F0A108FFD1400ADAA76 /* ui in Resources */ = {isa = PBXBuildFile; fileRef = C13B8F03108FFD1400ADAA76 /* ui */; };
+		C13B8F15108FFE6300ADAA76 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = C13B8F14108FFE6300ADAA76 /* libsqlite3.dylib */; };
+		C173ED57109009490014C97B /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C173ED56109009490014C97B /* Carbon.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		15409F740DCB9D6C00BC6E83 /* GLib.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLib.framework; path = /Library/Frameworks/GLib.framework; sourceTree = "<absolute>"; };
+		15409F780DCB9D7A00BC6E83 /* Gtk.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Gtk.framework; path = /Library/Frameworks/Gtk.framework; sourceTree = "<absolute>"; };
+		15409F7C0DCB9D8800BC6E83 /* Cairo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cairo.framework; path = /Library/Frameworks/Cairo.framework; sourceTree = "<absolute>"; };
+		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8D1107320486CEB800E47090 /* PddBy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PddBy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C13B8E7D108FFC8500ADAA76 /* answer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = answer.c; path = ../answer.c; sourceTree = SOURCE_ROOT; };
+		C13B8E7E108FFC8500ADAA76 /* answer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = answer.h; path = ../answer.h; sourceTree = SOURCE_ROOT; };
+		C13B8E7F108FFC8500ADAA76 /* chooser_dialog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = chooser_dialog.c; path = ../chooser_dialog.c; sourceTree = SOURCE_ROOT; };
+		C13B8E80108FFC8500ADAA76 /* chooser_dialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = chooser_dialog.h; path = ../chooser_dialog.h; sourceTree = SOURCE_ROOT; };
+		C13B8E83108FFC8500ADAA76 /* comment.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = comment.c; path = ../comment.c; sourceTree = SOURCE_ROOT; };
+		C13B8E84108FFC8500ADAA76 /* comment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = comment.h; path = ../comment.h; sourceTree = SOURCE_ROOT; };
+		C13B8E85108FFC8500ADAA76 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = ../common.h; sourceTree = SOURCE_ROOT; };
+		C13B8E8A108FFC8500ADAA76 /* database.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = database.c; path = ../database.c; sourceTree = SOURCE_ROOT; };
+		C13B8E8B108FFC8500ADAA76 /* database.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = database.h; path = ../database.h; sourceTree = SOURCE_ROOT; };
+		C13B8E8C108FFC8500ADAA76 /* decode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = decode.c; path = ../decode.c; sourceTree = SOURCE_ROOT; };
+		C13B8E8D108FFC8500ADAA76 /* decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = decode.h; path = ../decode.h; sourceTree = SOURCE_ROOT; };
+		C13B8E8E108FFC8500ADAA76 /* delphi_helper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = delphi_helper.c; path = ../delphi_helper.c; sourceTree = SOURCE_ROOT; };
+		C13B8E8F108FFC8500ADAA76 /* delphi_helper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = delphi_helper.h; path = ../delphi_helper.h; sourceTree = SOURCE_ROOT; };
+		C13B8E90108FFC8500ADAA76 /* help_dialog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = help_dialog.c; path = ../help_dialog.c; sourceTree = SOURCE_ROOT; };
+		C13B8E91108FFC8500ADAA76 /* help_dialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = help_dialog.h; path = ../help_dialog.h; sourceTree = SOURCE_ROOT; };
+		C13B8E92108FFC8500ADAA76 /* image.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = image.c; path = ../image.c; sourceTree = SOURCE_ROOT; };
+		C13B8E93108FFC8500ADAA76 /* image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = image.h; path = ../image.h; sourceTree = SOURCE_ROOT; };
+		C13B8EA8108FFC8500ADAA76 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = main.c; path = ../main.c; sourceTree = SOURCE_ROOT; };
+		C13B8EA9108FFC8500ADAA76 /* main_window.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = main_window.c; path = ../main_window.c; sourceTree = SOURCE_ROOT; };
+		C13B8EAA108FFC8500ADAA76 /* main_window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = main_window.h; path = ../main_window.h; sourceTree = SOURCE_ROOT; };
+		C13B8EAD108FFC8500ADAA76 /* question.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = question.c; path = ../question.c; sourceTree = SOURCE_ROOT; };
+		C13B8EAE108FFC8500ADAA76 /* question.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = question.h; path = ../question.h; sourceTree = SOURCE_ROOT; };
+		C13B8EAF108FFC8500ADAA76 /* question_window.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = question_window.c; path = ../question_window.c; sourceTree = SOURCE_ROOT; };
+		C13B8EB0108FFC8500ADAA76 /* question_window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = question_window.h; path = ../question_window.h; sourceTree = SOURCE_ROOT; };
+		C13B8EB3108FFC8500ADAA76 /* section.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = section.c; path = ../section.c; sourceTree = SOURCE_ROOT; };
+		C13B8EB4108FFC8500ADAA76 /* section.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = section.h; path = ../section.h; sourceTree = SOURCE_ROOT; };
+		C13B8EB5108FFC8500ADAA76 /* settings.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = settings.c; path = ../settings.c; sourceTree = SOURCE_ROOT; };
+		C13B8EB6108FFC8500ADAA76 /* settings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = settings.h; path = ../settings.h; sourceTree = SOURCE_ROOT; };
+		C13B8EB7108FFC8500ADAA76 /* ticket_dialog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ticket_dialog.c; path = ../ticket_dialog.c; sourceTree = SOURCE_ROOT; };
+		C13B8EB8108FFC8500ADAA76 /* ticket_dialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ticket_dialog.h; path = ../ticket_dialog.h; sourceTree = SOURCE_ROOT; };
+		C13B8EB9108FFC8500ADAA76 /* topic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = topic.c; path = ../topic.c; sourceTree = SOURCE_ROOT; };
+		C13B8EBA108FFC8500ADAA76 /* topic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = topic.h; path = ../topic.h; sourceTree = SOURCE_ROOT; };
+		C13B8EBB108FFC8500ADAA76 /* traffreg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = traffreg.c; path = ../traffreg.c; sourceTree = SOURCE_ROOT; };
+		C13B8EBC108FFC8500ADAA76 /* traffreg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = traffreg.h; path = ../traffreg.h; sourceTree = SOURCE_ROOT; };
+		C13B8EFE108FFD0A00ADAA76 /* data */ = {isa = PBXFileReference; lastKnownFileType = folder; name = data; path = ../data; sourceTree = SOURCE_ROOT; };
+		C13B8F03108FFD1400ADAA76 /* ui */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ui; path = ../ui; sourceTree = SOURCE_ROOT; };
+		C13B8F14108FFE6300ADAA76 /* libsqlite3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = /usr/lib/libsqlite3.dylib; sourceTree = "<absolute>"; };
+		C173ED56109009490014C97B /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8D11072E0486CEB800E47090 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15409F750DCB9D6C00BC6E83 /* GLib.framework in Frameworks */,
+				15409F790DCB9D7A00BC6E83 /* Gtk.framework in Frameworks */,
+				15409F7D0DCB9D8800BC6E83 /* Cairo.framework in Frameworks */,
+				C13B8F15108FFE6300ADAA76 /* libsqlite3.dylib in Frameworks */,
+				C173ED57109009490014C97B /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C173ED56109009490014C97B /* Carbon.framework */,
+				15409F7C0DCB9D8800BC6E83 /* Cairo.framework */,
+				15409F780DCB9D7A00BC6E83 /* Gtk.framework */,
+				15409F740DCB9D6C00BC6E83 /* GLib.framework */,
+			);
+			name = "Linked Frameworks";
+			sourceTree = "<group>";
+		};
+		1058C7A2FEA54F0111CA2CBB /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8F14108FFE6300ADAA76 /* libsqlite3.dylib */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		19C28FACFE9D520D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D1107320486CEB800E47090 /* PddBy.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		29B97314FDCFA39411CA2CEA /* PddBy */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8E7C108FFC5D00ADAA76 /* Sources */,
+				29B97317FDCFA39411CA2CEA /* Resources */,
+				29B97323FDCFA39411CA2CEA /* Frameworks */,
+				19C28FACFE9D520D11CA2CBB /* Products */,
+			);
+			name = PddBy;
+			sourceTree = "<group>";
+		};
+		29B97317FDCFA39411CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8F03108FFD1400ADAA76 /* ui */,
+				C13B8EFE108FFD0A00ADAA76 /* data */,
+				8D1107310486CEB800E47090 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */,
+				1058C7A2FEA54F0111CA2CBB /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C13B8E7C108FFC5D00ADAA76 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8F0B108FFD2800ADAA76 /* Models */,
+				C13B8F0E108FFDCB00ADAA76 /* Decoding */,
+				C13B8F0C108FFD6200ADAA76 /* User Interface */,
+				C13B8F0D108FFDA700ADAA76 /* Helpers */,
+				C13B8EA8108FFC8500ADAA76 /* main.c */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		C13B8F0B108FFD2800ADAA76 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8E7D108FFC8500ADAA76 /* answer.c */,
+				C13B8E7E108FFC8500ADAA76 /* answer.h */,
+				C13B8E83108FFC8500ADAA76 /* comment.c */,
+				C13B8E84108FFC8500ADAA76 /* comment.h */,
+				C13B8E92108FFC8500ADAA76 /* image.c */,
+				C13B8E93108FFC8500ADAA76 /* image.h */,
+				C13B8EAD108FFC8500ADAA76 /* question.c */,
+				C13B8EAE108FFC8500ADAA76 /* question.h */,
+				C13B8EB3108FFC8500ADAA76 /* section.c */,
+				C13B8EB4108FFC8500ADAA76 /* section.h */,
+				C13B8EB9108FFC8500ADAA76 /* topic.c */,
+				C13B8EBA108FFC8500ADAA76 /* topic.h */,
+				C13B8EBB108FFC8500ADAA76 /* traffreg.c */,
+				C13B8EBC108FFC8500ADAA76 /* traffreg.h */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
+		C13B8F0C108FFD6200ADAA76 /* User Interface */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8E7F108FFC8500ADAA76 /* chooser_dialog.c */,
+				C13B8E80108FFC8500ADAA76 /* chooser_dialog.h */,
+				C13B8E90108FFC8500ADAA76 /* help_dialog.c */,
+				C13B8E91108FFC8500ADAA76 /* help_dialog.h */,
+				C13B8EA9108FFC8500ADAA76 /* main_window.c */,
+				C13B8EAA108FFC8500ADAA76 /* main_window.h */,
+				C13B8EAF108FFC8500ADAA76 /* question_window.c */,
+				C13B8EB0108FFC8500ADAA76 /* question_window.h */,
+				C13B8EB7108FFC8500ADAA76 /* ticket_dialog.c */,
+				C13B8EB8108FFC8500ADAA76 /* ticket_dialog.h */,
+			);
+			name = "User Interface";
+			sourceTree = "<group>";
+		};
+		C13B8F0D108FFDA700ADAA76 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8E85108FFC8500ADAA76 /* common.h */,
+				C13B8E8A108FFC8500ADAA76 /* database.c */,
+				C13B8E8B108FFC8500ADAA76 /* database.h */,
+				C13B8E8E108FFC8500ADAA76 /* delphi_helper.c */,
+				C13B8E8F108FFC8500ADAA76 /* delphi_helper.h */,
+				C13B8EB5108FFC8500ADAA76 /* settings.c */,
+				C13B8EB6108FFC8500ADAA76 /* settings.h */,
+			);
+			name = Helpers;
+			sourceTree = "<group>";
+		};
+		C13B8F0E108FFDCB00ADAA76 /* Decoding */ = {
+			isa = PBXGroup;
+			children = (
+				C13B8E8C108FFC8500ADAA76 /* decode.c */,
+				C13B8E8D108FFC8500ADAA76 /* decode.h */,
+			);
+			name = Decoding;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8D1107260486CEB800E47090 /* PddBy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "PddBy" */;
+			buildPhases = (
+				8D1107290486CEB800E47090 /* Resources */,
+				8D11072C0486CEB800E47090 /* Sources */,
+				8D11072E0486CEB800E47090 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PddBy;
+			productInstallPath = "$(HOME)/Applications";
+			productName = PddBy;
+			productReference = 8D1107320486CEB800E47090 /* PddBy.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29B97313FDCFA39411CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "PddBy" */;
+			compatibilityVersion = "Xcode 2.4";
+			hasScannedForEncodings = 1;
+			mainGroup = 29B97314FDCFA39411CA2CEA /* PddBy */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8D1107260486CEB800E47090 /* PddBy */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8D1107290486CEB800E47090 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C13B8F02108FFD0A00ADAA76 /* data in Resources */,
+				C13B8F0A108FFD1400ADAA76 /* ui in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8D11072C0486CEB800E47090 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C13B8EC3108FFC8500ADAA76 /* answer.c in Sources */,
+				C13B8EC4108FFC8500ADAA76 /* chooser_dialog.c in Sources */,
+				C13B8EC7108FFC8500ADAA76 /* comment.c in Sources */,
+				C13B8ECB108FFC8500ADAA76 /* database.c in Sources */,
+				C13B8ECC108FFC8500ADAA76 /* decode.c in Sources */,
+				C13B8ECD108FFC8500ADAA76 /* delphi_helper.c in Sources */,
+				C13B8ECE108FFC8500ADAA76 /* help_dialog.c in Sources */,
+				C13B8ECF108FFC8500ADAA76 /* image.c in Sources */,
+				C13B8EDC108FFC8500ADAA76 /* main.c in Sources */,
+				C13B8EDD108FFC8500ADAA76 /* main_window.c in Sources */,
+				C13B8EE0108FFC8500ADAA76 /* question.c in Sources */,
+				C13B8EE1108FFC8500ADAA76 /* question_window.c in Sources */,
+				C13B8EE4108FFC8500ADAA76 /* section.c in Sources */,
+				C13B8EE5108FFC8500ADAA76 /* settings.c in Sources */,
+				C13B8EE6108FFC8500ADAA76 /* ticket_dialog.c in Sources */,
+				C13B8EE7108FFC8500ADAA76 /* topic.c in Sources */,
+				C13B8EE8108FFC8500ADAA76 /* traffreg.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		C01FCF4B08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				PRODUCT_NAME = PddBy;
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		C01FCF4C08A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Applications";
+				PRODUCT_NAME = PddBy;
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+		C01FCF4F08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				/Library/Frameworks/Cairo.framework/Headers = /Library/Frameworks/Cairo.framework/Headers;
+				/Library/Frameworks/GLib.framework/Headers = /Library/Frameworks/GLib.framework/Headers;
+				ARCHS = "$(NATIVE_ARCH)";
+				GCC_PREPROCESSOR_DEFINITIONS = APPLE;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/Library/Frameworks/Cairo.framework/Headers,
+					/Library/Frameworks/GLib.framework/Headers,
+					/Library/Frameworks/Gtk.framework/Headers,
+				);
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Debug;
+		};
+		C01FCF5008A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				/Library/Frameworks/Cairo.framework/Headers = /Library/Frameworks/Cairo.framework/Headers;
+				/Library/Frameworks/GLib.framework/Headers = /Library/Frameworks/GLib.framework/Headers;
+				GCC_PREPROCESSOR_DEFINITIONS = APPLE;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/Library/Frameworks/Cairo.framework/Headers,
+					/Library/Frameworks/GLib.framework/Headers,
+					/Library/Frameworks/Gtk.framework/Headers,
+				);
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "PddBy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4B08A954540054247B /* Debug */,
+				C01FCF4C08A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "PddBy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4F08A954540054247B /* Debug */,
+				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}

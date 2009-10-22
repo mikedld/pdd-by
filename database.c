@@ -1,6 +1,7 @@
 #include "database.h"
 #include "common.h"
 #include "section.h"
+#include "settings.h"
 #include "topic.h"
 
 #include <glib/gstdio.h>
@@ -58,7 +59,7 @@ sqlite3 *database_get()
 		g_error("unable to open database (%d)\n", result);
 	}
 
-	gchar *bootstrap_sql_filename = g_build_filename(PDD_SHARE_DIR, "data", "10.sql", NULL);
+	gchar *bootstrap_sql_filename = g_build_filename(get_share_dir(), "data", "10.sql", NULL);
 	gchar *bootstrap_sql;
 	GError *err = NULL;
 	if (!g_file_get_contents(bootstrap_sql_filename, &bootstrap_sql, NULL, &err))
@@ -79,6 +80,10 @@ sqlite3 *database_get()
 
 void database_tx_begin()
 {
+    if (!use_cache)
+    {
+        return;
+    }
 	database_tx_count++;
 	if (database_tx_count > 1)
 	{
@@ -93,6 +98,10 @@ void database_tx_begin()
 
 void database_tx_commit()
 {
+    if (!use_cache)
+    {
+        return;
+    }
 	if (!database_tx_count)
 	{
 		g_error("unable to commit (no transaction in effect)\n");

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interface>
-  <requires lib="gtk+" version="2.16"/>
+  <requires lib="gtk+" version="2.14"/>
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="main_window">
     <property name="title" translatable="yes">&#x423;&#x447;&#x435;&#x431;&#x43D;&#x430;&#x44F; &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x430;&#x43C;&#x43C;&#x430; &#x41F;&#x414;&#x414;</property>

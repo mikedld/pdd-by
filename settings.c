@@ -2,6 +2,11 @@
 #include "common.h"
 #include "database.h"
 
+#ifdef APPLE
+#include <Carbon/Carbon.h>
+#include <limits.h>
+#endif
+
 gchar *get_settings(const gchar *key)
 {
 	static sqlite3_stmt *stmt = NULL;
@@ -42,4 +47,20 @@ gchar *get_settings(const gchar *key)
 	const gchar *value = (const gchar *)sqlite3_column_text(stmt, 0);
 
 	return g_strdup(value);
+}
+
+const gchar *get_share_dir()
+{
+#ifndef APPLE
+	return PDD_SHARE_DIR;
+#else
+	static gchar share_dir[PATH_MAX] = {0,};
+    if (!share_dir[0])
+    {
+        CFURLRef resourcesURL;
+        resourcesURL = CFBundleCopyResourcesDirectoryURL(CFBundleGetMainBundle());
+        CFURLGetFileSystemRepresentation(resourcesURL, 1, (unsigned char *)share_dir, PATH_MAX);
+    }
+    return share_dir;
+#endif
 }

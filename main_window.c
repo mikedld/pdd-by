@@ -2,6 +2,7 @@
 #include "chooser_dialog.h"
 #include "common.h"
 #include "question_window.h"
+#include "settings.h"
 #include "ticket_dialog.h"
 #include "topic.h"
 
@@ -13,7 +14,9 @@ GtkWidget *main_window_new()
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, PDD_SHARE_DIR "/ui/main_window.ui", &err);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "main_window.ui", NULL);
+	gtk_builder_add_from_file(builder, ui_filename, &err);
+    g_free(ui_filename);
 	if (err)
 	{
 		g_error("%s\n", err->message);

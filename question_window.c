@@ -3,6 +3,7 @@
 #include "common.h"
 #include "help_dialog.h"
 #include "main_window.h"
+#include "settings.h"
 #include "question.h"
 
 #include <gdk/gdkkeysyms.h>
@@ -51,7 +52,9 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, PDD_SHARE_DIR "/ui/question_window.ui", &err);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "question_window.ui", NULL);
+	gtk_builder_add_from_file(builder, ui_filename, &err);
+    g_free(ui_filename);
 	if (err)
 	{
 		g_error("%s\n", err->message);

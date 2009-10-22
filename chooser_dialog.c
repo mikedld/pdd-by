@@ -1,6 +1,7 @@
 #include "chooser_dialog.h"
 #include "common.h"
 #include "section.h"
+#include "settings.h"
 #include "topic.h"
 
 #include <string.h>
@@ -15,7 +16,9 @@ static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gi
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, PDD_SHARE_DIR "/ui/chooser_dialog.ui", &err);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "chooser_dialog.ui", NULL);
+	gtk_builder_add_from_file(builder, ui_filename, &err);
+    g_free(ui_filename);
 	if (err)
 	{
 		g_error("%s\n", err->message);

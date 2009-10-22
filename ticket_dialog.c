@@ -1,5 +1,6 @@
 #include "ticket_dialog.h"
 #include "common.h"
+#include "settings.h"
 
 #include <gtk/gtk.h>
 
@@ -7,7 +8,9 @@ GtkWidget *ticket_dialog_new(gint maximum)
 {
 	GError *err = NULL;
 	GtkBuilder *builder = gtk_builder_new();
-	gtk_builder_add_from_file(builder, PDD_SHARE_DIR "/ui/ticket_dialog.ui", &err);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "ticket_dialog.ui", NULL);
+	gtk_builder_add_from_file(builder, ui_filename, &err);
+    g_free(ui_filename);
 	if (err)
 	{
 		g_error("%s\n", err->message);
