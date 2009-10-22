@@ -1,9 +1,12 @@
 #include "question.h"
 #include "common.h"
 #include "database.h"
+#include "settings.h"
 #include "topic.h"
 
-const gint ticket_topics_distribution[] = {1, 2, 2, 2, 1, 1, 1};
+#include <stdlib.h>
+
+gint *ticket_topics_distribution = NULL;//[] = {1, 2, 2, 2, 1, 1, 1};
 
 static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
 {
@@ -361,10 +364,37 @@ pdd_questions_t *question_find_by_topic(gint64 topic_id, gint ticket_number)
 	return question_find_with_offset(topic_id, 0, -1);
 }
 
+static void load_ticket_topics_distribution()
+{
+	if (ticket_topics_distribution)
+	{
+		return;
+	}
+
+	gchar *raw_ttd = get_settings("ticket_topics_distribution");
+	gchar **ttd = g_strsplit(raw_ttd, ":", 0);
+	g_free(raw_ttd);
+
+	ticket_topics_distribution = g_new(gint, g_strv_length(ttd));
+
+	gchar **it = ttd;
+	gsize i = 0;
+	while (*it)
+	{
+		ticket_topics_distribution[i] = atoi(*it);
+		it++;
+		i++;
+	}
+
+	g_strfreev(ttd);
+}
+
 pdd_questions_t *question_find_by_ticket(gint ticket_number)
 {
+	load_ticket_topics_distribution();
+
 	const pdd_topics_t *topics = topic_find_all();
-	gsize i;
+	gsize i = 0;
 	gint j;
 	pdd_questions_t *questions = g_ptr_array_new();
 	for (i = 0; i < topics->len; i++)
@@ -383,6 +413,8 @@ pdd_questions_t *question_find_by_ticket(gint ticket_number)
 
 pdd_questions_t *question_find_random()
 {
+	load_ticket_topics_distribution();
+
 	const pdd_topics_t *topics = topic_find_all();
 	gsize i;
 	gint j;

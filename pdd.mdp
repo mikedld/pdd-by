@@ -5,9 +5,6 @@
       <Build debugmode="True" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <Libs>
-        <Lib>yaml</Lib>
-      </Libs>
       <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="0" ExtraCompilerArguments="-W -Wextra -std=c99" ExtraLinkerArguments="" DefineSymbols="DEBUG MONODEVELOP" />
     </Configuration>
     <Configuration name="Release" SourceDirectory="." ctype="CProjectConfiguration">
@@ -15,9 +12,6 @@
       <Build debugmode="False" target="Bin" />
       <Execution runwithwarnings="True" consolepause="True" />
       <EnvironmentVariables />
-      <Libs>
-        <Lib>yaml</Lib>
-      </Libs>
       <CodeGeneration WarningLevel="All" WarningsAsErrors="False" OptimizationLevel="3" ExtraCompilerArguments="-W -Wextra -std=c99" ExtraLinkerArguments="" DefineSymbols="MONODEVELOP" />
     </Configuration>
   </Configurations>
@@ -49,22 +43,22 @@
     <File name="question.h" subtype="Code" buildaction="Nothing" />
     <File name="answer.c" subtype="Code" buildaction="Compile" />
     <File name="answer.h" subtype="Code" buildaction="Nothing" />
-    <File name="data/10.yml" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
-    <File name="yaml_helper.c" subtype="Code" buildaction="Compile" />
-    <File name="yaml_helper.h" subtype="Code" buildaction="Nothing" />
     <File name="topic.c" subtype="Code" buildaction="Compile" />
     <File name="topic.h" subtype="Code" buildaction="Nothing" />
     <File name="ui/question_window.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
     <File name="question_window.h" subtype="Code" buildaction="Nothing" />
     <File name="question_window.c" subtype="Code" buildaction="Compile" />
     <File name="ui/ticket_dialog.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
-    <File name="data/11.yml" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
     <File name="ticket_dialog.h" subtype="Code" buildaction="Nothing" />
     <File name="ticket_dialog.c" subtype="Code" buildaction="Compile" />
     <File name="common.h" subtype="Code" buildaction="Nothing" />
     <File name="help_dialog.c" subtype="Code" buildaction="Compile" />
     <File name="help_dialog.h" subtype="Code" buildaction="Nothing" />
     <File name="ui/help_dialog.ui" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="data/10.sql" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="data/11.sql" subtype="Code" buildaction="Nothing" copyToOutputDirectory="PreserveNewest" />
+    <File name="settings.c" subtype="Code" buildaction="Compile" />
+    <File name="settings.h" subtype="Code" buildaction="Nothing" />
   </Contents>
   <compiler ctype="GccCompiler" />
   <Packages>

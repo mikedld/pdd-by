@@ -5,10 +5,8 @@ include(FindPkgConfig)
 
 pkg_check_modules(PDD glib-2.0 sqlite3 gmodule-2.0 gtk+-2.0 gconf-2.0)
 
-find_library(YAML_LIBRARY yaml)
-
-include_directories(${PDD_INCLUDE_DIRS} ${YAML_INCLUDE_DIR})
-link_directories(${PDD_LIBRARY_DIRS} ${YAML_LIBRARY_DIR})
+include_directories(${PDD_INCLUDE_DIRS})
+link_directories(${PDD_LIBRARY_DIRS})
 
 if (APPLE)
     set(PDD_TARGET_NAME "ПДД-Беларусь")
@@ -43,13 +41,13 @@ add_executable(${PDD_TARGET_NAME}
     question.c
     question_window.c
     section.c
+    settings.c
     ticket_dialog.c
     topic.c
     traffreg.c
-    yaml_helper.c
 )
 
-target_link_libraries(${PDD_TARGET_NAME} ${PDD_LIBRARIES} ${YAML_LIBRARY})
+target_link_libraries(${PDD_TARGET_NAME} ${PDD_LIBRARIES})
 
 if (NOT APPLE)
     set_target_properties(${PDD_TARGET_NAME} PROPERTIES LINK_FLAGS "-export-dynamic")

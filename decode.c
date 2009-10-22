@@ -5,13 +5,14 @@
 #include "image.h"
 #include "question.h"
 #include "section.h"
+#include "settings.h"
 #include "topic.h"
 #include "traffreg.h"
 #include "delphi_helper.h"
-#include "yaml_helper.h"
 
 #include <glib/gstdio.h>
-#include <yaml.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct topic_question_s
 {
@@ -191,37 +192,16 @@ static gboolean decode_image(const gchar *path)
 
 static gboolean decode_images(const gchar *root_path)
 {
-	yaml_parser_t parser;
-	FILE *f = yaml_open_file();
-	if (!f)
-	{
-		g_error("unable to open YAML file\n");
-	}
-	if (!yaml_init_and_find_node(&parser, f, "image_dirs"))
-	{
-		return FALSE;
-	}
-	if (yaml_get_event(&parser, NULL) != YAML_SEQUENCE_START_EVENT)
-	{
-		g_error("malformed YAML\n");
-	}
+	gchar *raw_image_dirs = get_settings("image_dirs");
+	gchar **image_dirs = g_strsplit(raw_image_dirs, ":", 0);
+	g_free(raw_image_dirs);
+
 	gboolean result = TRUE;
 	database_tx_begin();
-	while (TRUE)
+	gchar **dir_name = image_dirs;
+	while (*dir_name)
 	{
-		gchar *dir_name;
-		yaml_event_type_t event = yaml_get_event(&parser, &dir_name);
-		if (event == YAML_SEQUENCE_END_EVENT)
-		{
-			g_free(dir_name);
-			break;
-		}
-		if (event != YAML_SCALAR_EVENT)
-		{
-			g_error("malformed YAML\n");
-		}
-
-		gchar *images_path = make_path(root_path, dir_name, NULL);
+		gchar *images_path = make_path(root_path, *dir_name, NULL);
 		GError *err = NULL;
 		GDir *dir = g_dir_open(images_path, 0, &err);
 		if (!dir)
@@ -248,10 +228,11 @@ static gboolean decode_images(const gchar *root_path)
 		{
 			break;
 		}
+
+		dir_name++;
 	}
 	database_tx_commit();
-	yaml_parser_delete(&parser);
-	fclose(f);
+	g_strfreev(image_dirs);
 	return result;
 }
 
