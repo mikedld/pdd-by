@@ -13,6 +13,8 @@
 #include <glib/gstdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
 
 typedef struct topic_question_s
 {
@@ -98,16 +100,48 @@ static gchar *make_path(const gchar *root_path, ...)
 	return result;
 }
 
-static gboolean init_magic(const gchar *root_path)
+static gboolean init_magic_2006(const gchar *root_path)
 {
 	gchar *pdd32_path = make_path(root_path, "pdd32.exe", NULL);
 	FILE *f = g_fopen(pdd32_path, "rb");
 	g_free(pdd32_path);
 	if (!f)
 	{
-		return FALSE;
+		g_error("pdd32.exe not found");
 	}
+	
+	guchar *buffer = g_malloc(16 * 1024 + 1);
+	fseek(f, 16 * 1024 + 1, SEEK_SET);
+	if (fread(buffer, 16 * 1024 + 1, 1, f) != 1)
+	{
+		g_error("pdd32.exe invalid");
+	}
+	
+	magic = 0;
+	set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
+	
+	int i;
+	for (i = 0; i < 255; i++)
+	{
+		magic ^= buffer[delphi_random(16 * 1024)];
+	}
+	magic = magic * buffer[16 * 1024] + 0x1998;
+	
+	g_free(buffer);
+	fclose(f);
+	return TRUE;
+}
 
+static gboolean init_magic_2008(const gchar *root_path)
+{
+	gchar *pdd32_path = make_path(root_path, "pdd32.exe", NULL);
+	FILE *f = g_fopen(pdd32_path, "rb");
+	g_free(pdd32_path);
+	if (!f)
+	{
+		g_error("pdd32.exe not found");
+	}
+	
 	guchar *buffer = g_malloc(32 * 1024);
 	fseek(f, 32 * 1024, SEEK_SET);
 	if (fread(buffer, 32 * 1024, 1, f) != 1)
@@ -115,11 +149,9 @@ static gboolean init_magic(const gchar *root_path)
 		g_error("pdd32.exe invalid");
 	}
 
-	// TODO: get pdd32.exe modification date since "2008" seems to be a release year
-	//       another way could be reading date at offset 0x0270 in pdd32.exe (for 10 & 11, it's "PDD-2008")
 	magic = 0x2008;
 	set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
-
+	
 	while (!feof(f))
 	{
 		int length = fread(buffer, 1, 32 * 1024, f);
@@ -144,11 +176,41 @@ static gboolean init_magic(const gchar *root_path)
 			}
 		}
 	}
-
-	g_print("magic: 0x%04x\n", magic);
-
+	
 	g_free(buffer);
 	fclose(f);
+	return TRUE;
+}
+
+static gboolean init_magic(const gchar *root_path)
+{
+	struct stat root_stat;
+	if (stat(root_path, &root_stat) == -1)
+	{
+		g_error("unable to stat root directory");
+	}
+
+	struct tm root_tm = *gmtime(&root_stat.st_mtime);
+
+	gboolean result = FALSE;
+	// TODO: better checks
+	switch (1900 + root_tm.tm_year)
+	{
+	case 2006: // v9
+	case 2007:
+		result = init_magic_2006(root_path);
+		break;
+	case 2008: // v10 & v11
+	case 2009:
+		result = init_magic_2008(root_path);
+		break;
+	}
+	if (!result)
+	{
+		g_error("unable to calculate magic number");
+	}
+
+	g_print("magic: 0x%04x\n", magic);
 	return TRUE;
 }
 
@@ -159,35 +221,92 @@ static gboolean decode_image(const gchar *path)
 
 	GError *err;
 	gchar *data;
-	gsize data_length, i;
+	gsize data_length, i, j;
 
 	if (!g_file_get_contents(path, &data, &data_length, &err))
 	{
 		g_error("%s\n", err->message);
 	}
 
-	if (strncmp(data, "BPFT", 4))
+	pdd_image_t *image = NULL;
+
+	if (!strncmp(data, "A8", 2))
+	{
+		// v9 image format
+
+		struct __attribute__((packed)) data_header_s
+		{
+			// file header
+			guint16 signature;
+			guint32 file_size;
+			guint16 reserved[2];
+			guint32 bitmap_offset;
+			// information header
+			guint32 header_size;
+			guint32 image_width;
+			guint32 image_height;
+			guint16 planes;
+			guint16 bpp;
+			// ... not important
+		} *header = (struct data_header_s *)data;
+
+		header->signature = 0x4d42; // 'BM'
+		
+		guint32 seed = 0;
+		for (i = 0; basename[i]; i++)
+		{
+			if (isnumber(basename[i]))
+			{
+				seed = seed * 10 + (basename[i] - '0');
+			}
+		}
+
+		set_randseed(seed + magic);
+
+		for (i = header->image_height; i > 0; i--)
+		{
+			gchar *scanline = &data[header->bitmap_offset + (i - 1) * ((header->image_width + 1) / 2)];
+			for (j = 0; j < (header->image_width + 1) / 2; j++)
+			{
+				g_assert(&scanline[j] < data + header->file_size);
+				scanline[j] ^= delphi_random(255);
+			}
+		}
+
+		image = image_new(g_strdelimit(basename, ".", '\0'), data, data_length);
+	}
+	else if (!strncmp(data, "BPFT", 4))
+	{
+		// v10 & v11 image format
+
+		for (i = 4; i < data_length; i++)
+		{
+			data[i] ^= delphi_random(255);
+		}
+		
+		image = image_new(g_strdelimit(basename, ".", '\0'), data + 4, data_length - 4);
+	}
+
+
+	g_free(data);
+	g_free(basename);
+
+	if (image)
+	{
+		gboolean result = image_save(image);
+		image_free(image);
+
+		if (!result)
+		{
+			g_error("unable to save image");
+		}
+	}
+	else
 	{
 		g_error("unknown image format\n");
 	}
 
-	for (i = 4; i < data_length; i++)
-	{
-		data[i] ^= delphi_random(255);
-	}
-
-	pdd_image_t *image = image_new(g_strdelimit(basename, ".", '\0'), data + 4, data_length - 4);
-	gboolean result = image_save(image);
-	image_free(image);
-	g_free(basename);
-	g_free(data);
-
-	if (!result)
-	{
-		g_error("unable to save image");
-	}
-	
-	return result;
+	return TRUE;
 }
 
 static gboolean decode_images(const gchar *root_path)
