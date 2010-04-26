@@ -10,6 +10,7 @@
 #include "traffreg.h"
 #include "delphi_helper.h"
 
+#include <ctype.h>
 #include <glib/gstdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -251,11 +252,11 @@ static gboolean decode_image(const gchar *path)
 		} *header = (struct data_header_s *)data;
 
 		header->signature = 0x4d42; // 'BM'
-		
+
 		guint32 seed = 0;
 		for (i = 0; basename[i]; i++)
 		{
-			if (isnumber(basename[i]))
+			if (isdigit(basename[i]))
 			{
 				seed = seed * 10 + (basename[i] - '0');
 			}
