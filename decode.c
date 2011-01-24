@@ -378,6 +378,7 @@ static gint32 *decode_table(const gchar *path, gsize *table_size)
 	gsize i;
 	for (i = 0; i < *table_size; i++)
 	{
+		table[i] = GINT32_FROM_LE(table[i]);
 		if (table[i] != -1)
 		{
 			table[i] ^= magic;
@@ -411,7 +412,7 @@ static topic_question_t *decode_topic_questions_table(const gchar *path, gsize *
 	gsize i;
 	for (i = 0; i < *table_size; i++)
 	{
-		table[i].question_offset ^= magic;
+		table[i].question_offset = GINT32_FROM_LE(table[i].question_offset) ^ magic;
 		// delphi has file offsets starting from 1, we need 0
 		// have to subtract another 1 from it (tell me why it points to 'R', not '[')
 		table[i].question_offset -= 2;
