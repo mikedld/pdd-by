@@ -1,8 +1,8 @@
 #ifndef CHOOSERWINDOW_H
 #define CHOOSERWINDOW_H
 
-#include "section.h"
-#include "topic.h"
+#include "pddby/section.h"
+#include "pddby/topic.h"
 
 #include <gtk/gtk.h>
 

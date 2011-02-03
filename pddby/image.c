@@ -1,5 +1,5 @@
 #include "image.h"
-#include "common.h"
+#include "config.h"
 #include "database.h"
 #include "traffreg.h"
 

@@ -1,5 +1,5 @@
 #include "database.h"
-#include "common.h"
+#include "config.h"
 #include "section.h"
 #include "settings.h"
 #include "topic.h"
@@ -7,8 +7,8 @@
 #include <glib/gstdio.h>
 #include <unistd.h>
 
-extern gboolean use_cache;
-
+static gboolean use_cache = FALSE;
+static gchar* share_dir = NULL;
 static gchar *database_file = NULL;
 static sqlite3 *database = NULL;
 static gint database_tx_count = 0;
@@ -23,6 +23,11 @@ gboolean database_exists()
 	return g_access(database_file, R_OK) == 0;
 }
 
+void database_init(gchar const* dir)
+{
+    share_dir = g_strdup(dir);
+}
+
 void database_cleanup()
 {
 	if (database)
@@ -33,6 +38,15 @@ void database_cleanup()
 	{
 		g_free(database_file);
 	}
+	if (share_dir)
+	{
+		g_free(share_dir);
+	}
+}
+
+void database_use_cache(gboolean value)
+{
+    use_cache = value;
 }
 
 sqlite3 *database_get()
@@ -59,7 +73,7 @@ sqlite3 *database_get()
 		g_error("unable to open database (%d)\n", result);
 	}
 
-	gchar *bootstrap_sql_filename = g_build_filename(get_share_dir(), "data", "10.sql", NULL);
+	gchar *bootstrap_sql_filename = g_build_filename(share_dir, "data", "10.sql", NULL);
 	gchar *bootstrap_sql;
 	GError *err = NULL;
 	if (!g_file_get_contents(bootstrap_sql_filename, &bootstrap_sql, NULL, &err))

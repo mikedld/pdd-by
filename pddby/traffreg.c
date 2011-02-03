@@ -1,5 +1,5 @@
 #include "traffreg.h"
-#include "common.h"
+#include "config.h"
 #include "database.h"
 #include "question.h"
 

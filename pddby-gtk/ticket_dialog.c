@@ -1,5 +1,5 @@
 #include "ticket_dialog.h"
-#include "common.h"
+#include "config.h"
 #include "settings.h"
 
 #include <gtk/gtk.h>

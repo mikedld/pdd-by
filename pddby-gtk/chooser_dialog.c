@@ -1,8 +1,8 @@
 #include "chooser_dialog.h"
-#include "common.h"
-#include "section.h"
+#include "config.h"
+#include "pddby/section.h"
+#include "pddby/topic.h"
 #include "settings.h"
-#include "topic.h"
 
 #include <string.h>
 

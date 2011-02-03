@@ -1,10 +1,10 @@
 #include "question_window.h"
-#include "answer.h"
-#include "common.h"
+#include "config.h"
 #include "help_dialog.h"
 #include "main_window.h"
+#include "pddby/answer.h"
+#include "pddby/question.h"
 #include "settings.h"
-#include "question.h"
 
 #include <gdk/gdkkeysyms.h>
 #include <math.h>

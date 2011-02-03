@@ -1,10 +1,10 @@
 #include "main_window.h"
 #include "chooser_dialog.h"
-#include "common.h"
+#include "config.h"
+#include "pddby/topic.h"
 #include "question_window.h"
 #include "settings.h"
 #include "ticket_dialog.h"
-#include "topic.h"
 
 extern GtkWidget *main_window;
 

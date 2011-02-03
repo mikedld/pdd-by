@@ -1,5 +1,5 @@
 #include "question.h"
-#include "common.h"
+#include "config.h"
 #include "database.h"
 #include "settings.h"
 #include "topic.h"

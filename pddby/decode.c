@@ -1,6 +1,6 @@
 #include "decode.h"
 #include "answer.h"
-#include "comment.h"
+#include "config.h"
 #include "database.h"
 #include "image.h"
 #include "question.h"

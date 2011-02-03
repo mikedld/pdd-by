@@ -1,7 +1,7 @@
 #ifndef HELP_DIALOG_H
 #define HELP_DIALOG_H
 
-#include "question.h"
+#include "pddby/question.h"
 
 #include <gtk/gtk.h>
 

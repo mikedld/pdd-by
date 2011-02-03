@@ -1,5 +1,5 @@
 #include "comment.h"
-#include "common.h"
+#include "config.h"
 #include "database.h"
 
 static pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)

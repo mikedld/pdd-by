@@ -1,5 +1,5 @@
 #include "answer.h"
-#include "common.h"
+#include "config.h"
 #include "database.h"
 
 static pdd_answer_t *answer_new_with_id(gint64 id, gint64 question_id, const gchar *text, gboolean is_correct)

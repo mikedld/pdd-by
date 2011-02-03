@@ -1,9 +1,9 @@
 #include "help_dialog.h"
-#include "comment.h"
-#include "common.h"
-#include "image.h"
+#include "config.h"
+#include "pddby/comment.h"
+#include "pddby/image.h"
+#include "pddby/traffreg.h"
 #include "settings.h"
-#include "traffreg.h"
 
 static GtkWidget *help_dialog_new(GtkBuilder **builder)
 {
