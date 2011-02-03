@@ -15,12 +15,12 @@ static gint database_tx_count = 0;
 
 gboolean database_exists()
 {
-	if (database_file == NULL)
-	{
-		database_file = g_build_filename(g_get_user_cache_dir(), "pdd.db", NULL);
-	}
+    if (database_file == NULL)
+    {
+        database_file = g_build_filename(g_get_user_cache_dir(), "pdd.db", NULL);
+    }
 
-	return g_access(database_file, R_OK) == 0;
+    return g_access(database_file, R_OK) == 0;
 }
 
 void database_init(gchar const* dir)
@@ -30,18 +30,18 @@ void database_init(gchar const* dir)
 
 void database_cleanup()
 {
-	if (database)
-	{
-		sqlite3_close(database);
-	}
-	if (database_file)
-	{
-		g_free(database_file);
-	}
-	if (share_dir)
-	{
-		g_free(share_dir);
-	}
+    if (database)
+    {
+        sqlite3_close(database);
+    }
+    if (database_file)
+    {
+        g_free(database_file);
+    }
+    if (share_dir)
+    {
+        g_free(share_dir);
+    }
 }
 
 void database_use_cache(gboolean value)
@@ -51,45 +51,45 @@ void database_use_cache(gboolean value)
 
 sqlite3 *database_get()
 {
-	if (database)
-	{
-		return database;
-	}
+    if (database)
+    {
+        return database;
+    }
 
-	if (use_cache && database_exists())
-	{
-		int result = sqlite3_open(database_file, &database);
-		if (result != SQLITE_OK)
-		{
-			g_error("unable to open database (%d)\n", result);
-		}
-		return database;
-	}
+    if (use_cache && database_exists())
+    {
+        int result = sqlite3_open(database_file, &database);
+        if (result != SQLITE_OK)
+        {
+            g_error("unable to open database (%d)\n", result);
+        }
+        return database;
+    }
 
-	int result = sqlite3_open(use_cache ? database_file : ":memory:", &database);
+    int result = sqlite3_open(use_cache ? database_file : ":memory:", &database);
 
-	if (result != SQLITE_OK)
-	{
-		g_error("unable to open database (%d)\n", result);
-	}
+    if (result != SQLITE_OK)
+    {
+        g_error("unable to open database (%d)\n", result);
+    }
 
-	gchar *bootstrap_sql_filename = g_build_filename(share_dir, "data", "10.sql", NULL);
-	gchar *bootstrap_sql;
-	GError *err = NULL;
-	if (!g_file_get_contents(bootstrap_sql_filename, &bootstrap_sql, NULL, &err))
-	{
-		g_error("%s\n", err->message);
-	}
+    gchar *bootstrap_sql_filename = g_build_filename(share_dir, "data", "10.sql", NULL);
+    gchar *bootstrap_sql;
+    GError *err = NULL;
+    if (!g_file_get_contents(bootstrap_sql_filename, &bootstrap_sql, NULL, &err))
+    {
+        g_error("%s\n", err->message);
+    }
 
-	result = sqlite3_exec(database, bootstrap_sql, NULL, NULL, NULL);
-	if (result != SQLITE_OK)
-	{
-		sqlite3_close(database);
-		g_unlink(database_file);
-		g_error("unable to bootstrap database (%d)\n", result);
-	}
+    result = sqlite3_exec(database, bootstrap_sql, NULL, NULL, NULL);
+    if (result != SQLITE_OK)
+    {
+        sqlite3_close(database);
+        g_unlink(database_file);
+        g_error("unable to bootstrap database (%d)\n", result);
+    }
 
-	return database;
+    return database;
 }
 
 void database_tx_begin()
@@ -98,16 +98,16 @@ void database_tx_begin()
     {
         return;
     }
-	database_tx_count++;
-	if (database_tx_count > 1)
-	{
-		return;
-	}
-	int result = sqlite3_exec(database_get(), "BEGIN EXCLUSIVE TRANSACTION", NULL, NULL, NULL);
-	if (result != SQLITE_OK)
-	{
-		g_error("unable to begin transaction (%d)\n", result);
-	}
+    database_tx_count++;
+    if (database_tx_count > 1)
+    {
+        return;
+    }
+    int result = sqlite3_exec(database_get(), "BEGIN EXCLUSIVE TRANSACTION", NULL, NULL, NULL);
+    if (result != SQLITE_OK)
+    {
+        g_error("unable to begin transaction (%d)\n", result);
+    }
 }
 
 void database_tx_commit()
@@ -116,18 +116,18 @@ void database_tx_commit()
     {
         return;
     }
-	if (!database_tx_count)
-	{
-		g_error("unable to commit (no transaction in effect)\n");
-	}
-	database_tx_count--;
-	if (database_tx_count)
-	{
-		return;
-	}
-	int result = sqlite3_exec(database_get(), "COMMIT TRANSACTION", NULL, NULL, NULL);
-	if (result != SQLITE_OK)
-	{
-		g_error("unable to commit transaction (%d)\n", result);
-	}
+    if (!database_tx_count)
+    {
+        g_error("unable to commit (no transaction in effect)\n");
+    }
+    database_tx_count--;
+    if (database_tx_count)
+    {
+        return;
+    }
+    int result = sqlite3_exec(database_get(), "COMMIT TRANSACTION", NULL, NULL, NULL);
+    if (result != SQLITE_OK)
+    {
+        g_error("unable to commit transaction (%d)\n", result);
+    }
 }

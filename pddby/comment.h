@@ -5,9 +5,9 @@
 
 typedef struct pdd_comment_s
 {
-	gint64 id;
-	gint32 number;
-	gchar *text;
+    gint64 id;
+    gint32 number;
+    gchar *text;
 } pdd_comment_t;
 
 typedef GPtrArray pdd_comments_t;

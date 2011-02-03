@@ -7,9 +7,9 @@
 
 typedef struct pdd_traffreg_s
 {
-	gint64 id;
-	gint32 number;
-	gchar *text;
+    gint64 id;
+    gint32 number;
+    gchar *text;
 } pdd_traffreg_t;
 
 typedef GPtrArray pdd_traffregs_t;

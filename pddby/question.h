@@ -8,12 +8,12 @@
 
 typedef struct pdd_question_s
 {
-	gint64 id;
-	gint64 topic_id;
-	gchar *text;
-	gint64 image_id;
-	gchar *advice;
-	gint64 comment_id;
+    gint64 id;
+    gint64 topic_id;
+    gchar *text;
+    gint64 image_id;
+    gchar *advice;
+    gint64 comment_id;
 } pdd_question_t;
 
 typedef GPtrArray pdd_questions_t;

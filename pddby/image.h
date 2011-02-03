@@ -5,10 +5,10 @@
 
 typedef struct pdd_image_s
 {
-	gint64 id;
-	gchar *name;
-	gpointer data;
-	gsize data_length;
+    gint64 id;
+    gchar *name;
+    gpointer data;
+    gsize data_length;
 } pdd_image_t;
 
 typedef GPtrArray pdd_images_t;

@@ -9,10 +9,10 @@
 
 typedef struct pdd_answer_s
 {
-	gint64 id;
-	gint64 question_id;
-	gchar *text;
-	gboolean is_correct;
+    gint64 id;
+    gint64 question_id;
+    gchar *text;
+    gboolean is_correct;
 } pdd_answer_t;
 
 typedef GPtrArray pdd_answers_t;

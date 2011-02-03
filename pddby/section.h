@@ -5,10 +5,10 @@
 
 typedef struct pdd_section_s
 {
-	gint64 id;
-	gchar *name;
-	gchar *title_prefix;
-	gchar *title;
+    gint64 id;
+    gchar *name;
+    gchar *title_prefix;
+    gchar *title;
 } pdd_section_t;
 
 typedef GPtrArray pdd_sections_t;

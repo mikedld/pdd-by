@@ -5,9 +5,9 @@
 
 typedef struct pdd_topic_s
 {
-	gint64 id;
-	gint number;
-	gchar *title;
+    gint64 id;
+    gint number;
+    gchar *title;
 } pdd_topic_t;
 
 typedef GPtrArray pdd_topics_t;
