@@ -80,7 +80,8 @@ gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)", -1,
+            &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -128,7 +129,8 @@ pdd_traffreg_t *traffreg_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -171,7 +173,8 @@ pdd_traffreg_t *traffreg_find_by_number(gint32 number)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -214,7 +217,8 @@ pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN `questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
+            "`questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

@@ -74,7 +74,8 @@ pdd_comment_t *comment_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("comment: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -117,7 +118,8 @@ pdd_comment_t *comment_find_by_number(gint32 number)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("comment: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

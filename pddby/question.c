@@ -8,7 +8,8 @@
 
 gint *ticket_topics_distribution = NULL;
 
-static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
+static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id,
+    const gchar *advice, gint64 comment_id)
 {
     pdd_question_t *question = g_new(pdd_question_t, 1);
     question->id = id;
@@ -20,7 +21,8 @@ static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gc
     return question;
 }
 
-pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id)
+pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice,
+    gint64 comment_id)
 {
     return question_new_with_id(0, topic_id, text, image_id, advice, comment_id);
 }
@@ -40,7 +42,8 @@ gboolean question_save(pdd_question_t *question)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `questions` (`topic_id`, `text`, `image_id`, `advice`, `comment_id`) VALUES (?, ?, ?, ?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `questions` (`topic_id`, `text`, `image_id`, `advice`, "
+            "`comment_id`) VALUES (?, ?, ?, ?, ?)", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -102,7 +105,8 @@ gboolean question_set_sections(pdd_question_t *question, pdd_sections_t *section
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `questions_sections` (`question_id`, `section_id`) VALUES (?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `questions_sections` (`question_id`, `section_id`) VALUES (?, ?)",
+            -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -150,7 +154,8 @@ gboolean question_set_traffregs(pdd_question_t *question, pdd_traffregs_t *traff
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `questions_traffregs` (`question_id`, `traffreg_id`) VALUES (?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `questions_traffregs` (`question_id`, `traffreg_id`) VALUES "
+            "(?, ?)", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -198,7 +203,8 @@ pdd_question_t *question_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `topic_id`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `topic_id`, `text`, `image_id`, `advice`, `comment_id` FROM "
+            "`questions` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -244,7 +250,9 @@ pdd_questions_t *question_find_by_section(gint64 section_id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT q.`rowid`, q.`topic_id`, q.`text`, q.`image_id`, q.`advice`, q.`comment_id` FROM `questions` q INNER JOIN `questions_sections` qs ON q.`rowid`=qs.`question_id` WHERE qs.`section_id`=?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT q.`rowid`, q.`topic_id`, q.`text`, q.`image_id`, q.`advice`, "
+            "q.`comment_id` FROM `questions` q INNER JOIN `questions_sections` qs ON q.`rowid`=qs.`question_id` WHERE "
+            "qs.`section_id`=?", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -298,7 +306,8 @@ pdd_questions_t *question_find_with_offset(gint64 topic_id, gint offset, gint co
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` WHERE `topic_id`=? LIMIT ?,?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` "
+            "WHERE `topic_id`=? LIMIT ?,?", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -403,7 +412,8 @@ pdd_questions_t *question_find_by_ticket(gint ticket_number)
         gint32 count = topic_get_question_count(topic);
         for (j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pdd_questions_t *topic_questions = question_find_with_offset(topic->id, ((ticket_number - 1) * 10 + j) % count, 1);
+            pdd_questions_t *topic_questions = question_find_with_offset(topic->id,
+                ((ticket_number - 1) * 10 + j) % count, 1);
             g_ptr_array_add(questions, g_ptr_array_index(topic_questions, 0));
             g_ptr_array_free(topic_questions, TRUE);
         }
@@ -425,7 +435,8 @@ pdd_questions_t *question_find_random()
         gint32 count = topic_get_question_count(topic);
         for (j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pdd_questions_t *topic_questions = question_find_with_offset(topic->id, g_random_int_range(0, count - 1), 1);
+            pdd_questions_t *topic_questions = question_find_with_offset(topic->id, g_random_int_range(0, count - 1),
+                1);
             g_ptr_array_add(questions, g_ptr_array_index(topic_questions, 0));
             g_ptr_array_free(topic_questions, TRUE);
         }

@@ -178,7 +178,8 @@ pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN `images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
+            "`images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

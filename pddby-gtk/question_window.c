@@ -73,13 +73,18 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
     g_free(window_title);
 
     GtkAccelGroup *accel_group = gtk_accel_group_new();
-    gtk_accel_group_connect(accel_group, GDK_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer, window, NULL));
-    gtk_accel_group_connect(accel_group, GDK_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window, NULL));
+    gtk_accel_group_connect(accel_group, GDK_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer, window,
+        NULL));
+    gtk_accel_group_connect(accel_group, GDK_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window,
+        NULL));
     if (!is_exam)
     {
-        gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window, NULL));
-        gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs, window, NULL));
-        gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment, window, NULL));
+        gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window,
+            NULL));
+        gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs,
+            window, NULL));
+        gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment,
+            window, NULL));
     }
     gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
@@ -108,7 +113,8 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
     }
     else
     {
-        gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить, <b>F1</b> - правила, <b>F2</b> - комментарий");
+        gtk_label_set_markup(hint_label, "<b>Ввод</b> - ответить, <b>Пробел</b> - пропустить, <b>F1</b> - правила, "
+            "<b>F2</b> - комментарий");
         gtk_widget_hide(time_bar);
         exam_timer_source_id = 0;
     }
@@ -166,7 +172,8 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
         gchar *new_progress_text;
         if (count[IncorrectState] && count[SkippedState])
         {
-            new_progress_text = g_strdup_printf("%s (%d неверно, %d пропущено)", progress_text, count[IncorrectState], count[SkippedState]);
+            new_progress_text = g_strdup_printf("%s (%d неверно, %d пропущено)", progress_text, count[IncorrectState],
+                count[SkippedState]);
         }
         else if (count[IncorrectState])
         {
@@ -181,7 +188,8 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     }
     GtkProgressBar *progress_bar = GTK_PROGRESS_BAR(gtk_builder_get_object(builder, "pb_progress"));
     gtk_progress_bar_set_text(progress_bar, progress_text);
-    gtk_progress_bar_set_fraction(progress_bar, (count[CorrectState] + count[IncorrectState]) * 1. / statistics->states->len);
+    gtk_progress_bar_set_fraction(progress_bar, (count[CorrectState] + count[IncorrectState]) * 1. /
+        statistics->states->len);
     g_free(progress_text);
 
     gchar *question_text = g_strdup_printf("<big><b>%s</b></big>", question->text);
@@ -241,7 +249,8 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
         }
         image_free(image);
         GdkPixbuf *pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-        pixbuf = gdk_pixbuf_scale_simple(pixbuf, 350, 350 * gdk_pixbuf_get_height(pixbuf) / gdk_pixbuf_get_width(pixbuf), GDK_INTERP_BILINEAR);
+        pixbuf = gdk_pixbuf_scale_simple(pixbuf, 350, 350 * gdk_pixbuf_get_height(pixbuf) /
+            gdk_pixbuf_get_width(pixbuf), GDK_INTERP_BILINEAR);
         g_object_unref(loader);
         gtk_image_set_from_pixbuf(question_image, pixbuf);
         g_object_unref(pixbuf);
@@ -369,7 +378,8 @@ static void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
     else
     {
         GtkLabel *label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(answer_radio)));
-        gchar *new_text = g_strdup_printf("<span underline='error' underline_color='red'>%s</span>", gtk_label_get_text(label));
+        gchar *new_text = g_strdup_printf("<span underline='error' underline_color='red'>%s</span>",
+            gtk_label_get_text(label));
         gtk_label_set_markup(label, new_text);
         g_free(new_text);
         statistics->try_count++;
@@ -381,7 +391,8 @@ static void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
                 GtkWidget *error_dialog = gtk_message_dialog_new_with_markup(window, GTK_DIALOG_MODAL,
                     GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
                     "<span size='large' weight='bold'>Правильный ответ: %d</span>", statistics->correct_index + 1);
-                const gchar *advice = ((pdd_question_t *)g_ptr_array_index(statistics->questions, statistics->index))->advice;
+                const gchar *advice = ((pdd_question_t *)g_ptr_array_index(statistics->questions, statistics->index))->
+                    advice;
                 if (advice)
                 {
                     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(error_dialog), "%s", advice);

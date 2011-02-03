@@ -39,7 +39,8 @@ gboolean section_save(pdd_section_t *section)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)", -1,
+            &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -89,7 +90,8 @@ pdd_section_t *section_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? "
+            "LIMIT 1", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -133,7 +135,8 @@ pdd_section_t *section_find_by_name(const gchar *name)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? "
+            "LIMIT 1", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -177,7 +180,8 @@ pdd_sections_t *section_find_all()
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -241,7 +245,8 @@ gint32 section_get_question_count(pdd_section_t *section)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

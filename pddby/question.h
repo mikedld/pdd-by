@@ -22,7 +22,8 @@ pdd_questions_t *get_questions();
 GHashTable *get_questions_sections();
 GHashTable *get_questions_traffregs();
 
-pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice, gint64 comment_id);
+pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice,
+    gint64 comment_id);
 void question_free(pdd_question_t *question);
 
 gboolean question_save(pdd_question_t *question);

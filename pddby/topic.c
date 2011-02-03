@@ -75,7 +75,8 @@ pdd_topic_t *topic_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `number`, `title` FROM `topics` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `number`, `title` FROM `topics` WHERE `rowid`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("topic: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -118,7 +119,8 @@ pdd_topic_t *topic_find_by_number(gint number)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title` FROM `topics` WHERE `number`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title` FROM `topics` WHERE `number`=? LIMIT 1", -1, &stmt,
+            NULL);
         if (result != SQLITE_OK)
         {
             g_error("topic: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

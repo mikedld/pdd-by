@@ -31,7 +31,8 @@ gboolean answer_save(pdd_answer_t *answer)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)",
+            -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -81,7 +82,8 @@ pdd_answer_t *answer_find_by_id(gint64 id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? "
+            "LIMIT 1", -1, &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
@@ -125,7 +127,8 @@ pdd_answers_t *answer_find_by_question(gint64 question_id)
 
     if (!stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?", -1, &stmt, NULL);
+        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?", -1,
+            &stmt, NULL);
         if (result != SQLITE_OK)
         {
             g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));

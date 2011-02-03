@@ -22,9 +22,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        GtkWidget *directory_dialog = gtk_file_chooser_dialog_new("Укажите путь к директории Pdd32 на компакт-диске", NULL,
-            GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-            GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT, NULL);
+        GtkWidget *directory_dialog = gtk_file_chooser_dialog_new("Укажите путь к директории Pdd32 на компакт-диске",
+            NULL, GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN,
+            GTK_RESPONSE_ACCEPT, NULL);
         GtkWidget *use_cache_checkbutton = gtk_check_button_new_with_label("Кэшировать данные на жёсткий диск "
             "(подумайте дважды: \"Новый поворот\" не одобряет и может обидеться)");
         gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(directory_dialog), use_cache_checkbutton);

@@ -66,7 +66,8 @@ once_again:
         }
         gtk_widget_destroy(ticket_dialog);
         gtk_widget_destroy(dialog);
-        GtkWidget *question_window = question_window_new_with_topic(topic, ticket_dialog_get_number(ticket_dialog), is_exam);
+        GtkWidget *question_window = question_window_new_with_topic(topic, ticket_dialog_get_number(ticket_dialog),
+            is_exam);
         gtk_widget_show(question_window);
     }
     else

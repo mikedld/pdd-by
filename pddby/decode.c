@@ -445,8 +445,8 @@ typedef gboolean (*object_save_t)(gpointer *);
 typedef void (*object_free_t)(gpointer *);
 typedef void (*object_set_images_t)(gpointer *, pdd_images_t *images);
 
-static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
-    object_new_t object_new, object_save_t object_save, object_free_t object_free, object_set_images_t object_set_images)
+static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path, object_new_t object_new,
+    object_save_t object_save, object_free_t object_free, object_set_images_t object_set_images)
 {
     gsize table_size;
     gint32 *table = decode_table(dat_path, &table_size);
@@ -455,7 +455,8 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
     gchar *str = decode_string(dbt_path, &str_size, 0);
 
     GError *err = NULL;
-    GRegex *simple_data_regex = g_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$", G_REGEX_OPTIMIZE | G_REGEX_DOTALL, 0, &err);
+    GRegex *simple_data_regex = g_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$",
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL, 0, &err);
     if (err)
     {
         g_error("%s\n", err->message);
@@ -468,7 +469,8 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
     } markup_regexes[] =
     {
         {
-            g_regex_new("@(.+?)@", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+            g_regex_new("@(.+?)@", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY,
+                &err),
             "<span underline='single' underline_color='#ff0000'>\\1</span>"
         },
         {
@@ -488,15 +490,18 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
             "<span underline='single' underline_color='#0000cc'><b>\\1</b></span>"
         },
         {
-            g_regex_new("\\^R(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+            g_regex_new("\\^R(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
+                G_REGEX_MATCH_NEWLINE_ANY, &err),
             "<span color='#cc0000'><b>\\1</b></span>"
         },
         {
-            g_regex_new("\\^G(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+            g_regex_new("\\^G(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
+                G_REGEX_MATCH_NEWLINE_ANY, &err),
             "<span color='#00cc00'><b>\\1</b></span>"
         },
         {
-            g_regex_new("\\^B(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY, &err),
+            g_regex_new("\\^B(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
+                G_REGEX_MATCH_NEWLINE_ANY, &err),
             "<span color='#0000cc'><b>\\1</b></span>"
         },
         {
@@ -566,7 +571,8 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
             }
             for (j = 0; j < sizeof(markup_regexes) / sizeof(*markup_regexes); j++)
             {
-                gchar *new_text = g_regex_replace(markup_regexes[j].regex, text, -1, 0, markup_regexes[j].replacement, 0, &err);
+                gchar *new_text = g_regex_replace(markup_regexes[j].regex, text, -1, 0, markup_regexes[j].replacement,
+                    0, &err);
                 if (err)
                 {
                     g_error("%s\n", err->message);
@@ -649,7 +655,8 @@ static gboolean decode_traffregs(const gchar *root_path)
     return result;
 }
 
-static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_question_t *sections_data, gsize sections_data_size)
+static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_question_t *sections_data,
+    gsize sections_data_size)
 {
     topic_question_t *table = sections_data;
     while (table->topic_number != topic_number)
@@ -672,7 +679,8 @@ static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number,
     {
         g_error("%s\n", err->message);
     }
-    GRegex *answers_regex = g_regex_new("^($^$)?\\d\\.?\\s+", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err);
+    GRegex *answers_regex = g_regex_new("^($^$)?\\d\\.?\\s+", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE,
+        G_REGEX_MATCH_NEWLINE_ANY, &err);
     if (err)
     {
         g_error("%s\n", err->message);
@@ -702,7 +710,8 @@ static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number,
             }
         }
 
-        gchar *text = g_convert(str + table[i].question_offset, next_offset - table[i].question_offset, "utf-8", "cp1251", NULL, NULL, &err);
+        gchar *text = g_convert(str + table[i].question_offset, next_offset - table[i].question_offset, "utf-8",
+            "cp1251", NULL, NULL, &err);
         if (!text)
         {
             g_error("%s\n", err->message);
@@ -779,7 +788,8 @@ static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number,
                         {
                             g_error("%s\n", err->message);
                         }
-                        pdd_answer_t *answer = answer_new(0, g_regex_replace_literal(spaces_regex, answer_text, -1, 0, " ", 0, &err), FALSE);
+                        pdd_answer_t *answer = answer_new(0, g_regex_replace_literal(spaces_regex, answer_text, -1, 0,
+                            " ", 0, &err), FALSE);
                         g_free(answer_text);
                         if (err)
                         {
@@ -851,55 +861,7 @@ static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number,
             p++;
         }
         g_strfreev(parts);
-        /*g_print("---\n  image_id: %ld\n  text: \"%s\"\n  advice: \"%s\"\n  comment_id: %ld\n  answer_number: %d\n", question->image_id, question->text, question->advice, question->comment_id, answer_number);
-        g_print("  answers:");
-        if (question_answers->len)
-        {
-            gsize k;
-            for (k = 0; k < question_answers->len; k++)
-            {
-                g_print("\n    \"%s\"", ((pdd_answer_t *)g_ptr_array_index(question_answers, k))->text);
-                if (k == answer_number)
-                {
-                    g_print(" (correct)");
-                }
-            }
-            g_print("\n");
-        }
-        else
-        {
-            g_print(" (none)\n");
-        }
-        g_print("  sections:");
-        if (question_sections->len)
-        {
-            gsize k;
-            g_print(" %ld", ((pdd_section_t *)g_ptr_array_index(question_sections, 0))->id);
-            for (k = 1; k < question_sections->len; k++)
-            {
-                g_print(", %ld", ((pdd_section_t *)g_ptr_array_index(question_sections, k))->id);
-            }
-            g_print("\n");
-        }
-        else
-        {
-            g_print(" (none)\n");
-        }
-        g_print("  traffregs:");
-        if (question_traffregs->len)
-        {
-            gsize k;
-            g_print(" %ld", ((pdd_traffreg_t *)g_ptr_array_index(question_traffregs, 0))->id);
-            for (k = 1; k < question_traffregs->len; k++)
-            {
-                g_print(", %ld", ((pdd_traffreg_t *)g_ptr_array_index(question_traffregs, k))->id);
-            }
-            g_print("\n");
-        }
-        else
-        {
-            g_print(" (none)\n");
-        }*/
+
         result = question_save(question);
         if (!result)
         {
