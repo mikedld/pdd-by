@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#cmakedefine PDDBY_SHARE_DIR "${PDDBY_SHARE_DIR}"
+#cmakedefine PDDBY_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/${PDDBY_SHARE_DIR}"
 
 #if __GNUC__ >= 4
 #define GNUC_VISIBLE __attribute__((visibility("default")))

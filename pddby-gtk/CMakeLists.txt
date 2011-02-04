@@ -74,4 +74,8 @@ elseif(UNIX)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         LINK_FLAGS "-export-dynamic"
     )
+
+    install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+    install(FILES ${${PROJECT_NAME}_UI_FILES} DESTINATION ${PDDBY_SHARE_DIR}/gtk)
+    install(FILES ${pddby_SQL_FILES} DESTINATION ${PDDBY_SHARE_DIR}/data)
 endif()
