@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-project(pddby-main)
+project(pddby-main C)
 
 option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
 
@@ -27,15 +27,14 @@ endif()
 #    set(PDD_SHAREDIR_NAME share/pdd-by)
 #endif (APPLE)
 
-add_definitions(
-    -W -Wall -Wextra -Werror -std=c99 -fvisibility=hidden
-    -DPDD_SHARE_DIR="${CMAKE_INSTALL_PREFIX}/${PDD_SHAREDIR_NAME}"
-)
+add_definitions(-W -Wall -Wextra -Werror -std=c99 -fvisibility=hidden)
 
 if(APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,-dead_strip_dylibs")
+    add_definitions(-D_DARWIN_PLATFORM_)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dead_strip_dylibs")
 elseif(UNIX)
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,-as-needed")
+    set(PDDBY_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/share/pddby")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-as-needed")
 endif()
 
 configure_file(config.h.in ${${PROJECT_NAME}_BINARY_DIR}/config.h)

@@ -14,7 +14,7 @@ GtkWidget *main_window_new()
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
-    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "main_window.ui", NULL);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "gtk", "main_window.ui", NULL);
     gtk_builder_add_from_file(builder, ui_filename, &err);
     g_free(ui_filename);
     if (err)

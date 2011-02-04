@@ -9,7 +9,7 @@ static GtkWidget *help_dialog_new(GtkBuilder **builder)
 {
     GError *err = NULL;
     *builder = gtk_builder_new();
-    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "help_dialog.ui", NULL);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "gtk", "help_dialog.ui", NULL);
     gtk_builder_add_from_file(*builder, ui_filename, &err);
     g_free(ui_filename);
     if (err)

@@ -52,7 +52,7 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
-    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "question_window.ui", NULL);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "gtk", "question_window.ui", NULL);
     gtk_builder_add_from_file(builder, ui_filename, &err);
     g_free(ui_filename);
     if (err)

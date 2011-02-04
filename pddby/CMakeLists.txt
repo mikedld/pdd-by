@@ -28,6 +28,12 @@ set(${PROJECT_NAME}_SOURCES
     traffreg.c
 )
 
+set(${PROJECT_NAME}_SQL_FILES
+    ${${PROJECT_NAME}_SOURCE_DIR}/data/10.sql
+    ${${PROJECT_NAME}_SOURCE_DIR}/data/11.sql
+    PARENT_SCOPE
+)
+
 include_directories(
     ${GLIB2_INCLUDE_DIRS}
     ${SQLITE3_INCLUDE_DIRS}
@@ -36,4 +42,5 @@ include_directories(
 add_library(${PROJECT_NAME}
     ${${PROJECT_NAME}_HEADERS}
     ${${PROJECT_NAME}_SOURCES}
+    ${${PROJECT_NAME}_SQL_FILES}
 )

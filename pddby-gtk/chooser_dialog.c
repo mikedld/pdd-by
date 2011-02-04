@@ -17,7 +17,7 @@ static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gi
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
-    gchar *ui_filename = g_build_filename(get_share_dir(), "ui", "chooser_dialog.ui", NULL);
+    gchar *ui_filename = g_build_filename(get_share_dir(), "gtk", "chooser_dialog.ui", NULL);
     gtk_builder_add_from_file(builder, ui_filename, &err);
     g_free(ui_filename);
     if (err)
