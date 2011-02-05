@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(pddby-main C)
 
+set(PDDBY_VERSION "0.4")
+
 option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -16,7 +18,7 @@ if(PDDBY_BUILD_GTK_FRONTEND)
     pkg_search_module(GTK2 REQUIRED gtk+-2.0)
 endif()
 
-add_definitions(-W -Wall -Wextra -Werror -std=c99 -fvisibility=hidden)
+add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden)
 
 if(APPLE)
     add_definitions(-D_DARWIN_PLATFORM_)

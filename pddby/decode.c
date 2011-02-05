@@ -2,6 +2,7 @@
 #include "answer.h"
 #include "config.h"
 #include "database.h"
+#include "decode_image.h"
 #include "image.h"
 #include "question.h"
 #include "section.h"
@@ -23,15 +24,25 @@ typedef struct topic_question_s
     gint32 question_offset;
 } __attribute__((__packed__)) topic_question_t;
 
-static guint16 magic = 0;
+typedef gchar* (*decode_string_func_t)(guint16 magic, gchar const* path, gsize* str_size, gint8 topic_number);
 
-static gboolean init_magic(const gchar *root_path);
-static gboolean decode_images(const gchar *root_path);
-static gboolean decode_comments(const gchar *root_path);
-static gboolean decode_traffregs(const gchar *root_path);
-static gboolean decode_questions(const gchar *root_path);
+typedef struct decode_context_s
+{
+    gchar const* root_path;
+    guint16 magic_number;
+    decode_string_func_t decode_string;
+} decode_context_t;
 
-typedef gboolean (*decode_stage_t) (const gchar *root_path);
+typedef gboolean (*decode_stage_t) (decode_context_t* context);
+
+static gboolean init_magic(decode_context_t* context);
+static gboolean decode_images(decode_context_t* context);
+static gboolean decode_comments(decode_context_t* context);
+static gboolean decode_traffregs(decode_context_t* context);
+static gboolean decode_questions(decode_context_t* context);
+
+static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
+static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
 
 static const decode_stage_t decode_stages[] =
 {
@@ -45,11 +56,14 @@ static const decode_stage_t decode_stages[] =
 
 gboolean decode(const gchar *root_path)
 {
+    decode_context_t context;
+    context.root_path = root_path;
+
     const decode_stage_t *stage;
 
     for (stage = decode_stages; NULL != *stage; stage++)
     {
-        if (!(*stage)(root_path))
+        if (!(*stage)(&context))
         {
             return FALSE;
         }
@@ -101,9 +115,9 @@ static gchar *make_path(const gchar *root_path, ...)
     return result;
 }
 
-static gboolean init_magic_2006(const gchar *root_path)
+static gboolean init_magic_2006(decode_context_t* context)
 {
-    gchar *pdd32_path = make_path(root_path, "pdd32.exe", NULL);
+    gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
     FILE *f = g_fopen(pdd32_path, "rb");
     g_free(pdd32_path);
     if (!f)
@@ -118,24 +132,24 @@ static gboolean init_magic_2006(const gchar *root_path)
         g_error("pdd32.exe invalid");
     }
 
-    magic = 0;
+    context->magic_number = 0;
     set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     int i;
     for (i = 0; i < 255; i++)
     {
-        magic ^= buffer[delphi_random(16 * 1024)];
+        context->magic_number ^= buffer[delphi_random(16 * 1024)];
     }
-    magic = magic * buffer[16 * 1024] + 0x1998;
+    context->magic_number = context->magic_number * buffer[16 * 1024] + 0x1998;
 
     g_free(buffer);
     fclose(f);
     return TRUE;
 }
 
-static gboolean init_magic_2008(const gchar *root_path)
+static gboolean init_magic_2008(decode_context_t* context)
 {
-    gchar *pdd32_path = make_path(root_path, "pdd32.exe", NULL);
+    gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
     FILE *f = g_fopen(pdd32_path, "rb");
     g_free(pdd32_path);
     if (!f)
@@ -150,7 +164,7 @@ static gboolean init_magic_2008(const gchar *root_path)
         g_error("pdd32.exe invalid");
     }
 
-    magic = 0x2008;
+    context->magic_number = 0x2008;
     set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     while (!feof(f))
@@ -166,12 +180,12 @@ static gboolean init_magic_2008(const gchar *root_path)
             guchar ch = buffer[delphi_random(length)];
             for (j = 0; j < 8; j++)
             {
-                guint16 old_magic = magic;
-                magic >>= 1;
+                guint16 old_magic = context->magic_number;
+                context->magic_number >>= 1;
                 if ((ch ^ old_magic) & 1)
                 {
                     // TODO: magic number?
-                    magic ^= 0x0a001;
+                    context->magic_number ^= 0x0a001;
                 }
                 ch >>= 1;
             }
@@ -183,10 +197,42 @@ static gboolean init_magic_2008(const gchar *root_path)
     return TRUE;
 }
 
-static gboolean init_magic(const gchar *root_path)
+static GChecksum* get_file_checksum(gchar const* file_path, GChecksumType type)
+{
+    FILE *f = g_fopen(file_path, "rb");
+    if (!f)
+    {
+        g_error("unable to open file: %s", file_path);
+    }
+
+    GChecksum* result = g_checksum_new(type);
+    guchar *buffer = g_malloc(32 * 1024);
+
+    do
+    {
+        size_t bytes_read = fread(buffer, 1, 32 * 1024, f);
+        if (!bytes_read)
+        {
+            if (feof(f))
+            {
+                break;
+            }
+            g_error("unable to read file: %s", file_path);
+        }
+        g_checksum_update(result, buffer, bytes_read);
+    }
+    while (!feof(f));
+
+    g_free(buffer);
+    fclose(f);
+
+    return result;
+}
+
+static gboolean init_magic(decode_context_t* context)
 {
     struct stat root_stat;
-    if (stat(root_path, &root_stat) == -1)
+    if (stat(context->root_path, &root_stat) == -1)
     {
         g_error("unable to stat root directory");
     }
@@ -199,118 +245,55 @@ static gboolean init_magic(const gchar *root_path)
     {
     case 2006: // v9
     case 2007:
-        result = init_magic_2006(root_path);
+        result = init_magic_2006(context);
+        context->decode_string = decode_string;
         break;
     case 2008: // v10 & v11
     case 2009:
-        result = init_magic_2008(root_path);
+        result = init_magic_2008(context);
+        context->decode_string = decode_string;
         break;
+    default:   // v12
+        {
+            struct checksum_magic_t
+            {
+                gchar const* checksum;
+                guint16 magic;
+                decode_string_func_t decode_string;
+            };
+            struct checksum_magic_t const s_checksums[] =
+            {
+                {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, decode_string_v12}
+            };
+
+            gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
+            GChecksum* checksum = get_file_checksum(pdd32_path, G_CHECKSUM_MD5);
+            g_free(pdd32_path);
+
+            for (gsize i = 0; i < sizeof(s_checksums) / sizeof(*s_checksums); i++)
+            {
+                if (!strcmp(s_checksums[i].checksum, g_checksum_get_string(checksum)))
+                {
+                    context->magic_number = s_checksums[i].magic;
+                    context->decode_string = s_checksums[i].decode_string;
+                    result = TRUE;
+                    break;
+                }
+            }
+
+            g_checksum_free(checksum);
+        }
     }
     if (!result)
     {
         g_error("unable to calculate magic number");
     }
 
-    g_print("magic: 0x%04x\n", magic);
+    g_print("magic: 0x%04x\n", context->magic_number);
     return TRUE;
 }
 
-static gboolean decode_image(const gchar *path)
-{
-    gchar *basename = g_path_get_basename(path);
-    init_randseed_for_image(basename, magic);
-
-    GError *err;
-    gchar *data;
-    gsize data_length, i, j;
-
-    if (!g_file_get_contents(path, &data, &data_length, &err))
-    {
-        g_error("%s\n", err->message);
-    }
-
-    pdd_image_t *image = NULL;
-
-    if (!strncmp(data, "A8", 2))
-    {
-        // v9 image format
-
-        struct __attribute__((packed)) data_header_s
-        {
-            // file header
-            guint16 signature;
-            guint32 file_size;
-            guint16 reserved[2];
-            guint32 bitmap_offset;
-            // information header
-            guint32 header_size;
-            guint32 image_width;
-            guint32 image_height;
-            guint16 planes;
-            guint16 bpp;
-            // ... not important
-        } *header = (struct data_header_s *)data;
-
-        header->signature = 0x4d42; // 'BM'
-
-        guint32 seed = 0;
-        for (i = 0; basename[i]; i++)
-        {
-            if (isdigit(basename[i]))
-            {
-                seed = seed * 10 + (basename[i] - '0');
-            }
-        }
-
-        set_randseed(seed + magic);
-
-        for (i = header->image_height; i > 0; i--)
-        {
-            gchar *scanline = &data[header->bitmap_offset + (i - 1) * ((header->image_width + 1) / 2)];
-            for (j = 0; j < (header->image_width + 1) / 2; j++)
-            {
-                g_assert(&scanline[j] < data + header->file_size);
-                scanline[j] ^= delphi_random(255);
-            }
-        }
-
-        image = image_new(g_strdelimit(basename, ".", '\0'), data, data_length);
-    }
-    else if (!strncmp(data, "BPFT", 4))
-    {
-        // v10 & v11 image format
-
-        for (i = 4; i < data_length; i++)
-        {
-            data[i] ^= delphi_random(255);
-        }
-
-        image = image_new(g_strdelimit(basename, ".", '\0'), data + 4, data_length - 4);
-    }
-
-
-    g_free(data);
-    g_free(basename);
-
-    if (image)
-    {
-        gboolean result = image_save(image);
-        image_free(image);
-
-        if (!result)
-        {
-            g_error("unable to save image");
-        }
-    }
-    else
-    {
-        g_error("unknown image format\n");
-    }
-
-    return TRUE;
-}
-
-static gboolean decode_images(const gchar *root_path)
+static gboolean decode_images(decode_context_t* context)
 {
     gchar *raw_image_dirs = get_settings("image_dirs");
     gchar **image_dirs = g_strsplit(raw_image_dirs, ":", 0);
@@ -321,7 +304,7 @@ static gboolean decode_images(const gchar *root_path)
     gchar **dir_name = image_dirs;
     while (*dir_name)
     {
-        gchar *images_path = make_path(root_path, *dir_name, NULL);
+        gchar *images_path = make_path(context->root_path, *dir_name, NULL);
         GError *err = NULL;
         GDir *dir = g_dir_open(images_path, 0, &err);
         if (!dir)
@@ -333,7 +316,7 @@ static gboolean decode_images(const gchar *root_path)
         while ((name = g_dir_read_name(dir)))
         {
             gchar *image_path = g_build_filename(images_path, name, NULL);
-            result = decode_image(image_path);
+            result = decode_image(image_path, context->magic_number);
             g_free(image_path);
             if (!result)
             {
@@ -356,7 +339,7 @@ static gboolean decode_images(const gchar *root_path)
     return result;
 }
 
-static gint32 *decode_table(const gchar *path, gsize *table_size)
+static gint32 *decode_table(guint16 magic, const gchar *path, gsize *table_size)
 {
     GError *err = NULL;
     gchar *t;
@@ -390,7 +373,7 @@ static gint32 *decode_table(const gchar *path, gsize *table_size)
     return table;
 }
 
-static topic_question_t *decode_topic_questions_table(const gchar *path, gsize *table_size)
+static topic_question_t *decode_topic_questions_table(guint16 magic, const gchar *path, gsize *table_size)
 {
     GError *err = NULL;
     gchar *t;
@@ -421,7 +404,7 @@ static topic_question_t *decode_topic_questions_table(const gchar *path, gsize *
     return table;
 }
 
-static gchar *decode_string(const gchar *path, gsize *str_size, gint8 topic_number)
+static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number)
 {
     GError *err = NULL;
     gchar *str;
@@ -440,19 +423,37 @@ static gchar *decode_string(const gchar *path, gsize *str_size, gint8 topic_numb
     return str;
 }
 
+static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number)
+{
+    GError *err = NULL;
+    gchar *str;
+    if (!g_file_get_contents(path, &str, str_size, &err))
+    {
+        g_error("%s\n", err->message);
+    }
+
+    for (gsize i = 0; i < *str_size; i++)
+    {
+        str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x80 : 0xaa) ^ ((i + 1) % 255);
+    }
+
+    return str;
+}
+
 typedef gpointer (*object_new_t)(gint32, const gchar *);
 typedef gboolean (*object_save_t)(gpointer *);
 typedef void (*object_free_t)(gpointer *);
 typedef void (*object_set_images_t)(gpointer *, pdd_images_t *images);
 
-static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path, object_new_t object_new,
-    object_save_t object_save, object_free_t object_free, object_set_images_t object_set_images)
+static gboolean decode_simple_data(decode_context_t* context, const gchar *dat_path, const gchar *dbt_path,
+    object_new_t object_new, object_save_t object_save, object_free_t object_free,
+    object_set_images_t object_set_images)
 {
     gsize table_size;
-    gint32 *table = decode_table(dat_path, &table_size);
+    gint32 *table = decode_table(context->magic_number, dat_path, &table_size);
 
     gsize str_size;
-    gchar *str = decode_string(dbt_path, &str_size, 0);
+    gchar *str = context->decode_string(context->magic_number, dbt_path, &str_size, 0);
 
     GError *err = NULL;
     GRegex *simple_data_regex = g_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$",
@@ -616,12 +617,12 @@ static gboolean decode_simple_data(const gchar *dat_path, const gchar *dbt_path,
     return result;
 }
 
-static gboolean decode_comments(const gchar *root_path)
+static gboolean decode_comments(decode_context_t* context)
 {
-    gchar *comments_dat_path = make_path(root_path, "tickets", "comments", "comments.dat", NULL);
-    gchar *comments_dbt_path = make_path(root_path, "tickets", "comments", "comments.dbt", NULL);
+    gchar *comments_dat_path = make_path(context->root_path, "tickets", "comments", "comments.dat", NULL);
+    gchar *comments_dbt_path = make_path(context->root_path, "tickets", "comments", "comments.dbt", NULL);
 
-    gboolean result = decode_simple_data(comments_dat_path, comments_dbt_path,
+    gboolean result = decode_simple_data(context, comments_dat_path, comments_dbt_path,
         (object_new_t)comment_new, (object_save_t)comment_save, (object_free_t)comment_free, NULL);
 
     if (!result)
@@ -635,12 +636,12 @@ static gboolean decode_comments(const gchar *root_path)
     return result;
 }
 
-static gboolean decode_traffregs(const gchar *root_path)
+static gboolean decode_traffregs(decode_context_t* context)
 {
-    gchar *traffreg_dat_path = make_path(root_path, "tickets", "traffreg", "traffreg.dat", NULL);
-    gchar *traffreg_dbt_path = make_path(root_path, "tickets", "traffreg", "traffreg.dbt", NULL);
+    gchar *traffreg_dat_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dat", NULL);
+    gchar *traffreg_dbt_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dbt", NULL);
 
-    gboolean result = decode_simple_data(traffreg_dat_path, traffreg_dbt_path,
+    gboolean result = decode_simple_data(context, traffreg_dat_path, traffreg_dbt_path,
         (object_new_t)traffreg_new, (object_save_t)traffreg_save, (object_free_t)traffreg_free,
         (object_set_images_t)traffreg_set_images);
 
@@ -655,8 +656,8 @@ static gboolean decode_traffregs(const gchar *root_path)
     return result;
 }
 
-static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number, topic_question_t *sections_data,
-    gsize sections_data_size)
+static gboolean decode_questions_data(decode_context_t* context, const gchar *dbt_path, gint8 topic_number,
+    topic_question_t *sections_data, gsize sections_data_size)
 {
     topic_question_t *table = sections_data;
     while (table->topic_number != topic_number)
@@ -671,7 +672,7 @@ static gboolean decode_questions_data(const gchar *dbt_path, gint8 topic_number,
     }
 
     gsize str_size;
-    gchar *str = decode_string(dbt_path, &str_size, topic_number);
+    gchar *str = context->decode_string(context->magic_number, dbt_path, &str_size, topic_number);
 
     GError *err = NULL;
     GRegex *question_data_regex = g_regex_new("\\s*\\[|\\]\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
@@ -923,7 +924,7 @@ static int compare_topic_questions(const void *first, const void *second)
     return 0;
 }
 
-static gboolean decode_questions(const gchar *root_path)
+static gboolean decode_questions(decode_context_t* context)
 {
     pdd_sections_t *sections = section_find_all();
     gsize i;
@@ -933,9 +934,9 @@ static gboolean decode_questions(const gchar *root_path)
     {
         pdd_section_t *section = ((pdd_section_t **)sections->pdata)[i];
         gchar *section_dat_name = g_strdup_printf("%s.dat", section->name);
-        gchar *section_dat_path = make_path(root_path, "tickets", "parts", section_dat_name, NULL);
+        gchar *section_dat_path = make_path(context->root_path, "tickets", "parts", section_dat_name, NULL);
         gsize size;
-        topic_question_t *data = decode_topic_questions_table(section_dat_path, &size);
+        topic_question_t *data = decode_topic_questions_table(context->magic_number, section_dat_path, &size);
         g_free(section_dat_path);
         g_free(section_dat_name);
         if (!data)
@@ -957,9 +958,10 @@ static gboolean decode_questions(const gchar *root_path)
         pdd_topic_t *topic = ((pdd_topic_t **)topics->pdata)[i];
 
         gchar *part_dbt_name = g_strdup_printf("part_%d.dbt", topic->number);
-        gchar *part_dbt_path = make_path(root_path, "tickets", part_dbt_name, NULL);
+        gchar *part_dbt_path = make_path(context->root_path, "tickets", part_dbt_name, NULL);
 
-        gboolean result = decode_questions_data(part_dbt_path, topic->number, sections_data, sections_data_size);
+        gboolean result = decode_questions_data(context, part_dbt_path, topic->number, sections_data,
+            sections_data_size);
 
         g_free(part_dbt_path);
         g_free(part_dbt_name);

@@ -5,6 +5,7 @@ set(${PROJECT_NAME}_HEADERS
     comment.h
     database.h
     decode.h
+    decode_image.h
     delphi_helper.h
     image.h
     question.h
@@ -19,6 +20,7 @@ set(${PROJECT_NAME}_SOURCES
     comment.c
     database.c
     decode.c
+    decode_image.c
     delphi_helper.c
     image.c
     question.c

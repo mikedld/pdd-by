@@ -139,12 +139,12 @@ GNUC_VISIBLE void on_quit()
 
 GNUC_VISIBLE void on_about()
 {
-    const gchar * const authors[] = { "Mike `mike.dld` Semenyako <mike.dld@gmail.com>", NULL };
+    const gchar * const authors[] = { "Mike `mike.dld` Gelfand <mike.dld@gmail.com>", NULL };
     gtk_show_about_dialog(NULL,
         "program-name", "Учебная программа ПДД",
-        "version", "0.3",
+        "version", PDDBY_VERSION,
         "website", "http://mikedld.com/",
-        "copyright", "Copyright © 2009 Mike `mike.dld` Semenyako",
+        "copyright", "Copyright © 2009-2011 Mike `mike.dld` Gelfand",
         "comments", "Империя наносит ответный удар\n(привет ЧПУП \"Новый поворот\")",
         "authors", authors,
         "license", "Данная программа распространяется свободно под лицензией GNU GPL v3.\n"

@@ -14,6 +14,11 @@ inline void set_randseed(guint64 seed)
     rand_seed = seed;
 }
 
+inline guint64 get_randseed()
+{
+    return rand_seed;
+}
+
 void init_randseed_for_image(const gchar *name, guint16 magic)
 {
     gchar *name_up = g_utf8_strup(name, -1);

@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#cmakedefine PDDBY_VERSION "${PDDBY_VERSION}"
+
 #cmakedefine PDDBY_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/${PDDBY_SHARE_DIR}"
 
 #if __GNUC__ >= 4

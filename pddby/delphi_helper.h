@@ -6,6 +6,7 @@
 guint64 delphi_random(guint32 limit);
 
 void set_randseed(guint64 seed);
+guint64 get_randseed();
 void init_randseed_for_image(const gchar *name, guint16 magic);
 
 #endif // DELPHI_HELPER_H
