@@ -41,41 +41,23 @@ gboolean section_save(pdd_section_t *section)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)", -1,
             &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_text(stmt, 1, section->name, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 2, section->title_prefix, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 3, section->title, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    if (result != SQLITE_DONE)
-    {
-        g_error("section: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     section->id = sqlite3_last_insert_rowid(db);
 
@@ -92,31 +74,19 @@ pdd_section_t *section_find_by_id(gint64 id)
     {
         result = sqlite3_prepare_v2(db, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? "
             "LIMIT 1", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("section: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -137,31 +107,19 @@ pdd_section_t *section_find_by_name(const gchar *name)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? "
             "LIMIT 1", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_text(stmt, 1, name, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("section: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -182,17 +140,11 @@ pdd_sections_t *section_find_all()
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`", -1, &stmt,
             NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     pdd_sections_t *sections = g_ptr_array_new();
 
@@ -203,10 +155,7 @@ pdd_sections_t *section_find_all()
         {
             break;
         }
-        if (result != SQLITE_ROW)
-        {
-            g_error("section: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
         gint64 id = sqlite3_column_int64(stmt, 0);
         const gchar *name = (const gchar *)sqlite3_column_text(stmt, 1);
@@ -247,29 +196,17 @@ gint32 section_get_question_count(pdd_section_t *section)
     {
         result = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?", -1, &stmt,
             NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("section: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, section->id);
-    if (result != SQLITE_OK)
-    {
-        g_error("section: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
-    {
-        g_error("section: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
     return sqlite3_column_int(stmt, 0);
 }

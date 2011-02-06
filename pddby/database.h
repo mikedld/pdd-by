@@ -15,4 +15,6 @@ void database_tx_begin();
 void database_tx_commit();
 void database_tx_rollback();
 
+void database_expect(int result, int expected_result, gchar const* scope, gchar const* message);
+
 #endif // DATABASE_H

@@ -33,41 +33,23 @@ gboolean answer_save(pdd_answer_t *answer)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)",
             -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = answer->question_id ? sqlite3_bind_int64(stmt, 1, answer->question_id) : sqlite3_bind_null(stmt, 1);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 2, answer->text, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_int(stmt, 3, answer->is_correct);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    if (result != SQLITE_DONE)
-    {
-        g_error("answer: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     answer->id = sqlite3_last_insert_rowid(db);
 
@@ -84,31 +66,19 @@ pdd_answer_t *answer_find_by_id(gint64 id)
     {
         result = sqlite3_prepare_v2(db, "SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? "
             "LIMIT 1", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("answer: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -129,23 +99,14 @@ pdd_answers_t *answer_find_by_question(gint64 question_id)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?", -1,
             &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("answer: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, question_id);
-    if (result != SQLITE_OK)
-    {
-        g_error("answer: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     pdd_answers_t *answers = g_ptr_array_new();
 
@@ -156,10 +117,7 @@ pdd_answers_t *answer_find_by_question(gint64 question_id)
         {
             break;
         }
-        if (result != SQLITE_ROW)
-        {
-            g_error("answer: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
         gint64 id = sqlite3_column_int64(stmt, 0);
         const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);

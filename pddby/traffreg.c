@@ -37,35 +37,20 @@ gboolean traffreg_save(pdd_traffreg_t *traffreg)
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `traffregs` (`number`, `text`) VALUES (?, ?)", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int(stmt, 1, traffreg->number);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 2, traffreg->text, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    if (result != SQLITE_DONE)
-    {
-        g_error("traffreg: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     traffreg->id = sqlite3_last_insert_rowid(db);
 
@@ -82,10 +67,7 @@ gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)", -1,
             &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     gsize i;
@@ -94,28 +76,16 @@ gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
         pdd_image_t *image = ((pdd_image_t **)images->pdata)[i];
 
         result = sqlite3_reset(stmt);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
         result = sqlite3_bind_int64(stmt, 1, image->id);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_bind_int64(stmt, 2, traffreg->id);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_step(stmt);
-        if (result != SQLITE_DONE)
-        {
-            g_error("traffreg: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
     }
 
     return TRUE;
@@ -131,31 +101,19 @@ pdd_traffreg_t *traffreg_find_by_id(gint64 id)
     {
         result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1", -1, &stmt,
             NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("traffreg: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -175,31 +133,19 @@ pdd_traffreg_t *traffreg_find_by_number(gint32 number)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1", -1, &stmt,
             NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("traffreg: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int(stmt, 1, number);
-    if (result != SQLITE_OK)
-    {
-        g_error("traffreg: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("traffreg: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -219,23 +165,14 @@ pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
     {
         result = sqlite3_prepare_v2(db, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
             "`questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("question: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, question_id);
-    if (result != SQLITE_OK)
-    {
-        g_error("question: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     pdd_traffregs_t *traffregs = g_ptr_array_new();
 
@@ -246,10 +183,7 @@ pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
         {
             break;
         }
-        if (result != SQLITE_ROW)
-        {
-            g_error("question: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
         gint64 id = sqlite3_column_int64(stmt, 0);
         gint number = sqlite3_column_int(stmt, 1);

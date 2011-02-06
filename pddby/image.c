@@ -39,38 +39,23 @@ gboolean image_save(pdd_image_t *image)
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `images` (`name`, `data`) VALUES (?, ?)", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("image: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     gchar *image_name = g_utf8_strdown(image->name, -1);
     g_free(image->name);
     image->name = image_name;
     result = sqlite3_bind_text(stmt, 1, image->name, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_blob(stmt, 2, image->data, image->data_length, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    if (result != SQLITE_DONE)
-    {
-        g_error("image: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     image->id = sqlite3_last_insert_rowid(db);
 
@@ -86,31 +71,19 @@ pdd_image_t *image_find_by_id(gint64 id)
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `name`, `data` FROM `images` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("image: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("image: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -130,32 +103,20 @@ pdd_image_t *image_find_by_name(const gchar *name)
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `data` FROM `images` WHERE `name`=? LIMIT 1", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("image: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     gchar *image_name = g_utf8_strdown(name, -1);
     result = sqlite3_bind_text(stmt, 1, image_name, -1, NULL);
-    if (result != SQLITE_OK)
-    {
-        g_error("image: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        if (result != SQLITE_DONE)
-        {
-            g_error("image: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
@@ -180,23 +141,14 @@ pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
     {
         result = sqlite3_prepare_v2(db, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
             "`images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?", -1, &stmt, NULL);
-        if (result != SQLITE_OK)
-        {
-            g_error("question: unable to prepare statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    if (result != SQLITE_OK)
-    {
-        g_error("question: unable to reset prepared statement (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, traffreg_id);
-    if (result != SQLITE_OK)
-    {
-        g_error("question: unable to bind param (%d: %s)\n", result, sqlite3_errmsg(db));
-    }
+    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     pdd_images_t *images = g_ptr_array_new();
 
@@ -207,10 +159,7 @@ pdd_images_t *image_find_by_traffreg(gint64 traffreg_id)
         {
             break;
         }
-        if (result != SQLITE_ROW)
-        {
-            g_error("question: unable to perform statement (%d: %s)\n", result, sqlite3_errmsg(db));
-        }
+        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
         gint64 id = sqlite3_column_int64(stmt, 0);
         const gchar *name = (const gchar *)sqlite3_column_text(stmt, 1);

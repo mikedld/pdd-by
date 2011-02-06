@@ -131,3 +131,11 @@ void database_tx_commit()
         g_error("unable to commit transaction (%d)\n", result);
     }
 }
+
+void database_expect(int result, int expected_result, gchar const* scope, gchar const* message)
+{
+    if (result != expected_result)
+    {
+        g_error("%s: %s (%d: %s)\n", scope, message, result, sqlite3_errmsg(database));
+    }
+}
