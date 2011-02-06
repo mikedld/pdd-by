@@ -94,9 +94,9 @@ static pdd_image_t* decode_image_bpft(gchar* basename, guint16 magic, gchar* dat
     return image_new(g_strdelimit(basename, ".", '\0'), data + 4, data_size - 4);
 }
 
-static void decode_image_bpftcam_init(bpftcam_context_t* ctx, gchar const* basename)
+static void decode_image_bpftcam_init(bpftcam_context_t* ctx, gchar const* basename, guint16 magic)
 {
-    init_randseed_for_image(basename, 0x04b5);
+    init_randseed_for_image(basename, magic);
 
     ctx->a[0] = get_randseed();
     // initializes both `a` and `x`
@@ -172,12 +172,12 @@ guint8 decode_image_bpftcam_next(bpftcam_context_t* ctx)
     return *ctx->x;
 }
 
-static pdd_image_t* decode_image_bpftcam(gchar* basename, G_GNUC_UNUSED guint16 magic, gchar* data, gsize data_size)
+static pdd_image_t* decode_image_bpftcam(gchar* basename, guint16 magic, gchar* data, gsize data_size)
 {
     // v12 image format
 
     bpftcam_context_t context;
-    decode_image_bpftcam_init(&context, basename);
+    decode_image_bpftcam_init(&context, basename, magic);
 
     for (gsize i = 7; i < data_size; i++)
     {

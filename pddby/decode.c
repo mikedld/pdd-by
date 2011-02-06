@@ -29,7 +29,8 @@ typedef gchar* (*decode_string_func_t)(guint16 magic, gchar const* path, gsize* 
 typedef struct decode_context_s
 {
     gchar const* root_path;
-    guint16 magic_number;
+    guint16 data_magic;
+    guint16 image_magic;
     decode_string_func_t decode_string;
 } decode_context_t;
 
@@ -132,15 +133,15 @@ static gboolean init_magic_2006(decode_context_t* context)
         g_error("pdd32.exe invalid");
     }
 
-    context->magic_number = 0;
+    context->data_magic = 0;
     set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     int i;
     for (i = 0; i < 255; i++)
     {
-        context->magic_number ^= buffer[delphi_random(16 * 1024)];
+        context->data_magic ^= buffer[delphi_random(16 * 1024)];
     }
-    context->magic_number = context->magic_number * buffer[16 * 1024] + 0x1998;
+    context->data_magic = context->data_magic * buffer[16 * 1024] + 0x1998;
 
     g_free(buffer);
     fclose(f);
@@ -164,7 +165,7 @@ static gboolean init_magic_2008(decode_context_t* context)
         g_error("pdd32.exe invalid");
     }
 
-    context->magic_number = 0x2008;
+    context->data_magic = 0x2008;
     set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     while (!feof(f))
@@ -180,12 +181,12 @@ static gboolean init_magic_2008(decode_context_t* context)
             guchar ch = buffer[delphi_random(length)];
             for (j = 0; j < 8; j++)
             {
-                guint16 old_magic = context->magic_number;
-                context->magic_number >>= 1;
+                guint16 old_magic = context->data_magic;
+                context->data_magic >>= 1;
                 if ((ch ^ old_magic) & 1)
                 {
                     // TODO: magic number?
-                    context->magic_number ^= 0x0a001;
+                    context->data_magic ^= 0x0a001;
                 }
                 ch >>= 1;
             }
@@ -246,11 +247,13 @@ static gboolean init_magic(decode_context_t* context)
     case 2006: // v9
     case 2007:
         result = init_magic_2006(context);
+        context->image_magic = context->data_magic;
         context->decode_string = decode_string;
         break;
     case 2008: // v10 & v11
     case 2009:
         result = init_magic_2008(context);
+        context->image_magic = context->data_magic;
         context->decode_string = decode_string;
         break;
     default:   // v12
@@ -258,12 +261,14 @@ static gboolean init_magic(decode_context_t* context)
             struct checksum_magic_t
             {
                 gchar const* checksum;
-                guint16 magic;
+                guint16 data_magic;
+                guint16 image_magic;
                 decode_string_func_t decode_string;
             };
             struct checksum_magic_t const s_checksums[] =
             {
-                {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, decode_string_v12}
+                {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, decode_string_v12},
+                {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12}
             };
 
             gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
@@ -274,7 +279,8 @@ static gboolean init_magic(decode_context_t* context)
             {
                 if (!strcmp(s_checksums[i].checksum, g_checksum_get_string(checksum)))
                 {
-                    context->magic_number = s_checksums[i].magic;
+                    context->data_magic = s_checksums[i].data_magic;
+                    context->image_magic = s_checksums[i].image_magic;
                     context->decode_string = s_checksums[i].decode_string;
                     result = TRUE;
                     break;
@@ -289,7 +295,7 @@ static gboolean init_magic(decode_context_t* context)
         g_error("unable to calculate magic number");
     }
 
-    g_print("magic: 0x%04x\n", context->magic_number);
+    g_print("magic: 0x%04x\n", context->data_magic);
     return TRUE;
 }
 
@@ -316,7 +322,7 @@ static gboolean decode_images(decode_context_t* context)
         while ((name = g_dir_read_name(dir)))
         {
             gchar *image_path = g_build_filename(images_path, name, NULL);
-            result = decode_image(image_path, context->magic_number);
+            result = decode_image(image_path, context->image_magic);
             g_free(image_path);
             if (!result)
             {
@@ -450,10 +456,10 @@ static gboolean decode_simple_data(decode_context_t* context, const gchar *dat_p
     object_set_images_t object_set_images)
 {
     gsize table_size;
-    gint32 *table = decode_table(context->magic_number, dat_path, &table_size);
+    gint32 *table = decode_table(context->data_magic, dat_path, &table_size);
 
     gsize str_size;
-    gchar *str = context->decode_string(context->magic_number, dbt_path, &str_size, 0);
+    gchar *str = context->decode_string(context->data_magic, dbt_path, &str_size, 0);
 
     GError *err = NULL;
     GRegex *simple_data_regex = g_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$",
@@ -672,7 +678,7 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
     }
 
     gsize str_size;
-    gchar *str = context->decode_string(context->magic_number, dbt_path, &str_size, topic_number);
+    gchar *str = context->decode_string(context->data_magic, dbt_path, &str_size, topic_number);
 
     GError *err = NULL;
     GRegex *question_data_regex = g_regex_new("\\s*\\[|\\]\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
@@ -936,7 +942,7 @@ static gboolean decode_questions(decode_context_t* context)
         gchar *section_dat_name = g_strdup_printf("%s.dat", section->name);
         gchar *section_dat_path = make_path(context->root_path, "tickets", "parts", section_dat_name, NULL);
         gsize size;
-        topic_question_t *data = decode_topic_questions_table(context->magic_number, section_dat_path, &size);
+        topic_question_t *data = decode_topic_questions_table(context->data_magic, section_dat_path, &size);
         g_free(section_dat_path);
         g_free(section_dat_name);
         if (!data)
