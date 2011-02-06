@@ -258,14 +258,14 @@ static gboolean init_magic(decode_context_t* context)
         break;
     default:   // v12
         {
-            struct checksum_magic_t
+            struct checksum_magic_s
             {
                 gchar const* checksum;
                 guint16 data_magic;
-                guint16 image_magic;
+                guint16 image_magic; // == data_magic ^ 0x1a80
                 decode_string_func_t decode_string;
             };
-            struct checksum_magic_t const s_checksums[] =
+            struct checksum_magic_s const s_checksums[] =
             {
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, decode_string_v12},
                 {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12}
