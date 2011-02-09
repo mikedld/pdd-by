@@ -267,8 +267,11 @@ static gboolean init_magic(decode_context_t* context)
             };
             struct checksum_magic_s const s_checksums[] =
             {
+                // v12
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, decode_string_v12},
-                {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12}
+                {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12},
+                // v13 (?)
+                {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v12}
             };
 
             gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
