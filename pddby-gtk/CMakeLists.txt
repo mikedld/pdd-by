@@ -40,12 +40,12 @@ set_source_files_properties(${pddby_SQL_FILES} PROPERTIES
 )
 
 include_directories(
-    ${GTK2_INCLUDE_DIRS}
     ${SQLITE3_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
+    ${GTK2_INCLUDE_DIRS}
 )
 
 link_directories(
-    ${GTK2_LIBRARY_DIRS}
     ${SQLITE3_LIBRARY_DIRS}
 )
 
@@ -62,8 +62,10 @@ add_dependencies(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     pddby
-    ${GTK2_LIBRARIES}
     ${SQLITE3_LIBRARIES}
+    ${PCRE_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    ${GTK2_LIBRARIES}
 )
 
 if(APPLE)

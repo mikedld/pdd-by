@@ -39,7 +39,7 @@ GNUC_VISIBLE void on_training_section()
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
     {
         gtk_widget_destroy(dialog);
-        pdd_section_t *section = section_find_by_id(chooser_dialog_get_id(dialog));
+        pddby_section_t *section = pddby_section_find_by_id(chooser_dialog_get_id(dialog));
         GtkWidget *question_window = question_window_new_with_section(section, FALSE);
         gtk_widget_show(question_window);
     }
@@ -57,8 +57,8 @@ static void on_topic(gboolean is_exam)
 once_again:
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
     {
-        pdd_topic_t *topic = topic_find_by_id(chooser_dialog_get_id(dialog));
-        GtkWidget *ticket_dialog = ticket_dialog_new((topic_get_question_count(topic) + 9) / 10);
+        pddby_topic_t *topic = pddby_topic_find_by_id(chooser_dialog_get_id(dialog));
+        GtkWidget *ticket_dialog = ticket_dialog_new((pddby_topic_get_question_count(topic) + 9) / 10);
         if (gtk_dialog_run(GTK_DIALOG(ticket_dialog)) != GTK_RESPONSE_OK)
         {
             gtk_widget_destroy(ticket_dialog);

@@ -72,36 +72,36 @@ gint64 chooser_dialog_get_id(GtkWidget *dialog)
     return g_value_get_int64(&id);
 }
 
-static void add_section_to_model(pdd_section_t *section, GtkListStore *model)
+static void add_section_to_model(pddby_section_t *section, GtkListStore *model)
 {
     GtkTreeIter iter;
     gtk_list_store_append(model, &iter);
     gtk_list_store_set(model, &iter, 0, section->id, 1, section->name, 2, section->title_prefix, 3, section->title, 4,
-        section_get_question_count(section), -1);
+        pddby_section_get_question_count(section), -1);
 }
 
 GtkListStore *sections_model_new()
 {
     GtkListStore *model = gtk_list_store_new(5, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-    pdd_sections_t *sections = section_find_all();
-    g_ptr_array_foreach(sections, (GFunc)add_section_to_model, model);
-    section_free_all(sections);
+    pddby_sections_t *sections = pddby_section_find_all();
+    pddby_array_foreach(sections, (GFunc)add_section_to_model, model);
+    pddby_section_free_all(sections);
     return model;
 }
 
-static void add_topic_to_model(pdd_topic_t *topic, GtkListStore *model)
+static void add_topic_to_model(pddby_topic_t *topic, GtkListStore *model)
 {
     GtkTreeIter iter;
     gtk_list_store_append(model, &iter);
-    gtk_list_store_set(model, &iter, 0, topic->id, 1, topic->title, 2, (topic_get_question_count(topic) + 9) / 10, -1);
+    gtk_list_store_set(model, &iter, 0, topic->id, 1, topic->title, 2, (pddby_topic_get_question_count(topic) + 9) / 10, -1);
 }
 
 GtkListStore *topics_model_new()
 {
     GtkListStore *model = gtk_list_store_new(3, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_INT);
-    pdd_topics_t *topics = topic_find_all();
-    g_ptr_array_foreach(topics, (GFunc)add_topic_to_model, model);
-    topic_free_all(topics);
+    pddby_topics_t *topics = pddby_topic_find_all();
+    pddby_array_foreach(topics, (GFunc)add_topic_to_model, model);
+    pddby_topic_free_all(topics);
     return model;
 }
 

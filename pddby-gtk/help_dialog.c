@@ -25,13 +25,13 @@ static GtkWidget *help_dialog_new(GtkBuilder **builder)
     return dialog;
 }
 
-static void add_images_to_box(GtkWidget *box, const pdd_images_t *images)
+static void add_images_to_box(GtkWidget *box, const pddby_images_t *images)
 {
     GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
     gsize i;
-    for (i = 0; i < images->len; i++)
+    for (i = 0; i < pddby_array_size(images); i++)
     {
-        const pdd_image_t *image = g_ptr_array_index(images, i);
+        const pddby_image_t *image = pddby_array_index(images, i);
         GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
         GError *err = NULL;
         if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
@@ -65,38 +65,38 @@ static void add_text_to_box(GtkWidget *box, const gchar *text)
     gtk_box_pack_start(GTK_BOX(box), box_alignment, FALSE, TRUE, 0);
 }
 
-GtkWidget *help_dialog_new_with_comment(const pdd_question_t *question)
+GtkWidget *help_dialog_new_with_comment(const pddby_question_t *question)
 {
     GtkBuilder *builder;
     GtkWidget *dialog = help_dialog_new(&builder);
 
-    pdd_comment_t *comment = comment_find_by_id(question->comment_id);
+    pddby_comment_t *comment = pddby_comment_find_by_id(question->comment_id);
     GtkWidget *help_box = GTK_WIDGET(gtk_builder_get_object(builder, "box_help"));
     add_text_to_box(help_box, comment->text);
     gtk_widget_show_all(help_box);
-    comment_free(comment);
+    pddby_comment_free(comment);
 
     return dialog;
 }
 
-GtkWidget *help_dialog_new_with_traffregs(const pdd_question_t *question)
+GtkWidget *help_dialog_new_with_traffregs(const pddby_question_t *question)
 {
     GtkBuilder *builder;
     GtkWidget *dialog = help_dialog_new(&builder);
 
-    pdd_traffregs_t *traffregs = traffreg_find_by_question(question->id);
+    pddby_traffregs_t *traffregs = pddby_traffreg_find_by_question(question->id);
     GtkWidget *help_box = GTK_WIDGET(gtk_builder_get_object(builder, "box_help"));
     gsize i;
-    for (i = 0; i < traffregs->len; i++)
+    for (i = 0; i < pddby_array_size(traffregs); i++)
     {
-        pdd_traffreg_t *traffreg = g_ptr_array_index(traffregs, i);
-        pdd_images_t *images = image_find_by_traffreg(traffreg->id);
+        pddby_traffreg_t *traffreg = pddby_array_index(traffregs, i);
+        pddby_images_t *images = pddby_image_find_by_traffreg(traffreg->id);
         add_images_to_box(help_box, images);
         add_text_to_box(help_box, traffreg->text);
-        image_free_all(images);
+        pddby_image_free_all(images);
     }
     gtk_widget_show_all(help_box);
-    traffreg_free_all(traffregs);
+    pddby_traffreg_free_all(traffregs);
 
     return dialog;
 }

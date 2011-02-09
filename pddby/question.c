@@ -1,185 +1,185 @@
 #include "question.h"
+#include "util/aux.h"
 #include "config.h"
 #include "database.h"
-#include "settings.h"
+#include "util/settings.h"
 #include "topic.h"
 
 #include <stdlib.h>
+#include <string.h>
 
-gint *ticket_topics_distribution = NULL;
+static int* ticket_topics_distribution = 0;
 
-static pdd_question_t *question_new_with_id(gint64 id, gint64 topic_id, const gchar *text, gint64 image_id,
-    const gchar *advice, gint64 comment_id)
+static pddby_question_t* pddby_question_new_with_id(int64_t id, int64_t topic_id, char const* text, int64_t image_id,
+    char const* advice, int64_t comment_id)
 {
-    pdd_question_t *question = g_new(pdd_question_t, 1);
+    pddby_question_t* question = malloc(sizeof(pddby_question_t));
     question->id = id;
     question->topic_id = topic_id;
-    question->text = g_strdup(text);
+    question->text = strdup(text);
     question->image_id = image_id;
-    question->advice = g_strdup(advice);
+    question->advice = strdup(advice);
     question->comment_id = comment_id;
     return question;
 }
 
-pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice,
-    gint64 comment_id)
+pddby_question_t* pddby_question_new(int64_t topic_id, char const* text, int64_t image_id, char const* advice,
+    int64_t comment_id)
 {
-    return question_new_with_id(0, topic_id, text, image_id, advice, comment_id);
+    return pddby_question_new_with_id(0, topic_id, text, image_id, advice, comment_id);
 }
 
-void question_free(pdd_question_t *question)
+void pddby_question_free(pddby_question_t *question)
 {
-    g_free(question->text);
-    g_free(question->advice);
-    g_free(question);
+    free(question->text);
+    free(question->advice);
+    free(question);
 }
 
-gboolean question_save(pdd_question_t *question)
+int pddby_question_save(pddby_question_t* question)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = 0;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `questions` (`topic_id`, `text`, `image_id`, `advice`, "
             "`comment_id`) VALUES (?, ?, ?, ?, ?)", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = question->topic_id ? sqlite3_bind_int64(stmt, 1, question->topic_id) : sqlite3_bind_null(stmt, 1);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 2, question->text, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = question->image_id ? sqlite3_bind_int64(stmt, 3, question->image_id) : sqlite3_bind_null(stmt, 3);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 4, question->advice, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = question->comment_id ? sqlite3_bind_int64(stmt, 5, question->comment_id) : sqlite3_bind_null(stmt, 5);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+    pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     question->id = sqlite3_last_insert_rowid(db);
 
-    return TRUE;
+    return 1;
 }
 
-gboolean question_set_sections(pdd_question_t *question, pdd_sections_t *sections)
+int pddby_question_set_sections(pddby_question_t* question, pddby_sections_t* sections)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = 0;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `questions_sections` (`question_id`, `section_id`) VALUES (?, ?)",
             -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
-    gsize i;
-    for (i = 0; i < sections->len; i++)
+    for (size_t i = 0; i < pddby_array_size(sections); i++)
     {
-        pdd_section_t *section = ((pdd_section_t **)sections->pdata)[i];
+        pddby_section_t* section = pddby_array_index(sections, i);
 
         result = sqlite3_reset(stmt);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
         result = sqlite3_bind_int64(stmt, 1, question->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_bind_int64(stmt, 2, section->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_step(stmt);
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
     }
 
-    return TRUE;
+    return 1;
 }
 
-gboolean question_set_traffregs(pdd_question_t *question, pdd_traffregs_t *traffregs)
+int pddby_question_set_traffregs(pddby_question_t* question, pddby_traffregs_t* traffregs)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = 0;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `questions_traffregs` (`question_id`, `traffreg_id`) VALUES "
             "(?, ?)", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
-    gsize i;
-    for (i = 0; i < traffregs->len; i++)
+    for (size_t i = 0; i < pddby_array_size(traffregs); i++)
     {
-        pdd_traffreg_t *traffreg = ((pdd_traffreg_t **)traffregs->pdata)[i];
+        pddby_traffreg_t* traffreg = pddby_array_index(traffregs, i);
 
         result = sqlite3_reset(stmt);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
         result = sqlite3_bind_int64(stmt, 1, question->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_bind_int64(stmt, 2, traffreg->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
         result = sqlite3_step(stmt);
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
     }
 
-    return TRUE;
+    return 1;
 }
 
-pdd_question_t *question_find_by_id(gint64 id)
+pddby_question_t* pddby_question_find_by_id(int64_t id)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `topic_id`, `text`, `image_id`, `advice`, `comment_id` FROM "
             "`questions` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
-    gint64 topic_id = sqlite3_column_int64(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
-    gint64 image_id = sqlite3_column_int64(stmt, 2);
-    const gchar *advice = (const gchar *)sqlite3_column_text(stmt, 3);
-    gint64 comment_id = sqlite3_column_int64(stmt, 4);
+    int64_t topic_id = sqlite3_column_int64(stmt, 0);
+    char const* text = (char const*)sqlite3_column_text(stmt, 1);
+    int64_t image_id = sqlite3_column_int64(stmt, 2);
+    char const* advice = (char const*)sqlite3_column_text(stmt, 3);
+    int64_t comment_id = sqlite3_column_int64(stmt, 4);
 
-    return question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
+    return pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
 }
 
-pdd_questions_t *question_find_by_section(gint64 section_id)
+pddby_questions_t* pddby_question_find_by_section(int64_t section_id)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
@@ -187,169 +187,181 @@ pdd_questions_t *question_find_by_section(gint64 section_id)
         result = sqlite3_prepare_v2(db, "SELECT q.`rowid`, q.`topic_id`, q.`text`, q.`image_id`, q.`advice`, "
             "q.`comment_id` FROM `questions` q INNER JOIN `questions_sections` qs ON q.`rowid`=qs.`question_id` WHERE "
             "qs.`section_id`=?", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, section_id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pdd_questions_t *questions = g_ptr_array_new();
+    pddby_questions_t* questions = pddby_array_new(0);
 
-    while (TRUE)
+    for (;;)
     {
         result = sqlite3_step(stmt);
         if (result == SQLITE_DONE)
         {
             break;
         }
-        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
-        gint64 id = sqlite3_column_int64(stmt, 0);
-        gint64 topic_id = sqlite3_column_int64(stmt, 1);
-        const gchar *text = (const gchar *)sqlite3_column_text(stmt, 2);
-        gint64 image_id = sqlite3_column_int64(stmt, 3);
-        const gchar *advice = (const gchar *)sqlite3_column_text(stmt, 4);
-        gint64 comment_id = sqlite3_column_int64(stmt, 5);
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        int64_t topic_id = sqlite3_column_int64(stmt, 1);
+        char const* text = (char const*)sqlite3_column_text(stmt, 2);
+        int64_t image_id = sqlite3_column_int64(stmt, 3);
+        char const* advice = (char const*)sqlite3_column_text(stmt, 4);
+        int64_t comment_id = sqlite3_column_int64(stmt, 5);
 
-        g_ptr_array_add(questions, question_new_with_id(id, topic_id, text, image_id, advice, comment_id));
+        pddby_array_add(questions, pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id));
     }
 
     return questions;
 }
 
-pdd_questions_t *question_find_with_offset(gint64 topic_id, gint offset, gint count)
+static pddby_questions_t* pddby_question_find_with_offset(int64_t topic_id, int offset, int count)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` "
             "WHERE `topic_id`=? LIMIT ?,?", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, topic_id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_int(stmt, 2, offset);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_int(stmt, 3, count);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pdd_questions_t *questions = g_ptr_array_new();
+    pddby_questions_t* questions = pddby_array_new(0);
 
-    while (TRUE)
+    for (;;)
     {
         result = sqlite3_step(stmt);
         if (result == SQLITE_DONE)
         {
             break;
         }
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to perform statement");
 
-        gint64 id = sqlite3_column_int64(stmt, 0);
-        const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
-        gint64 image_id = sqlite3_column_int64(stmt, 2);
-        const gchar *advice = (const gchar *)sqlite3_column_text(stmt, 3);
-        gint64 comment_id = sqlite3_column_int64(stmt, 4);
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        char const* text = (char const*)sqlite3_column_text(stmt, 1);
+        int64_t image_id = sqlite3_column_int64(stmt, 2);
+        char const* advice = (char const*)sqlite3_column_text(stmt, 3);
+        int64_t comment_id = sqlite3_column_int64(stmt, 4);
 
-        g_ptr_array_add(questions, question_new_with_id(id, topic_id, text, image_id, advice, comment_id));
+        pddby_array_add(questions, pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id));
     }
 
     return questions;
 }
 
-pdd_questions_t *question_find_by_topic(gint64 topic_id, gint ticket_number)
+pddby_questions_t* pddby_question_find_by_topic(int64_t topic_id, int ticket_number)
 {
     if (ticket_number > 0)
     {
-        return question_find_with_offset(topic_id, (ticket_number - 1) * 10, 10);
+        return pddby_question_find_with_offset(topic_id, (ticket_number - 1) * 10, 10);
     }
-    return question_find_with_offset(topic_id, 0, -1);
+    return pddby_question_find_with_offset(topic_id, 0, -1);
 }
 
-static void load_ticket_topics_distribution()
+static void pddby_load_ticket_topics_distribution()
 {
     if (ticket_topics_distribution)
     {
         return;
     }
 
-    gchar *raw_ttd = get_settings("ticket_topics_distribution");
-    gchar **ttd = g_strsplit(raw_ttd, ":", 0);
-    g_free(raw_ttd);
+    char *raw_ttd = pddby_settings_get("ticket_topics_distribution");
 
-    ticket_topics_distribution = g_new(gint, g_strv_length(ttd));
-
-    gchar **it = ttd;
-    gsize i = 0;
-    while (*it)
+    char *p = raw_ttd;
+    size_t count = 1;
+    while (*p)
     {
-        ticket_topics_distribution[i] = atoi(*it);
-        it++;
-        i++;
+        if (*p == ':')
+        {
+            count++;
+        }
+        p++;
     }
 
-    g_strfreev(ttd);
+    ticket_topics_distribution = malloc(count * sizeof(int));
+
+    size_t i = 0;
+    while (p > raw_ttd)
+    {
+        while (p >= raw_ttd && *p != ':')
+        {
+            p--;
+        }
+        ticket_topics_distribution[i++] = atoi(p + 1);
+        if (p >= raw_ttd)
+        {
+            *p = '\0';
+        }
+    }
+
+    free(raw_ttd);
 }
 
-pdd_questions_t *question_find_by_ticket(gint ticket_number)
+pddby_questions_t* pddby_question_find_by_ticket(int ticket_number)
 {
-    load_ticket_topics_distribution();
+    pddby_load_ticket_topics_distribution();
 
-    const pdd_topics_t *topics = topic_find_all();
-    gsize i = 0;
-    gint j;
-    pdd_questions_t *questions = g_ptr_array_new();
-    for (i = 0; i < topics->len; i++)
+    pddby_topics_t const* topics = pddby_topic_find_all();
+    int j;
+    pddby_questions_t* questions = pddby_array_new(0);
+    for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
-        const pdd_topic_t *topic = g_ptr_array_index(topics, i);
-        gint32 count = topic_get_question_count(topic);
+        pddby_topic_t const* topic = pddby_array_index(topics, i);
+        int32_t count = pddby_topic_get_question_count(topic);
         for (j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pdd_questions_t *topic_questions = question_find_with_offset(topic->id,
+            pddby_questions_t* topic_questions = pddby_question_find_with_offset(topic->id,
                 ((ticket_number - 1) * 10 + j) % count, 1);
-            g_ptr_array_add(questions, g_ptr_array_index(topic_questions, 0));
-            g_ptr_array_free(topic_questions, TRUE);
+            pddby_array_add(questions, pddby_array_index(topic_questions, 0));
+            pddby_array_free(topic_questions);
         }
     }
     return questions;
 }
 
-pdd_questions_t *question_find_random()
+pddby_questions_t* pddby_question_find_random()
 {
-    load_ticket_topics_distribution();
+    pddby_load_ticket_topics_distribution();
 
-    const pdd_topics_t *topics = topic_find_all();
-    gsize i;
-    gint j;
-    pdd_questions_t *questions = g_ptr_array_new();
-    for (i = 0; i < topics->len; i++)
+    pddby_topics_t const* topics = pddby_topic_find_all();
+    int j;
+    pddby_questions_t* questions = pddby_array_new(0);
+    for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
-        const pdd_topic_t *topic = g_ptr_array_index(topics, i);
-        gint32 count = topic_get_question_count(topic);
+        pddby_topic_t const* topic = pddby_array_index(topics, i);
+        int32_t count = pddby_topic_get_question_count(topic);
         for (j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pdd_questions_t *topic_questions = question_find_with_offset(topic->id, g_random_int_range(0, count - 1),
+            pddby_questions_t* topic_questions = pddby_question_find_with_offset(topic->id, pddby_aux_random_int_range(0, count - 1),
                 1);
-            g_ptr_array_add(questions, g_ptr_array_index(topic_questions, 0));
-            g_ptr_array_free(topic_questions, TRUE);
+            pddby_array_add(questions, pddby_array_index(topic_questions, 0));
+            pddby_array_free(topic_questions);
         }
     }
     return questions;
 }
 
-void question_free_all(pdd_questions_t *questions)
+void pddby_question_free_all(pddby_questions_t* questions)
 {
-    g_ptr_array_foreach(questions, (GFunc)question_free, NULL);
-    g_ptr_array_free(questions, TRUE);
+    //pddby_array_foreach(questions, (GFunc)pddby_question_free, NULL);
+    pddby_array_free(questions);
 }

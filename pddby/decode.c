@@ -1,18 +1,24 @@
 #include "decode.h"
 #include "answer.h"
+#include "callback.h"
+#include "comment.h"
 #include "config.h"
 #include "database.h"
-#include "decode_image.h"
+#include "decode.h"
 #include "image.h"
 #include "question.h"
 #include "section.h"
-#include "settings.h"
 #include "topic.h"
 #include "traffreg.h"
-#include "delphi_helper.h"
+#include "util/aux.h"
+#include "util/delphi.h"
+#include "util/regex.h"
+#include "util/settings.h"
 
 #include <ctype.h>
-#include <glib/gstdio.h>
+#include <dirent.h>
+#include <openssl/md5.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -20,30 +26,30 @@
 
 typedef struct topic_question_s
 {
-    gint8 topic_number;
-    gint32 question_offset;
+    int8_t topic_number;
+    int32_t question_offset;
 } __attribute__((__packed__)) topic_question_t;
 
-typedef gchar* (*decode_string_func_t)(guint16 magic, gchar const* path, gsize* str_size, gint8 topic_number);
+typedef char* (*decode_string_func_t)(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
 
 typedef struct decode_context_s
 {
-    gchar const* root_path;
-    guint16 data_magic;
-    guint16 image_magic;
+    char const* root_path;
+    uint16_t data_magic;
+    uint16_t image_magic;
     decode_string_func_t decode_string;
 } decode_context_t;
 
-typedef gboolean (*decode_stage_t) (decode_context_t* context);
+typedef int (*decode_stage_t) (decode_context_t* context);
 
-static gboolean init_magic(decode_context_t* context);
-static gboolean decode_images(decode_context_t* context);
-static gboolean decode_comments(decode_context_t* context);
-static gboolean decode_traffregs(decode_context_t* context);
-static gboolean decode_questions(decode_context_t* context);
+static int init_magic(decode_context_t* context);
+static int decode_images(decode_context_t* context);
+static int decode_comments(decode_context_t* context);
+static int decode_traffregs(decode_context_t* context);
+static int decode_questions(decode_context_t* context);
 
-static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
-static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
+static char* decode_string(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
+static char* decode_string_v12(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
 
 static const decode_stage_t decode_stages[] =
 {
@@ -52,59 +58,58 @@ static const decode_stage_t decode_stages[] =
     &decode_comments,
     &decode_traffregs,
     &decode_questions,
-    NULL
+    0
 };
 
-gboolean decode(const gchar *root_path)
+int decode(char const* root_path)
 {
     decode_context_t context;
     context.root_path = root_path;
 
     const decode_stage_t *stage;
 
-    for (stage = decode_stages; NULL != *stage; stage++)
+    for (stage = decode_stages; *stage; stage++)
     {
         if (!(*stage)(&context))
         {
-            return FALSE;
+            return 0;
         }
     }
 
-    return TRUE;
+    return 1;
 }
 
-static gchar *find_file_ci(const gchar *path, const gchar *fname)
+static char* find_file_ci(char const* path, char const* fname)
 {
-    GError *err;
-    GDir *dir = g_dir_open(path, 0, &err);
+    DIR* dir = opendir(path);
     if (!dir)
     {
-        g_error("%s\n", err->message);
+        pddby_report_error("");
     }
-    gchar *file_path = NULL;
-    const gchar *name;
-    while ((name = g_dir_read_name(dir)))
+    char* file_path = 0;
+    struct dirent* ent;
+    while ((ent = readdir(dir)))
     {
-        if (!g_strcasecmp(name, fname))
+        if (!strcasecmp(ent->d_name, fname))
         {
-            file_path = g_build_filename(path, name, NULL);
+            file_path = pddby_aux_build_filename(path, ent->d_name, 0);
             break;
         }
     }
-    g_dir_close(dir);
+    closedir(dir);
     return file_path;
 }
 
-static gchar *make_path(const gchar *root_path, ...)
+static char* make_path(char const* root_path, ...)
 {
-    gchar *result = g_strdup(root_path);
+    char* result = strdup(root_path);
     va_list list;
     va_start(list, root_path);
-    const gchar *path_part;
-    while ((path_part = va_arg(list, const gchar *)))
+    char const* path_part;
+    while ((path_part = va_arg(list, char const*)))
     {
-        gchar *path = find_file_ci(result, path_part);
-        g_free(result);
+        char* path = find_file_ci(result, path_part);
+        free(result);
         result = path;
         if (!result)
         {
@@ -112,57 +117,56 @@ static gchar *make_path(const gchar *root_path, ...)
         }
     }
     va_end(list);
-    g_print("make_path: %s\n", result);
+    printf("make_path: %s\n", result);
     return result;
 }
 
-static gboolean init_magic_2006(decode_context_t* context)
+static int init_magic_2006(decode_context_t* context)
 {
-    gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
-    FILE *f = g_fopen(pdd32_path, "rb");
-    g_free(pdd32_path);
+    char* pdd32_path = make_path(context->root_path, "pdd32.exe", 0);
+    FILE* f = fopen(pdd32_path, "rb");
+    free(pdd32_path);
     if (!f)
     {
-        g_error("pdd32.exe not found");
+        pddby_report_error("pdd32.exe not found");
     }
 
-    guchar *buffer = g_malloc(16 * 1024 + 1);
+    uint8_t* buffer = malloc(16 * 1024 + 1);
     fseek(f, 16 * 1024 + 1, SEEK_SET);
     if (fread(buffer, 16 * 1024 + 1, 1, f) != 1)
     {
-        g_error("pdd32.exe invalid");
+        pddby_report_error("pdd32.exe invalid");
     }
 
     context->data_magic = 0;
     set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
-    int i;
-    for (i = 0; i < 255; i++)
+    for (int i = 0; i < 255; i++)
     {
         context->data_magic ^= buffer[delphi_random(16 * 1024)];
     }
     context->data_magic = context->data_magic * buffer[16 * 1024] + 0x1998;
 
-    g_free(buffer);
+    free(buffer);
     fclose(f);
-    return TRUE;
+    return 1;
 }
 
-static gboolean init_magic_2008(decode_context_t* context)
+static int init_magic_2008(decode_context_t* context)
 {
-    gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
-    FILE *f = g_fopen(pdd32_path, "rb");
-    g_free(pdd32_path);
+    char* pdd32_path = make_path(context->root_path, "pdd32.exe", 0);
+    FILE* f = fopen(pdd32_path, "rb");
+    free(pdd32_path);
     if (!f)
     {
-        g_error("pdd32.exe not found");
+        pddby_report_error("pdd32.exe not found");
     }
 
-    guchar *buffer = g_malloc(32 * 1024);
+    uint8_t* buffer = malloc(32 * 1024);
     fseek(f, 32 * 1024, SEEK_SET);
     if (fread(buffer, 32 * 1024, 1, f) != 1)
     {
-        g_error("pdd32.exe invalid");
+        pddby_report_error("pdd32.exe invalid");
     }
 
     context->data_magic = 0x2008;
@@ -175,13 +179,12 @@ static gboolean init_magic_2008(decode_context_t* context)
         {
             break;
         }
-        int i, j;
-        for (i = 0; i < 256; i++)
+        for (int i = 0; i < 256; i++)
         {
-            guchar ch = buffer[delphi_random(length)];
-            for (j = 0; j < 8; j++)
+            uint8_t ch = buffer[delphi_random(length)];
+            for (int j = 0; j < 8; j++)
             {
-                guint16 old_magic = context->data_magic;
+                uint16_t old_magic = context->data_magic;
                 context->data_magic >>= 1;
                 if ((ch ^ old_magic) & 1)
                 {
@@ -193,21 +196,23 @@ static gboolean init_magic_2008(decode_context_t* context)
         }
     }
 
-    g_free(buffer);
+    free(buffer);
     fclose(f);
-    return TRUE;
+    return 1;
 }
 
-static GChecksum* get_file_checksum(gchar const* file_path, GChecksumType type)
+static char* get_file_checksum(char const* file_path)
 {
-    FILE *f = g_fopen(file_path, "rb");
+    FILE* f = fopen(file_path, "rb");
     if (!f)
     {
-        g_error("unable to open file: %s", file_path);
+        pddby_report_error("unable to open file: %s", file_path);
     }
 
-    GChecksum* result = g_checksum_new(type);
-    guchar *buffer = g_malloc(32 * 1024);
+    MD5_CTX md5ctx;
+    MD5_Init(&md5ctx);
+
+    uint8_t* buffer = malloc(32 * 1024);
 
     do
     {
@@ -218,29 +223,38 @@ static GChecksum* get_file_checksum(gchar const* file_path, GChecksumType type)
             {
                 break;
             }
-            g_error("unable to read file: %s", file_path);
+            pddby_report_error("unable to read file: %s", file_path);
         }
-        g_checksum_update(result, buffer, bytes_read);
+        MD5_Update(&md5ctx, buffer, bytes_read);
     }
     while (!feof(f));
 
-    g_free(buffer);
+    free(buffer);
     fclose(f);
+
+    uint8_t md5sum[MD5_DIGEST_LENGTH];
+    MD5_Final(md5sum, &md5ctx);
+
+    char* result = malloc(MD5_DIGEST_LENGTH * 2 + 1);
+    for (size_t i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        sprintf(result + i * 2, "%02x", md5sum[i]);
+    }
 
     return result;
 }
 
-static gboolean init_magic(decode_context_t* context)
+static int init_magic(decode_context_t* context)
 {
     struct stat root_stat;
     if (stat(context->root_path, &root_stat) == -1)
     {
-        g_error("unable to stat root directory");
+        pddby_report_error("unable to stat root directory");
     }
 
     struct tm root_tm = *gmtime(&root_stat.st_mtime);
 
-    gboolean result = FALSE;
+    int result = 0;
     // TODO: better checks
     switch (1900 + root_tm.tm_year)
     {
@@ -260,9 +274,9 @@ static gboolean init_magic(decode_context_t* context)
         {
             struct checksum_magic_s
             {
-                gchar const* checksum;
-                guint16 data_magic;
-                guint16 image_magic; // == data_magic ^ 0x1a80
+                char const* checksum;
+                uint16_t data_magic;
+                uint16_t image_magic; // == data_magic ^ 0x1a80
                 decode_string_func_t decode_string;
             };
             struct checksum_magic_s const s_checksums[] =
@@ -274,67 +288,66 @@ static gboolean init_magic(decode_context_t* context)
                 {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v12}
             };
 
-            gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
-            GChecksum* checksum = get_file_checksum(pdd32_path, G_CHECKSUM_MD5);
-            g_free(pdd32_path);
+            char* pdd32_path = make_path(context->root_path, "pdd32.exe", 0);
+            char* checksum = get_file_checksum(pdd32_path);
+            free(pdd32_path);
 
-            for (gsize i = 0; i < sizeof(s_checksums) / sizeof(*s_checksums); i++)
+            for (size_t i = 0; i < sizeof(s_checksums) / sizeof(*s_checksums); i++)
             {
-                if (!strcmp(s_checksums[i].checksum, g_checksum_get_string(checksum)))
+                if (!strcmp(s_checksums[i].checksum, checksum))
                 {
                     context->data_magic = s_checksums[i].data_magic;
                     context->image_magic = s_checksums[i].image_magic;
                     context->decode_string = s_checksums[i].decode_string;
-                    result = TRUE;
+                    result = 1;
                     break;
                 }
             }
 
-            g_checksum_free(checksum);
+            free(checksum);
         }
     }
     if (!result)
     {
-        g_error("unable to calculate magic number");
+        pddby_report_error("unable to calculate magic number");
     }
 
-    g_print("magic: 0x%04x\n", context->data_magic);
-    return TRUE;
+    printf("magic: 0x%04x\n", context->data_magic);
+    return 1;
 }
 
-static gboolean decode_images(decode_context_t* context)
+static int decode_images(decode_context_t* context)
 {
-    gchar *raw_image_dirs = get_settings("image_dirs");
-    gchar **image_dirs = g_strsplit(raw_image_dirs, ":", 0);
-    g_free(raw_image_dirs);
+    char* raw_image_dirs = pddby_settings_get("image_dirs");
+    char** image_dirs = g_strsplit(raw_image_dirs, ":", 0);
+    free(raw_image_dirs);
 
-    gboolean result = TRUE;
-    database_tx_begin();
-    gchar **dir_name = image_dirs;
+    int result = 1;
+    pddby_database_tx_begin();
+    char** dir_name = image_dirs;
     while (*dir_name)
     {
-        gchar *images_path = make_path(context->root_path, *dir_name, NULL);
-        GError *err = NULL;
-        GDir *dir = g_dir_open(images_path, 0, &err);
+        char* images_path = make_path(context->root_path, *dir_name, 0);
+        DIR* dir = opendir(images_path);
         if (!dir)
         {
-            g_error("%s\n", err->message);
+            pddby_report_error("");
         }
 
-        const gchar *name;
-        while ((name = g_dir_read_name(dir)))
+        struct dirent* ent;
+        while ((ent = readdir(dir)))
         {
-            gchar *image_path = g_build_filename(images_path, name, NULL);
+            char* image_path = pddby_aux_build_filename(images_path, ent->d_name, 0);
             result = decode_image(image_path, context->image_magic);
-            g_free(image_path);
+            free(image_path);
             if (!result)
             {
                 break;
             }
         }
 
-        g_dir_close(dir);
-        g_free(images_path);
+        closedir(dir);
+        free(images_path);
 
         if (!result)
         {
@@ -343,34 +356,34 @@ static gboolean decode_images(decode_context_t* context)
 
         dir_name++;
     }
-    database_tx_commit();
+    pddby_database_tx_commit();
     g_strfreev(image_dirs);
     return result;
 }
 
-static gint32 *decode_table(guint16 magic, const gchar *path, gsize *table_size)
+static int32_t* decode_table(uint16_t magic, char const* path, size_t* table_size)
 {
-    GError *err = NULL;
-    gchar *t;
-    gint32 *table;
-    if (!g_file_get_contents(path, &t, table_size, &err))
+    //GError *err = NULL;
+    char* t;
+    int32_t* table;
+    if (!pddby_aux_file_get_contents(path, &t, table_size))
     {
-        g_error("%s\n", err->message);
+        pddby_report_error("");
+        //pddby_report_error("%s\n", err->message);
     }
 
-    table = (gint32 *)t;
+    table = (int32_t *)t;
 
-    if (*table_size % sizeof(gint32))
+    if (*table_size % sizeof(int32_t))
     {
-        g_error("invalid file size: %s (should be multiple of %u)\n", path, (guint)sizeof(gint32));
+        pddby_report_error("invalid file size: %s (should be multiple of %ld)\n", path, sizeof(int32_t));
     }
 
-    *table_size /= sizeof(gint32);
+    *table_size /= sizeof(int32_t);
 
-    gsize i;
-    for (i = 0; i < *table_size; i++)
+    for (size_t i = 0; i < *table_size; i++)
     {
-        table[i] = GINT32_FROM_LE(table[i]);
+        table[i] = PDDBY_INT32_FROM_LE(table[i]);
         if (table[i] != -1)
         {
             table[i] ^= magic;
@@ -382,29 +395,29 @@ static gint32 *decode_table(guint16 magic, const gchar *path, gsize *table_size)
     return table;
 }
 
-static topic_question_t *decode_topic_questions_table(guint16 magic, const gchar *path, gsize *table_size)
+static topic_question_t* decode_topic_questions_table(uint16_t magic, char const* path, size_t* table_size)
 {
-    GError *err = NULL;
-    gchar *t;
-    topic_question_t *table;
-    if (!g_file_get_contents(path, &t, table_size, &err))
+    //GError *err = NULL;
+    char* t;
+    topic_question_t* table;
+    if (!pddby_aux_file_get_contents(path, &t, table_size))
     {
-        g_error("%s\n", err->message);
+        pddby_report_error("");
+        //pddby_report_error("%s\n", err->message);
     }
 
-    table = (topic_question_t *)t;
+    table = (topic_question_t*)t;
 
     if (*table_size % sizeof(topic_question_t))
     {
-        g_error("invalid file size: %s (should be multiple of %u)\n", path, (guint)sizeof(topic_question_t));
+        pddby_report_error("invalid file size: %s (should be multiple of %ld)\n", path, sizeof(topic_question_t));
     }
 
     *table_size /= sizeof(topic_question_t);
 
-    gsize i;
-    for (i = 0; i < *table_size; i++)
+    for (size_t i = 0; i < *table_size; i++)
     {
-        table[i].question_offset = GINT32_FROM_LE(table[i].question_offset) ^ magic;
+        table[i].question_offset = PDDBY_INT32_FROM_LE(table[i].question_offset) ^ magic;
         // delphi has file offsets starting from 1, we need 0
         // have to subtract another 1 from it (tell me why it points to 'R', not '[')
         table[i].question_offset -= 2;
@@ -413,17 +426,17 @@ static topic_question_t *decode_topic_questions_table(guint16 magic, const gchar
     return table;
 }
 
-static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number)
+static char* decode_string(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number)
 {
-    GError *err = NULL;
-    gchar *str;
-    if (!g_file_get_contents(path, &str, str_size, &err))
+    //GError *err = NULL;
+    char* str;
+    if (!pddby_aux_file_get_contents(path, &str, str_size))
     {
-        g_error("%s\n", err->message);
+        pddby_report_error("");
+        //pddby_report_error("%s\n", err->message);
     }
 
-    guint32 i;
-    for (i = 0; i < *str_size; i++)
+    for (size_t i = 0; i < *str_size; i++)
     {
         // TODO: magic numbers?
         str[i] ^= (magic & 0x0ff) ^ topic_number ^ (i & 1 ? 0x30 : 0x16) ^ ((i + 1) % 255);
@@ -432,16 +445,17 @@ static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, g
     return str;
 }
 
-static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number)
+static char* decode_string_v12(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number)
 {
-    GError *err = NULL;
-    gchar *str;
-    if (!g_file_get_contents(path, &str, str_size, &err))
+    //GError *err = NULL;
+    char* str;
+    if (!pddby_aux_file_get_contents(path, &str, str_size))
     {
-        g_error("%s\n", err->message);
+        pddby_report_error("");
+        //pddby_report_error("%s\n", err->message);
     }
 
-    for (gsize i = 0; i < *str_size; i++)
+    for (size_t i = 0; i < *str_size; i++)
     {
         str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x80 : 0xaa) ^ ((i + 1) % 255);
     }
@@ -449,100 +463,120 @@ static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_siz
     return str;
 }
 
-typedef gpointer (*object_new_t)(gint32, const gchar *);
-typedef gboolean (*object_save_t)(gpointer *);
-typedef void (*object_free_t)(gpointer *);
-typedef void (*object_set_images_t)(gpointer *, pdd_images_t *images);
+typedef void* (*object_new_t)(int32_t, char const*);
+typedef int (*object_save_t)(void*);
+typedef void (*object_free_t)(void*);
+typedef void (*object_set_images_t)(void*, pddby_images_t* images);
 
-static gboolean decode_simple_data(decode_context_t* context, const gchar *dat_path, const gchar *dbt_path,
+static int decode_simple_data(decode_context_t* context, char const* dat_path, char const* dbt_path,
     object_new_t object_new, object_save_t object_save, object_free_t object_free,
     object_set_images_t object_set_images)
 {
-    gsize table_size;
-    gint32 *table = decode_table(context->data_magic, dat_path, &table_size);
+    size_t table_size;
+    int32_t* table = decode_table(context->data_magic, dat_path, &table_size);
 
-    gsize str_size;
-    gchar *str = context->decode_string(context->data_magic, dbt_path, &str_size, 0);
+    size_t str_size;
+    char* str = context->decode_string(context->data_magic, dbt_path, &str_size, 0);
 
-    GError *err = NULL;
-    GRegex *simple_data_regex = g_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$",
-        G_REGEX_OPTIMIZE | G_REGEX_DOTALL, 0, &err);
-    if (err)
+    pddby_regex_t* simple_data_regex = pddby_regex_new("^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$",
+        PDDBY_REGEX_DOTALL);
+
+    struct markup_regex_s
     {
-        g_error("%s\n", err->message);
-    }
-
-    struct
-    {
-        GRegex *regex;
-        const gchar *replacement;
-    } markup_regexes[] =
+        char const* regex_text;
+        char const* replacement_text;
+        int regex_options;
+        pddby_regex_t* regex;
+    };
+    struct markup_regex_s markup_regexes[] =
     {
         {
-            g_regex_new("@(.+?)@", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL, G_REGEX_MATCH_NEWLINE_ANY,
-                &err),
-            "<span underline='single' underline_color='#ff0000'>\\1</span>"
+            "@(.+?)@",
+            "<span underline='single' underline_color='#ff0000'>\\1</span>",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("^~\\s*.+?$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            ""
+            "^~\\s*.+?$\\s*",
+            "",
+            PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("^\\^R\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span underline='single' underline_color='#cc0000'><b>\\1</b></span>"
+            "^\\^R\\^(.+?)$\\s*",
+            "<span underline='single' underline_color='#cc0000'><b>\\1</b></span>",
+            PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("^\\^G\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span underline='single' underline_color='#00cc00'><b>\\1</b></span>"
+            "^\\^G\\^(.+?)$\\s*",
+            "<span underline='single' underline_color='#00cc00'><b>\\1</b></span>",
+            PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("^\\^B\\^(.+?)$\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span underline='single' underline_color='#0000cc'><b>\\1</b></span>"
+            "^\\^B\\^(.+?)$\\s*",
+            "<span underline='single' underline_color='#0000cc'><b>\\1</b></span>",
+            PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("\\^R(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
-                G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span color='#cc0000'><b>\\1</b></span>"
+            "\\^R(.+?)\\^K",
+            "<span color='#cc0000'><b>\\1</b></span>",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("\\^G(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
-                G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span color='#00cc00'><b>\\1</b></span>"
+            "\\^G(.+?)\\^K",
+            "<span color='#00cc00'><b>\\1</b></span>",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("\\^B(.+?)\\^K", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE | G_REGEX_DOTALL,
-                G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "<span color='#0000cc'><b>\\1</b></span>"
+            "\\^B(.+?)\\^K",
+            "<span color='#0000cc'><b>\\1</b></span>",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("-\\s*$\\s*", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            ""
+            "-\\s*$\\s*",
+            "",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("([^.> \t])\\s*$\\s*", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            "\\1 "
+            "([^.> \t])\\s*$\\s*",
+            "\\1 ",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY,
+            0
         },
         {
-            g_regex_new("[ \t]{2,}", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE, G_REGEX_MATCH_NEWLINE_ANY, &err),
-            " "
-        },
+            "[ \t]{2,}",
+            " ",
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY,
+            0
+        }
     };
 
-    gsize i, j;
-    gboolean result = TRUE;
-    database_tx_begin();
-    for (i = 0; i < table_size; i++)
+    for (size_t i = 0; i < sizeof(markup_regexes) / sizeof(*markup_regexes); i++)
     {
-        gpointer *object = NULL;
-        pdd_images_t *object_images = g_ptr_array_new();
+        markup_regexes[i].regex = pddby_regex_new(markup_regexes[i].regex_text, markup_regexes[i].regex_options);
+    }
+
+    int result = 1;
+    pddby_database_tx_begin();
+    for (size_t i = 0; i < table_size; i++)
+    {
+        void* object = NULL;
+        pddby_images_t* object_images = pddby_array_new(0);
         if (table[i] == -1)
         {
             object = object_new(table[i], NULL);
         }
         else
         {
-            gint32 next_offset = str_size;
-            for (j = 0; j < table_size; j++)
+            int32_t next_offset = str_size;
+            for (size_t j = 0; j < table_size; j++)
             {
                 if (table[j] > table[i] && table[j] < next_offset)
                 {
@@ -550,169 +584,149 @@ static gboolean decode_simple_data(decode_context_t* context, const gchar *dat_p
                 }
             }
 
-            gchar *data = g_convert(str + table[i], next_offset - table[i], "utf-8", "cp1251", NULL, NULL, &err);
+            char* data = g_convert(str + table[i], next_offset - table[i], "utf-8", "cp1251", NULL, NULL);
             if (!data)
             {
-                g_error("%s\n", err->message);
+                pddby_report_error("");
+                //pddby_report_error("%s\n", err->message);
             }
-            GMatchInfo *match_info;
-            if (!g_regex_match(simple_data_regex, data, 0, &match_info))
+            //GMatchInfo *match_info;
+            pddby_regex_match_t* match;
+            //if (!g_regex_match(simple_data_regex, data, 0, &match_info))
+            if (!pddby_regex_match(simple_data_regex, data, &match))
             {
-                g_error("unable to match simple data\n");
+                pddby_report_error("unable to match simple data\n");
             }
-            gchar *number = g_strchomp(g_match_info_fetch(match_info, 1));
-            gchar *images = g_strchomp(g_match_info_fetch(match_info, 2));
-            gchar *text = g_strchomp(g_match_info_fetch(match_info, 3));
+            // FIXME: memleak
+            char* number = pddby_string_chomp(pddby_regex_match_fetch(match, 1));
+            char* images = pddby_string_chomp(pddby_regex_match_fetch(match, 2));
+            char* text = pddby_string_chomp(pddby_regex_match_fetch(match, 3));
             if (*images)
             {
-                gchar **image_names = g_strsplit(images, "\n", 0);
-                gchar **in = image_names;
+                char** image_names = g_strsplit(images, "\n", 0);
+                char** in = image_names;
                 while (*in)
                 {
-                    pdd_image_t *image = image_find_by_name(g_strchomp(*in + 1));
+                    pddby_image_t* image = pddby_image_find_by_name(pddby_string_chomp(*in + 1));
                     if (!image)
                     {
-                        g_error("unable to find image with name %s\n", *in + 1);
+                        pddby_report_error("unable to find image with name %s\n", *in + 1);
                     }
-                    g_ptr_array_add(object_images, image);
+                    pddby_array_add(object_images, image);
                     in++;
                 }
                 g_strfreev(image_names);
             }
-            for (j = 0; j < sizeof(markup_regexes) / sizeof(*markup_regexes); j++)
+            for (size_t j = 0; j < sizeof(markup_regexes) / sizeof(*markup_regexes); j++)
             {
-                gchar *new_text = g_regex_replace(markup_regexes[j].regex, text, -1, 0, markup_regexes[j].replacement,
-                    0, &err);
-                if (err)
-                {
-                    g_error("%s\n", err->message);
-                }
-                g_free(text);
+                char* new_text = pddby_regex_replace(markup_regexes[j].regex, text, markup_regexes[j].replacement_text);
+                free(text);
                 text = new_text;
             }
-            object = object_new(atoi(number), g_strchomp(text));
-            g_free(text);
-            g_free(images);
-            g_free(number);
-            g_match_info_free(match_info);
-            g_free(data);
+            object = object_new(atoi(number), pddby_string_chomp(text));
+            free(text);
+            free(images);
+            free(number);
+            pddby_regex_match_free(match);
+            free(data);
         }
         result = object_save(object);
         if (object_set_images)
         {
             object_set_images(object, object_images);
         }
-        image_free_all(object_images);
+        pddby_image_free_all(object_images);
         if (!result)
         {
-            g_error("unable to save object\n");
+            pddby_report_error("unable to save object\n");
         }
         object_free(object);
-        g_print(".");
+        printf(".");
     }
-    database_tx_commit();
+    pddby_database_tx_commit();
 
-    g_print("\n");
+    printf("\n");
 
-    for (i = 0; i < sizeof(markup_regexes) / sizeof(*markup_regexes); i++)
+    for (size_t i = 0; i < sizeof(markup_regexes) / sizeof(*markup_regexes); i++)
     {
-        g_regex_unref(markup_regexes[i].regex);
+        pddby_regex_free(markup_regexes[i].regex);
     }
 
-    g_regex_unref(simple_data_regex);
-    g_free(str);
-    g_free(table);
+    pddby_regex_free(simple_data_regex);
+    free(str);
+    free(table);
 
     return result;
 }
 
-static gboolean decode_comments(decode_context_t* context)
+static int decode_comments(decode_context_t* context)
 {
-    gchar *comments_dat_path = make_path(context->root_path, "tickets", "comments", "comments.dat", NULL);
-    gchar *comments_dbt_path = make_path(context->root_path, "tickets", "comments", "comments.dbt", NULL);
+    char* comments_dat_path = make_path(context->root_path, "tickets", "comments", "comments.dat", 0);
+    char* comments_dbt_path = make_path(context->root_path, "tickets", "comments", "comments.dbt", 0);
 
-    gboolean result = decode_simple_data(context, comments_dat_path, comments_dbt_path,
-        (object_new_t)comment_new, (object_save_t)comment_save, (object_free_t)comment_free, NULL);
+    int result = decode_simple_data(context, comments_dat_path, comments_dbt_path,
+        (object_new_t)pddby_comment_new, (object_save_t)pddby_comment_save, (object_free_t)pddby_comment_free, NULL);
 
     if (!result)
     {
-        g_error("unable to decode comments\n");
+        pddby_report_error("unable to decode comments\n");
     }
 
-    g_free(comments_dat_path);
-    g_free(comments_dbt_path);
+    free(comments_dat_path);
+    free(comments_dbt_path);
 
     return result;
 }
 
-static gboolean decode_traffregs(decode_context_t* context)
+static int decode_traffregs(decode_context_t* context)
 {
-    gchar *traffreg_dat_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dat", NULL);
-    gchar *traffreg_dbt_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dbt", NULL);
+    char* traffreg_dat_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dat", NULL);
+    char* traffreg_dbt_path = make_path(context->root_path, "tickets", "traffreg", "traffreg.dbt", NULL);
 
-    gboolean result = decode_simple_data(context, traffreg_dat_path, traffreg_dbt_path,
-        (object_new_t)traffreg_new, (object_save_t)traffreg_save, (object_free_t)traffreg_free,
-        (object_set_images_t)traffreg_set_images);
+    int result = decode_simple_data(context, traffreg_dat_path, traffreg_dbt_path,
+        (object_new_t)pddby_traffreg_new, (object_save_t)pddby_traffreg_save, (object_free_t)pddby_traffreg_free,
+        (object_set_images_t)pddby_traffreg_set_images);
 
     if (!result)
     {
-        g_error("unable to decode traffregs");
+        pddby_report_error("unable to decode traffregs");
     }
 
-    g_free(traffreg_dat_path);
-    g_free(traffreg_dbt_path);
+    free(traffreg_dat_path);
+    free(traffreg_dbt_path);
 
     return result;
 }
 
-static gboolean decode_questions_data(decode_context_t* context, const gchar *dbt_path, gint8 topic_number,
-    topic_question_t *sections_data, gsize sections_data_size)
+static int decode_questions_data(decode_context_t* context, char const* dbt_path, int8_t topic_number,
+    topic_question_t* sections_data, size_t sections_data_size)
 {
-    topic_question_t *table = sections_data;
+    topic_question_t* table = sections_data;
     while (table->topic_number != topic_number)
     {
         table++;
         sections_data_size--;
     }
-    gsize table_size = 0;
+    size_t table_size = 0;
     while (table_size < sections_data_size && table[table_size].topic_number == topic_number)
     {
         table_size++;
     }
 
-    gsize str_size;
-    gchar *str = context->decode_string(context->data_magic, dbt_path, &str_size, topic_number);
+    size_t str_size;
+    char* str = context->decode_string(context->data_magic, dbt_path, &str_size, topic_number);
 
-    GError *err = NULL;
-    GRegex *question_data_regex = g_regex_new("\\s*\\[|\\]\\s*", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
-    if (err)
-    {
-        g_error("%s\n", err->message);
-    }
-    GRegex *answers_regex = g_regex_new("^($^$)?\\d\\.?\\s+", G_REGEX_OPTIMIZE | G_REGEX_MULTILINE,
-        G_REGEX_MATCH_NEWLINE_ANY, &err);
-    if (err)
-    {
-        g_error("%s\n", err->message);
-    }
-    GRegex *word_break_regex = g_regex_new("(?<!\\s)-\\s+", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
-    if (err)
-    {
-        g_error("%s\n", err->message);
-    }
-    GRegex *spaces_regex = g_regex_new("\\s{2,}", G_REGEX_OPTIMIZE, G_REGEX_MATCH_NEWLINE_ANY, &err);
-    if (err)
-    {
-        g_error("%s\n", err->message);
-    }
+    pddby_regex_t* question_data_regex = pddby_regex_new("\\s*\\[|\\]\\s*", PDDBY_REGEX_NEWLINE_ANY);
+    pddby_regex_t* answers_regex = pddby_regex_new("^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY);
+    pddby_regex_t* word_break_regex = pddby_regex_new("(?<!\\s)-\\s+", PDDBY_REGEX_NEWLINE_ANY);
+    pddby_regex_t* spaces_regex = pddby_regex_new("\\s{2,}", PDDBY_REGEX_NEWLINE_ANY);
 
-    gsize i, j;
-    gboolean result = TRUE;
-    database_tx_begin();
-    for (i = 0; i < table_size; i++)
+    int result = 1;
+    pddby_database_tx_begin();
+    for (size_t i = 0; i < table_size; i++)
     {
-        gint32 next_offset = str_size;
-        for (j = 0; j < table_size; j++)
+        int32_t next_offset = str_size;
+        for (size_t j = 0; j < table_size; j++)
         {
             if (table[j].question_offset > table[i].question_offset && table[j].question_offset < next_offset)
             {
@@ -720,20 +734,21 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
             }
         }
 
-        gchar *text = g_convert(str + table[i].question_offset, next_offset - table[i].question_offset, "utf-8",
-            "cp1251", NULL, NULL, &err);
+        char* text = g_convert(str + table[i].question_offset, next_offset - table[i].question_offset, "utf-8",
+            "cp1251", NULL, NULL);
         if (!text)
         {
-            g_error("%s\n", err->message);
+            pddby_report_error("");
+            //pddby_report_error("%s\n", err->message);
         }
-        gchar **parts = g_regex_split(question_data_regex, text, 0);
-        g_free(text);
-        gchar **p = parts + 1;
-        pdd_question_t *question = question_new(topic_number, NULL, 0, NULL, 0);
-        pdd_traffregs_t *question_traffregs = g_ptr_array_new();
-        pdd_sections_t *question_sections = g_ptr_array_new();
-        pdd_answers_t *question_answers = g_ptr_array_new();
-        gsize answer_number = 0;
+        char** parts = pddby_regex_split(question_data_regex, text);
+        free(text);
+        char** p = parts + 1;
+        pddby_question_t* question = pddby_question_new(topic_number, NULL, 0, NULL, 0);
+        pddby_traffregs_t* question_traffregs = pddby_array_new(0);
+        pddby_sections_t* question_sections = pddby_array_new(0);
+        pddby_answers_t* question_answers = pddby_array_new(0);
+        size_t answer_number = 0;
         while (*p)
         {
             switch ((*p)[0])
@@ -741,16 +756,16 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
             case 'R':
                 p++;
                 {
-                    gchar **section_names = g_strsplit(*p, " ", 0);
-                    gchar **sn = section_names;
+                    char** section_names = g_strsplit(*p, " ", 0);
+                    char** sn = section_names;
                     while (*sn)
                     {
-                        pdd_section_t *section = section_find_by_name(*sn);
+                        pddby_section_t *section = pddby_section_find_by_name(*sn);
                         if (!section)
                         {
-                            g_error("unable to find section with name %s\n", *sn);
+                            pddby_report_error("unable to find section with name %s\n", *sn);
                         }
-                        g_ptr_array_add(question_sections, section);
+                        pddby_array_add(question_sections, section);
                         sn++;
                     }
                     g_strfreev(section_names);
@@ -759,54 +774,38 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
             case 'G':
                 p++;
                 {
-                    pdd_image_t *image = image_find_by_name(*p);
+                    pddby_image_t *image = pddby_image_find_by_name(*p);
                     if (!image)
                     {
-                        g_error("unable to find image with name %s\n", *p);
+                        pddby_report_error("unable to find image with name %s\n", *p);
                     }
                     question->image_id = image->id;
-                    image_free(image);
+                    pddby_image_free(image);
                 }
                 break;
             case 'Q':
                 p++;
                 {
-                    gchar *question_text = g_regex_replace_literal(word_break_regex, *p, -1, 0, "", 0, &err);
-                    if (err)
-                    {
-                        g_error("%s\n", err->message);
-                    }
-                    question->text = g_regex_replace_literal(spaces_regex, question_text, -1, 0, " ", 0, &err);
-                    g_free(question_text);
-                    if (err)
-                    {
-                        g_error("%s\n", err->message);
-                    }
-                    g_strchomp(question->text);
+                    char* question_text = pddby_regex_replace_literal(word_break_regex, *p, "");
+                    question->text = pddby_regex_replace_literal(spaces_regex, question_text, " ");
+                    free(question_text);
+                    pddby_string_chomp(question->text);
                 }
                 break;
             case 'W':
             case 'V':
                 p++;
                 {
-                    gchar **answers = g_regex_split(answers_regex, *p, 0);
-                    gchar **a = answers + 1;
+                    char** answers = pddby_regex_split(answers_regex, *p);
+                    char** a = answers + 1;
                     while (*a)
                     {
-                        gchar *answer_text = g_regex_replace_literal(word_break_regex, *a, -1, 0, "", 0, &err);
-                        if (err)
-                        {
-                            g_error("%s\n", err->message);
-                        }
-                        pdd_answer_t *answer = answer_new(0, g_regex_replace_literal(spaces_regex, answer_text, -1, 0,
-                            " ", 0, &err), FALSE);
-                        g_free(answer_text);
-                        if (err)
-                        {
-                            g_error("%s\n", err->message);
-                        }
-                        g_strchomp(answer->text);
-                        g_ptr_array_add(question_answers, answer);
+                        char* answer_text = pddby_regex_replace_literal(word_break_regex, *a, "");
+                        // FIXME: memleak
+                        pddby_answer_t *answer = pddby_answer_new(0, pddby_regex_replace_literal(spaces_regex, answer_text, " "), 0);
+                        free(answer_text);
+                        pddby_string_chomp(answer->text);
+                        pddby_array_add(question_answers, answer);
                         a++;
                     }
                     g_strfreev(answers);
@@ -821,33 +820,25 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
             case 'T':
                 p++;
                 {
-                    gchar *advice_text = g_regex_replace_literal(word_break_regex, *p, -1, 0, "", 0, &err);
-                    if (err)
-                    {
-                        g_error("%s\n", err->message);
-                    }
-                    question->advice = g_regex_replace_literal(spaces_regex, advice_text, -1, 0, " ", 0, &err);
-                    g_free(advice_text);
-                    if (err)
-                    {
-                        g_error("%s\n", err->message);
-                    }
-                    g_strchomp(question->advice);
+                    char* advice_text = pddby_regex_replace_literal(word_break_regex, *p, "");
+                    question->advice = pddby_regex_replace_literal(spaces_regex, advice_text, " ");
+                    free(advice_text);
+                    pddby_string_chomp(question->advice);
                 }
                 break;
             case 'L':
                 p++;
                 {
-                    gchar **traffreg_numbers = g_strsplit(*p, " ", 0);
-                    gchar **trn = traffreg_numbers;
+                    char** traffreg_numbers = g_strsplit(*p, " ", 0);
+                    char** trn = traffreg_numbers;
                     while (*trn)
                     {
-                        pdd_traffreg_t *traffreg = traffreg_find_by_number(atoi(*trn));
+                        pddby_traffreg_t *traffreg = pddby_traffreg_find_by_number(atoi(*trn));
                         if (!traffreg)
                         {
-                            g_error("unable to find traffreg with number %s\n", *trn);
+                            pddby_report_error("unable to find traffreg with number %s\n", *trn);
                         }
-                        g_ptr_array_add(question_traffregs, traffreg);
+                        pddby_array_add(question_traffregs, traffreg);
                         trn++;
                     }
                     g_strfreev(traffreg_numbers);
@@ -856,71 +847,71 @@ static gboolean decode_questions_data(decode_context_t* context, const gchar *db
             case 'C':
                 p++;
                 {
-                    pdd_comment_t *comment = comment_find_by_number(atoi(*p));
+                    pddby_comment_t *comment = pddby_comment_find_by_number(atoi(*p));
                     if (!comment)
                     {
-                        g_error("unable to find comment with number %s\n", *p);
+                        pddby_report_error("unable to find comment with number %s\n", *p);
                     }
                     question->comment_id = comment->id;
-                    comment_free(comment);
+                    pddby_comment_free(comment);
                 }
                 break;
             default:
-                g_error("unknown question data section: %s\n", *p);
+                pddby_report_error("unknown question data section: %s\n", *p);
             }
             p++;
         }
         g_strfreev(parts);
 
-        result = question_save(question);
+        result = pddby_question_save(question);
         if (!result)
         {
-            g_error("unable to save question\n");
+            pddby_report_error("unable to save question\n");
         }
-        gsize k;
-        for (k = 0; k < question_answers->len; k++)
+        for (size_t k = 0; k < pddby_array_size(question_answers); k++)
         {
-            pdd_answer_t *answer = (pdd_answer_t *)g_ptr_array_index(question_answers, k);
+            pddby_answer_t* answer = (pddby_answer_t*)pddby_array_index(question_answers, k);
             answer->question_id = question->id;
             answer->is_correct = k == answer_number;
-            result = answer_save(answer);
+            result = pddby_answer_save(answer);
             if (!result)
             {
-                g_error("unable to save answer\n");
+                pddby_report_error("unable to save answer\n");
             }
         }
-        answer_free_all(question_answers);
-        result = question_set_sections(question, question_sections);
+        pddby_answer_free_all(question_answers);
+        result = pddby_question_set_sections(question, question_sections);
         if (!result)
         {
-            g_error("unable to set question sections\n");
+            pddby_report_error("unable to set question sections\n");
         }
-        section_free_all(question_sections);
-        result = question_set_traffregs(question, question_traffregs);
+        pddby_section_free_all(question_sections);
+        result = pddby_question_set_traffregs(question, question_traffregs);
         if (!result)
         {
-            g_error("unable to set question traffregs\n");
+            pddby_report_error("unable to set question traffregs\n");
         }
-        traffreg_free_all(question_traffregs);
-        question_free(question);
-        g_print(".");
+        pddby_traffreg_free_all(question_traffregs);
+        pddby_question_free(question);
+        printf(".");
     }
-    database_tx_commit();
+    pddby_database_tx_commit();
 
-    g_print("\n");
+    printf("\n");
 
-    g_regex_unref(spaces_regex);
-    g_regex_unref(word_break_regex);
-    g_regex_unref(question_data_regex);
-    g_free(str);
+    pddby_regex_free(spaces_regex);
+    pddby_regex_free(word_break_regex);
+    pddby_regex_free(answers_regex);
+    pddby_regex_free(question_data_regex);
+    free(str);
 
     return result;
 }
 
-static int compare_topic_questions(const void *first, const void *second)
+static int compare_topic_questions(void const* first, void const* second)
 {
-    const topic_question_t *first_tq = (const topic_question_t *)first;
-    const topic_question_t *second_tq = (const topic_question_t *)second;
+    topic_question_t const* first_tq = (topic_question_t const*)first;
+    topic_question_t const* second_tq = (topic_question_t const*)second;
 
     if (first_tq->topic_number != second_tq->topic_number)
     {
@@ -933,53 +924,52 @@ static int compare_topic_questions(const void *first, const void *second)
     return 0;
 }
 
-static gboolean decode_questions(decode_context_t* context)
+static int decode_questions(decode_context_t* context)
 {
-    pdd_sections_t *sections = section_find_all();
-    gsize i;
-    topic_question_t *sections_data = NULL;
-    gsize sections_data_size = 0;
-    for (i = 0; i < sections->len; i++)
+    pddby_sections_t* sections = pddby_section_find_all();
+    topic_question_t* sections_data = NULL;
+    size_t sections_data_size = 0;
+    for (size_t i = 0; i < pddby_array_size(sections); i++)
     {
-        pdd_section_t *section = ((pdd_section_t **)sections->pdata)[i];
-        gchar *section_dat_name = g_strdup_printf("%s.dat", section->name);
-        gchar *section_dat_path = make_path(context->root_path, "tickets", "parts", section_dat_name, NULL);
-        gsize size;
-        topic_question_t *data = decode_topic_questions_table(context->data_magic, section_dat_path, &size);
-        g_free(section_dat_path);
-        g_free(section_dat_name);
+        pddby_section_t* section = pddby_array_index(sections, i);
+        char* section_dat_name = g_strdup_printf("%s.dat", section->name);
+        char* section_dat_path = make_path(context->root_path, "tickets", "parts", section_dat_name, NULL);
+        size_t  size;
+        topic_question_t* data = decode_topic_questions_table(context->data_magic, section_dat_path, &size);
+        free(section_dat_path);
+        free(section_dat_name);
         if (!data)
         {
-            g_error("unable to decode section data\n");
+            pddby_report_error("unable to decode section data\n");
         }
-        sections_data = g_realloc(sections_data, (sections_data_size + size) * sizeof(topic_question_t));
-        g_memmove(&sections_data[sections_data_size], data, size * sizeof(topic_question_t));
+        sections_data = realloc(sections_data, (sections_data_size + size) * sizeof(topic_question_t));
+        memmove(&sections_data[sections_data_size], data, size * sizeof(topic_question_t));
         sections_data_size += size;
-        g_free(data);
+        free(data);
     }
-    section_free_all(sections);
+    pddby_section_free_all(sections);
 
     qsort(sections_data, sections_data_size, sizeof(topic_question_t), compare_topic_questions);
 
-    pdd_topics_t *topics = topic_find_all();
-    for (i = 0; i < topics->len; i++)
+    pddby_topics_t* topics = pddby_topic_find_all();
+    for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
-        pdd_topic_t *topic = ((pdd_topic_t **)topics->pdata)[i];
+        pddby_topic_t *topic = pddby_array_index(topics, i);
 
-        gchar *part_dbt_name = g_strdup_printf("part_%d.dbt", topic->number);
-        gchar *part_dbt_path = make_path(context->root_path, "tickets", part_dbt_name, NULL);
+        char* part_dbt_name = g_strdup_printf("part_%d.dbt", topic->number);
+        char* part_dbt_path = make_path(context->root_path, "tickets", part_dbt_name, NULL);
 
-        gboolean result = decode_questions_data(context, part_dbt_path, topic->number, sections_data,
+        int result = decode_questions_data(context, part_dbt_path, topic->number, sections_data,
             sections_data_size);
 
-        g_free(part_dbt_path);
-        g_free(part_dbt_name);
+        free(part_dbt_path);
+        free(part_dbt_name);
 
         if (!result)
         {
-            g_error("unable to decode questions\n");
+            pddby_report_error("unable to decode questions\n");
         }
     }
-    topic_free_all(topics);
-    return TRUE;
+    pddby_topic_free_all(topics);
+    return 1;
 }

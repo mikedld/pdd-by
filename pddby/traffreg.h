@@ -1,33 +1,42 @@
-#ifndef TRAFFREG_H
-#define TRAFFREG_H
+#ifndef PDDBY_TRAFFREG_H
+#define PDDBY_TRAFFREG_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "array.h"
 #include "image.h"
 
-#include <glib.h>
+#include <stdint.h>
 
-typedef struct pdd_traffreg_s
+struct pddby_traffreg_s
 {
-    gint64 id;
-    gint32 number;
-    gchar *text;
-} pdd_traffreg_t;
+    int64_t id;
+    int32_t number;
+    char* text;
+};
 
-typedef GPtrArray pdd_traffregs_t;
+typedef struct pddby_traffreg_s pddby_traffreg_t;
+typedef pddby_array_t pddby_traffregs_t;
 
-GHashTable *get_traffregs_images();
+pddby_traffreg_t* pddby_traffreg_new(int32_t number, char const* text);
+void pddby_traffreg_free(pddby_traffreg_t* traffreg);
 
-pdd_traffreg_t *traffreg_new(gint32 number, const gchar *text);
-void traffreg_free(pdd_traffreg_t *traffreg);
+int pddby_traffreg_save(pddby_traffreg_t* traffreg);
 
-gboolean traffreg_save(pdd_traffreg_t *traffreg);
+int pddby_traffreg_set_images(pddby_traffreg_t* traffreg, pddby_images_t* images);
 
-gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images);
+pddby_traffreg_t* pddby_traffreg_find_by_id(int64_t id);
+pddby_traffreg_t* pddby_traffreg_find_by_number(int32_t number);
 
-pdd_traffreg_t *traffreg_find_by_id(gint64 id);
-pdd_traffreg_t *traffreg_find_by_number(gint32 number);
+pddby_traffregs_t* pddby_traffreg_find_by_question(int64_t question_id);
+pddby_traffregs_t* pddby_traffreg_copy_all(pddby_traffregs_t* traffregs);
+void pddby_traffreg_free_all(pddby_traffregs_t* traffregs);
 
-pdd_traffregs_t *traffreg_find_by_question(gint64 question_id);
-pdd_traffregs_t *traffreg_copy_all(pdd_traffregs_t *traffregs);
-void traffreg_free_all(pdd_traffregs_t *traffregs);
+#ifdef __cplusplus
+}
+#endif
 
-#endif // TRAFFREG_H
+#endif // PDDBY_TRAFFREG_H

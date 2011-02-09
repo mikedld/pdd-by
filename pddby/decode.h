@@ -1,8 +1,15 @@
-#ifndef DECODE_H
-#define DECODE_H
+#ifndef PDDBY_DECODE_H
+#define PDDBY_DECODE_H
 
-#include <glib.h>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-gboolean decode(const gchar *root_path);
+int decode(char const* root_path);
 
-#endif // DECODE_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_DECODE_H

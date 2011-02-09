@@ -4,18 +4,21 @@ project(pddby-main C)
 set(PDDBY_VERSION "0.4")
 
 option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
+option(PDDBY_BUILD_QT_FRONTEND "Build Qt frontend" OFF)
+option(PDDBY_BUILD_COCOA_FRONTEND "Build Cocoa frontend" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-include(FindPkgConfig)
+list(APPEND CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}")
 
-pkg_search_module(GLIB2 REQUIRED glib-2.0)
-pkg_search_module(SQLITE3 REQUIRED sqlite3)
+find_package(SQLite3 REQUIRED)
+find_package(PCRE REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 if(PDDBY_BUILD_GTK_FRONTEND)
-    pkg_search_module(GTK2 REQUIRED gtk+-2.0)
+    find_package(GTK2 REQUIRED COMPONENTS gtk)
 endif()
 
 add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden)
@@ -29,6 +32,7 @@ elseif(UNIX)
 endif()
 
 configure_file(config.h.in ${${PROJECT_NAME}_BINARY_DIR}/config.h)
+
 include_directories(
     ${${PROJECT_NAME}_BINARY_DIR}
     ${${PROJECT_NAME}_SOURCE_DIR}
@@ -40,7 +44,10 @@ if(PDDBY_BUILD_GTK_FRONTEND)
     add_subdirectory(pddby-gtk)
 endif()
 
-message(STATUS "------------------------------")
+message(STATUS "----------------------------------------")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Options: GTK(${PDDBY_BUILD_GTK_FRONTEND})")
-message(STATUS "------------------------------")
+message(STATUS "Options:"
+    " GTK(${PDDBY_BUILD_GTK_FRONTEND})"
+    " QT(${PDDBY_BUILD_QT_FRONTEND})"
+    " COCOA(${PDDBY_BUILD_COCOA_FRONTEND})")
+message(STATUS "----------------------------------------")

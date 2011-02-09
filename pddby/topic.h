@@ -1,30 +1,42 @@
-#ifndef TOPIC_H
-#define TOPIC_H
+#ifndef PDDBY_TOPIC_H
+#define PDDBY_TOPIC_H
 
-#include <glib.h>
-
-typedef struct pdd_topic_s
+#ifdef __cplusplus
+extern "C"
 {
-    gint64 id;
-    gint number;
-    gchar *title;
-} pdd_topic_t;
+#endif
 
-typedef GPtrArray pdd_topics_t;
+#include "array.h"
 
-pdd_topics_t *get_topics();
+#include <stdint.h>
 
-pdd_topic_t *topic_new(gint number, const gchar *title);
-void topic_free(pdd_topic_t *topic);
+struct pddby_topic_s
+{
+    int64_t id;
+    int number;
+    char* title;
+};
 
-gboolean topic_save(pdd_topic_t *topic);
+typedef struct pddby_topic_s pddby_topic_t;
+typedef pddby_array_t pddby_topics_t;
 
-pdd_topic_t *topic_find_by_id(gint64 id);
-pdd_topic_t *topic_find_by_number(gint number);
+pddby_topics_t* pddby_get_topics();
 
-pdd_topics_t *topic_find_all();
-void topic_free_all(pdd_topics_t *topics);
+pddby_topic_t* pddby_topic_new(int number, char const* title);
+void pddby_topic_free(pddby_topic_t* topic);
 
-gint32 topic_get_question_count(const pdd_topic_t *topic);
+int pddby_topic_save(pddby_topic_t* topic);
 
-#endif // TOPIC_H
+pddby_topic_t* pddby_topic_find_by_id(int64_t id);
+pddby_topic_t* pddby_topic_find_by_number(int number);
+
+pddby_topics_t* pddby_topic_find_all();
+void pddby_topic_free_all(pddby_topics_t* topics);
+
+size_t pddby_topic_get_question_count(pddby_topic_t const* topic);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_TOPIC_H

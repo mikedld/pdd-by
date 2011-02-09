@@ -1,20 +1,28 @@
-#ifndef DATABASE_H
-#define DATABASE_H
+#ifndef PDDBY_DATABASE_H
+#define PDDBY_DATABASE_H
 
-#include <glib.h>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <sqlite3.h>
 
-gboolean database_exists();
-void database_init(gchar const* dir);
-void database_cleanup();
-void database_use_cache(gboolean value);
+int pddby_database_exists();
+void pddby_database_init(char const* dir);
+void pddby_database_cleanup();
+void pddby_database_use_cache(int value);
 
-sqlite3 *database_get();
+sqlite3* pddby_database_get();
 
-void database_tx_begin();
-void database_tx_commit();
-void database_tx_rollback();
+void pddby_database_tx_begin();
+void pddby_database_tx_commit();
+void pddby_database_tx_rollback();
 
-void database_expect(int result, int expected_result, gchar const* scope, gchar const* message);
+void pddby_database_expect(int result, int expected_result, char const* scope, char const* message);
 
-#endif // DATABASE_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_DATABASE_H

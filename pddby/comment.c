@@ -2,115 +2,118 @@
 #include "config.h"
 #include "database.h"
 
-static pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
+#include <stdlib.h>
+#include <string.h>
+
+static pddby_comment_t* pddby_comment_new_with_id(int64_t id, int32_t number, char const* text)
 {
-    pdd_comment_t *comment = g_new(pdd_comment_t, 1);
+    pddby_comment_t* comment = malloc(sizeof(pddby_comment_t));
     comment->id = id;
     comment->number = number;
-    comment->text = g_strdup(text);
+    comment->text = strdup(text);
     return comment;
 }
 
-pdd_comment_t *comment_new(gint32 number, const gchar *text)
+pddby_comment_t* pddby_comment_new(int32_t number, char const* text)
 {
-    return comment_new_with_id(0, number, text);
+    return pddby_comment_new_with_id(0, number, text);
 }
 
-void comment_free(pdd_comment_t *comment)
+void pddby_comment_free(pddby_comment_t* comment)
 {
-    g_free(comment->text);
-    g_free(comment);
+    free(comment->text);
+    free(comment);
 }
 
-gboolean comment_save(pdd_comment_t *comment)
+int pddby_comment_save(pddby_comment_t* comment)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "INSERT INTO `comments` (`number`, `text`) VALUES (?, ?)", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int(stmt, 1, comment->number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_bind_text(stmt, 2, comment->text, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+    pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
 
     comment->id = sqlite3_last_insert_rowid(db);
 
-    return TRUE;
+    return 1;
 }
 
-pdd_comment_t *comment_find_by_id(gint64 id)
+pddby_comment_t* pddby_comment_find_by_id(int64_t id)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1", -1, &stmt,
             NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int64(stmt, 1, id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
-    gint32 number = sqlite3_column_int(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
+    int32_t number = sqlite3_column_int(stmt, 0);
+    char const* text = (char const*)sqlite3_column_text(stmt, 1);
 
-    return comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(id, number, text);
 }
 
-pdd_comment_t *comment_find_by_number(gint32 number)
+pddby_comment_t* pddby_comment_find_by_number(int32_t number)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
+    static sqlite3_stmt* stmt = NULL;
+    sqlite3* db = pddby_database_get();
     int result;
 
     if (!stmt)
     {
         result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1", -1, &stmt,
             NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
     }
 
     result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     result = sqlite3_bind_int(stmt, 1, number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
     result = sqlite3_step(stmt);
     if (result != SQLITE_ROW)
     {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
         return NULL;
     }
 
-    gint32 id = sqlite3_column_int64(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
+    int64_t id = sqlite3_column_int64(stmt, 0);
+    char const* text = (char const*)sqlite3_column_text(stmt, 1);
 
-    return comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(id, number, text);
 }

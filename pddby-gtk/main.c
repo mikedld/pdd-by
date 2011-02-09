@@ -14,11 +14,11 @@ int main(int argc, char *argv[])
 #else
     gtk_init(&argc, &argv);
 
-    database_init(get_share_dir());
+    pddby_database_init(get_share_dir());
 
-    if (database_exists())
+    if (pddby_database_exists())
     {
-        database_use_cache(TRUE);
+        pddby_database_use_cache(TRUE);
     }
     else
     {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         gchar *pdd32_path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(directory_dialog));
-        database_use_cache(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_cache_checkbutton)));
+        pddby_database_use_cache(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_cache_checkbutton)));
         gtk_widget_destroy(directory_dialog);
         // TODO: check if path corresponds to mounted CD-ROM device
         if (!decode(pdd32_path))
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     gtk_widget_show(main_window);
     gtk_main();
 
-    database_cleanup();
+    pddby_database_cleanup();
 
     return 0;
 #endif

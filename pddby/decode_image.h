@@ -1,8 +1,17 @@
-#ifndef DECODE_IMAGE_H
-#define DECODE_IMAGE_H
+#ifndef PDDBY_DECODE_IMAGE_H
+#define PDDBY_DECODE_IMAGE_H
 
-#include <glib.h>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-gboolean decode_image(const gchar *path, guint16 magic);
+#include <stdint.h>
 
-#endif // DECODE_IMAGE_H
+int decode_image(char const* path, uint16_t magic);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_DECODE_IMAGE_H
