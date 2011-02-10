@@ -56,6 +56,7 @@ include_directories(
     ${SQLITE3_INCLUDE_DIRS}
     ${PCRE_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIRS}
+    ${ICONV_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME}

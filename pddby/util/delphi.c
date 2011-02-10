@@ -25,7 +25,7 @@ inline uint64_t get_randseed()
 
 void init_randseed_for_image(char const* name, uint16_t magic)
 {
-    char* name_up = pddby_string_upcase(name, -1);
+    char* name_up = pddby_string_upcase(name);
 
     rand_seed = magic;
     for (size_t i = 0; name_up[i]; i++)

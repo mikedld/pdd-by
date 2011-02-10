@@ -10,7 +10,7 @@ static pddby_comment_t* pddby_comment_new_with_id(int64_t id, int32_t number, ch
     pddby_comment_t* comment = malloc(sizeof(pddby_comment_t));
     comment->id = id;
     comment->number = number;
-    comment->text = strdup(text);
+    comment->text = text ? strdup(text) : 0;
     return comment;
 }
 

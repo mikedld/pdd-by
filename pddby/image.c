@@ -1,7 +1,9 @@
 #include "image.h"
-#include "util/aux.h"
+
 #include "config.h"
 #include "database.h"
+#include "util/aux.h"
+#include "util/string.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +52,7 @@ int pddby_image_save(pddby_image_t* image)
     result = sqlite3_reset(stmt);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
-    char* image_name = pddby_string_downcase(image->name, -1);
+    char* image_name = pddby_string_downcase(image->name);
     free(image->name);
     image->name = image_name;
     result = sqlite3_bind_text(stmt, 1, image->name, -1, NULL);
@@ -114,7 +116,7 @@ pddby_image_t* pddby_image_find_by_name(char const* name)
     result = sqlite3_reset(stmt);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
-    char *image_name = pddby_string_downcase(name, -1);
+    char *image_name = pddby_string_downcase(name);
     result = sqlite3_bind_text(stmt, 1, image_name, -1, NULL);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 

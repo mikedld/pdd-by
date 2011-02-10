@@ -52,10 +52,14 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
     {
         return 0;
     }
-    *buffer_size = lseek(fd, 0, SEEK_END);
+    size_t file_size = lseek(fd, 0, SEEK_END);
+    if (buffer_size)
+    {
+        *buffer_size = file_size;
+    }
     lseek(fd, 0, SEEK_SET);
-    *buffer = malloc(*buffer_size);
-    if (read(fd, *buffer, *buffer_size) == -1)
+    *buffer = malloc(file_size);
+    if (read(fd, *buffer, file_size) == -1)
     {
         free(*buffer);
         close(fd);

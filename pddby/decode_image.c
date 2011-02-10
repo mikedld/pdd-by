@@ -1,8 +1,10 @@
 #include "decode_image.h"
-#include "util/aux.h"
+
 #include "callback.h"
-#include "util/delphi.h"
 #include "image.h"
+#include "util/aux.h"
+#include "util/delphi.h"
+#include "util/string.h"
 
 #include <assert.h>
 #include <ctype.h>

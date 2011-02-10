@@ -1,10 +1,11 @@
 #include "decode.h"
+
 #include "answer.h"
 #include "callback.h"
 #include "comment.h"
 #include "config.h"
 #include "database.h"
-#include "decode.h"
+#include "decode_image.h"
 #include "image.h"
 #include "question.h"
 #include "section.h"
@@ -14,6 +15,7 @@
 #include "util/delphi.h"
 #include "util/regex.h"
 #include "util/settings.h"
+#include "util/string.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -24,21 +26,26 @@
 #include <sys/stat.h>
 #include <time.h>
 
-typedef struct topic_question_s
+struct __attribute__((__packed__)) topic_question_s
 {
     int8_t topic_number;
     int32_t question_offset;
-} __attribute__((__packed__)) topic_question_t;
+};
+
+typedef struct topic_question_s topic_question_t;
 
 typedef char* (*decode_string_func_t)(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
 
-typedef struct decode_context_s
+struct decode_context_s
 {
     char const* root_path;
+    pddby_iconv_t* iconv;
     uint16_t data_magic;
     uint16_t image_magic;
     decode_string_func_t decode_string;
-} decode_context_t;
+};
+
+typedef struct decode_context_s decode_context_t;
 
 typedef int (*decode_stage_t) (decode_context_t* context);
 
@@ -65,6 +72,7 @@ int decode(char const* root_path)
 {
     decode_context_t context;
     context.root_path = root_path;
+    context.iconv = pddby_iconv_new("cp1251", "utf-8");
 
     const decode_stage_t *stage;
 
@@ -75,6 +83,8 @@ int decode(char const* root_path)
             return 0;
         }
     }
+
+    pddby_iconv_free(context.iconv);
 
     return 1;
 }
@@ -319,7 +329,7 @@ static int init_magic(decode_context_t* context)
 static int decode_images(decode_context_t* context)
 {
     char* raw_image_dirs = pddby_settings_get("image_dirs");
-    char** image_dirs = g_strsplit(raw_image_dirs, ":", 0);
+    char** image_dirs = pddby_string_split(raw_image_dirs, ":");
     free(raw_image_dirs);
 
     int result = 1;
@@ -337,6 +347,10 @@ static int decode_images(decode_context_t* context)
         struct dirent* ent;
         while ((ent = readdir(dir)))
         {
+            if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
+            {
+                continue;
+            }
             char* image_path = pddby_aux_build_filename(images_path, ent->d_name, 0);
             result = decode_image(image_path, context->image_magic);
             free(image_path);
@@ -357,7 +371,7 @@ static int decode_images(decode_context_t* context)
         dir_name++;
     }
     pddby_database_tx_commit();
-    g_strfreev(image_dirs);
+    pddby_stringv_free(image_dirs);
     return result;
 }
 
@@ -584,7 +598,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
                 }
             }
 
-            char* data = g_convert(str + table[i], next_offset - table[i], "utf-8", "cp1251", NULL, NULL);
+            char* data = pddby_string_convert(context->iconv, str + table[i], next_offset - table[i]);
             if (!data)
             {
                 pddby_report_error("");
@@ -603,7 +617,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
             char* text = pddby_string_chomp(pddby_regex_match_fetch(match, 3));
             if (*images)
             {
-                char** image_names = g_strsplit(images, "\n", 0);
+                char** image_names = pddby_string_split(images, "\n");
                 char** in = image_names;
                 while (*in)
                 {
@@ -615,7 +629,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
                     pddby_array_add(object_images, image);
                     in++;
                 }
-                g_strfreev(image_names);
+                pddby_stringv_free(image_names);
             }
             for (size_t j = 0; j < sizeof(markup_regexes) / sizeof(*markup_regexes); j++)
             {
@@ -734,8 +748,8 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
             }
         }
 
-        char* text = g_convert(str + table[i].question_offset, next_offset - table[i].question_offset, "utf-8",
-            "cp1251", NULL, NULL);
+        char* text = pddby_string_convert(context->iconv, str + table[i].question_offset, next_offset -
+            table[i].question_offset);
         if (!text)
         {
             pddby_report_error("");
@@ -756,7 +770,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
             case 'R':
                 p++;
                 {
-                    char** section_names = g_strsplit(*p, " ", 0);
+                    char** section_names = pddby_string_split(*p, " ");
                     char** sn = section_names;
                     while (*sn)
                     {
@@ -768,7 +782,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
                         pddby_array_add(question_sections, section);
                         sn++;
                     }
-                    g_strfreev(section_names);
+                    pddby_stringv_free(section_names);
                 }
                 break;
             case 'G':
@@ -808,7 +822,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
                         pddby_array_add(question_answers, answer);
                         a++;
                     }
-                    g_strfreev(answers);
+                    pddby_stringv_free(answers);
                 }
                 break;
             case 'A':
@@ -829,7 +843,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
             case 'L':
                 p++;
                 {
-                    char** traffreg_numbers = g_strsplit(*p, " ", 0);
+                    char** traffreg_numbers = pddby_string_split(*p, " ");
                     char** trn = traffreg_numbers;
                     while (*trn)
                     {
@@ -841,7 +855,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
                         pddby_array_add(question_traffregs, traffreg);
                         trn++;
                     }
-                    g_strfreev(traffreg_numbers);
+                    pddby_stringv_free(traffreg_numbers);
                 }
                 break;
             case 'C':
@@ -861,7 +875,7 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
             }
             p++;
         }
-        g_strfreev(parts);
+        pddby_stringv_free(parts);
 
         result = pddby_question_save(question);
         if (!result)
@@ -932,12 +946,12 @@ static int decode_questions(decode_context_t* context)
     for (size_t i = 0; i < pddby_array_size(sections); i++)
     {
         pddby_section_t* section = pddby_array_index(sections, i);
-        char* section_dat_name = g_strdup_printf("%s.dat", section->name);
+        char section_dat_name[32];
+        sprintf(section_dat_name, "%s.dat", section->name);
         char* section_dat_path = make_path(context->root_path, "tickets", "parts", section_dat_name, NULL);
         size_t  size;
         topic_question_t* data = decode_topic_questions_table(context->data_magic, section_dat_path, &size);
         free(section_dat_path);
-        free(section_dat_name);
         if (!data)
         {
             pddby_report_error("unable to decode section data\n");
@@ -956,14 +970,14 @@ static int decode_questions(decode_context_t* context)
     {
         pddby_topic_t *topic = pddby_array_index(topics, i);
 
-        char* part_dbt_name = g_strdup_printf("part_%d.dbt", topic->number);
+        char part_dbt_name[32];
+        sprintf(part_dbt_name, "part_%d.dbt", topic->number);
         char* part_dbt_path = make_path(context->root_path, "tickets", part_dbt_name, NULL);
 
         int result = decode_questions_data(context, part_dbt_path, topic->number, sections_data,
             sections_data_size);
 
         free(part_dbt_path);
-        free(part_dbt_name);
 
         if (!result)
         {

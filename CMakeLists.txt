@@ -16,12 +16,13 @@ list(APPEND CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}")
 find_package(SQLite3 REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(Iconv REQUIRED)
 
 if(PDDBY_BUILD_GTK_FRONTEND)
     find_package(GTK2 REQUIRED COMPONENTS gtk)
 endif()
 
-add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden)
+add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -D_GNU_SOURCE)
 
 if(APPLE)
     add_definitions(-D_DARWIN_PLATFORM_)

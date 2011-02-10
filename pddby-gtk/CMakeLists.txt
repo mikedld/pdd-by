@@ -41,7 +41,6 @@ set_source_files_properties(${pddby_SQL_FILES} PROPERTIES
 
 include_directories(
     ${SQLITE3_INCLUDE_DIRS}
-    ${OPENSSL_INCLUDE_DIR}
     ${GTK2_INCLUDE_DIRS}
 )
 
@@ -65,6 +64,7 @@ target_link_libraries(${PROJECT_NAME}
     ${SQLITE3_LIBRARIES}
     ${PCRE_LIBRARIES}
     ${OPENSSL_LIBRARIES}
+    ${ICONV_LIBRARIES}
     ${GTK2_LIBRARIES}
 )
 

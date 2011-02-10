@@ -1,9 +1,10 @@
 #include "question.h"
-#include "util/aux.h"
 #include "config.h"
 #include "database.h"
-#include "util/settings.h"
 #include "topic.h"
+#include "util/aux.h"
+#include "util/settings.h"
+#include "util/string.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -285,35 +286,21 @@ static void pddby_load_ticket_topics_distribution()
     }
 
     char *raw_ttd = pddby_settings_get("ticket_topics_distribution");
-
-    char *p = raw_ttd;
-    size_t count = 1;
-    while (*p)
-    {
-        if (*p == ':')
-        {
-            count++;
-        }
-        p++;
-    }
-
-    ticket_topics_distribution = malloc(count * sizeof(int));
-
-    size_t i = 0;
-    while (p > raw_ttd)
-    {
-        while (p >= raw_ttd && *p != ':')
-        {
-            p--;
-        }
-        ticket_topics_distribution[i++] = atoi(p + 1);
-        if (p >= raw_ttd)
-        {
-            *p = '\0';
-        }
-    }
-
+    char **ttd = pddby_string_split(raw_ttd, ":");
     free(raw_ttd);
+
+    ticket_topics_distribution = malloc(pddby_stringv_length(ttd) * sizeof(int));
+
+    char **it = ttd;
+    size_t i = 0;
+    while (*it)
+    {
+        ticket_topics_distribution[i] = atoi(*it);
+        it++;
+        i++;
+    }
+
+    pddby_stringv_free(ttd);
 }
 
 pddby_questions_t* pddby_question_find_by_ticket(int ticket_number)

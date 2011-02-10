@@ -11,7 +11,7 @@ static pddby_traffreg_t* pddby_traffreg_new_with_id(int64_t id, int32_t number, 
     pddby_traffreg_t *traffreg = malloc(sizeof(pddby_traffreg_t));
     traffreg->id = id;
     traffreg->number = number;
-    traffreg->text = strdup(text);
+    traffreg->text = text ? strdup(text) : 0;
     return traffreg;
 }
 
