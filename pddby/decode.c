@@ -44,6 +44,7 @@ static gboolean decode_questions(decode_context_t* context);
 
 static gchar *decode_string(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
 static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
+static gchar *decode_string_v13(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number);
 
 static const decode_stage_t decode_stages[] =
 {
@@ -270,8 +271,8 @@ static gboolean init_magic(decode_context_t* context)
                 // v12
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, decode_string_v12},
                 {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12},
-                // v13 (?)
-                {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v12}
+                // v13
+                {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v13}
             };
 
             gchar *pdd32_path = make_path(context->root_path, "pdd32.exe", NULL);
@@ -444,6 +445,23 @@ static gchar *decode_string_v12(guint16 magic, const gchar *path, gsize *str_siz
     for (gsize i = 0; i < *str_size; i++)
     {
         str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x80 : 0xaa) ^ ((i + 1) % 255);
+    }
+
+    return str;
+}
+
+static gchar *decode_string_v13(guint16 magic, const gchar *path, gsize *str_size, gint8 topic_number)
+{
+    GError *err = NULL;
+    gchar *str;
+    if (!g_file_get_contents(path, &str, str_size, &err))
+    {
+        g_error("%s\n", err->message);
+    }
+
+    for (gsize i = 0; i < *str_size; i++)
+    {
+        str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x13 : 0x11) ^ ((i + 1) % 255);
     }
 
     return str;
