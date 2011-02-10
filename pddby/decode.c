@@ -57,6 +57,7 @@ static int decode_questions(decode_context_t* context);
 
 static char* decode_string(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
 static char* decode_string_v12(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
+static char* decode_string_v13(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number);
 
 static const decode_stage_t decode_stages[] =
 {
@@ -294,8 +295,8 @@ static int init_magic(decode_context_t* context)
                 // v12
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, decode_string_v12},
                 {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, decode_string_v12},
-                // v13 (?)
-                {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v12}
+                // v13
+                {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, decode_string_v13}
             };
 
             char* pdd32_path = make_path(context->root_path, "pdd32.exe", 0);
@@ -472,6 +473,24 @@ static char* decode_string_v12(uint16_t magic, char const* path, size_t* str_siz
     for (size_t i = 0; i < *str_size; i++)
     {
         str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x80 : 0xaa) ^ ((i + 1) % 255);
+    }
+
+    return str;
+}
+
+static char* decode_string_v13(uint16_t magic, char const* path, size_t* str_size, int8_t topic_number)
+{
+    //GError *err = NULL;
+    char* str;
+    if (!pddby_aux_file_get_contents(path, &str, str_size))
+    {
+        pddby_report_error("");
+        //pddby_report_error("%s\n", err->message);
+    }
+
+    for (size_t i = 0; i < *str_size; i++)
+    {
+        str[i] ^= (magic >> 8) ^ (i & 1 ? topic_number : 0) ^ (i & 1 ? 0x13 : 0x11) ^ ((i + 1) % 255);
     }
 
     return str;
