@@ -6,6 +6,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 char* pddby_aux_build_filename(char const* first_part, ...)
 {
     char* result = strdup(first_part);
@@ -58,7 +62,7 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
         *buffer_size = file_size;
     }
     lseek(fd, 0, SEEK_SET);
-    *buffer = malloc(file_size);
+    *buffer = malloc(file_size + 1);
     if (read(fd, *buffer, file_size) == -1)
     {
         free(*buffer);
@@ -66,10 +70,11 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
         return 0;
     }
     close(fd);
+    (*buffer)[file_size] = '\0';
     return 1;
 }
 
 int32_t pddby_aux_random_int_range(int32_t begin, int32_t end)
 {
-    return begin + (int64_t)rand() * (end - begin) / RAND_MAX;
+    return begin + rand() * (double)(end - begin) / RAND_MAX;
 }

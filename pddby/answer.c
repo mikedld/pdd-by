@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_answer_t* pddby_answer_new_with_id(int64_t id, int64_t question_id, char const* text, int is_correct)
 {
     pddby_answer_t *answer = malloc(sizeof(pddby_answer_t));
@@ -111,7 +115,7 @@ pddby_answers_t* pddby_answer_find_by_question(int64_t question_id)
     result = sqlite3_bind_int64(stmt, 1, question_id);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pddby_answers_t* answers = pddby_array_new(NULL);
+    pddby_answers_t* answers = pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
 
     for (;;)
     {
@@ -134,6 +138,6 @@ pddby_answers_t* pddby_answer_find_by_question(int64_t question_id)
 
 void pddby_answer_free_all(pddby_answers_t* answers)
 {
-    pddby_array_foreach(answers, (pddby_array_foreach_func_t)pddby_answer_free, NULL);
-    pddby_array_free(answers);
+    //pddby_array_foreach(answers, (pddby_array_foreach_func_t)pddby_answer_free, NULL);
+    pddby_array_free(answers, 1);
 }

@@ -48,7 +48,7 @@ static void on_question_show_comment();
 
 static gboolean on_exam_timer(GtkWindow *window);
 
-static GtkWidget *question_window_new(gchar *title, pddby_questions_t *quesions, gboolean is_exam)
+static GtkWidget *question_window_new(gchar *title, pddby_questions_t *questions, gboolean is_exam)
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
@@ -89,9 +89,9 @@ static GtkWidget *question_window_new(gchar *title, pddby_questions_t *quesions,
     gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
     statistics_t *statistics = g_new(statistics_t, 1);
-    statistics->questions = quesions;
-    statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), pddby_array_size(quesions));
-    g_array_set_size(statistics->states, pddby_array_size(quesions));
+    statistics->questions = questions;
+    statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), pddby_array_size(questions));
+    g_array_set_size(statistics->states, pddby_array_size(questions));
     statistics->is_exam = is_exam;
     statistics->index = -1;
     g_object_set_data_full(G_OBJECT(window), "pdd-statistics", statistics, (GDestroyNotify)statistics_free);

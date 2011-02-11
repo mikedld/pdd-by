@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_traffreg_t* pddby_traffreg_new_with_id(int64_t id, int32_t number, char const* text)
 {
     pddby_traffreg_t *traffreg = malloc(sizeof(pddby_traffreg_t));
@@ -27,7 +31,10 @@ pddby_traffreg_t* pddby_traffreg_new(int32_t number, char const* text)
 
 void pddby_traffreg_free(pddby_traffreg_t* traffreg)
 {
-    free(traffreg->text);
+    if (traffreg->text)
+    {
+        free(traffreg->text);
+    }
     free(traffreg);
 }
 
@@ -176,7 +183,7 @@ pddby_traffregs_t* pddby_traffreg_find_by_question(int64_t question_id)
     result = sqlite3_bind_int64(stmt, 1, question_id);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pddby_traffregs_t* traffregs = pddby_array_new(0);
+    pddby_traffregs_t* traffregs = pddby_array_new((pddby_array_free_func_t)pddby_traffreg_free);
 
     for (;;)
     {
@@ -199,7 +206,7 @@ pddby_traffregs_t* pddby_traffreg_find_by_question(int64_t question_id)
 
 pddby_traffregs_t* pddby_traffreg_copy_all(pddby_traffregs_t* traffregs)
 {
-    pddby_traffregs_t* traffregs_copy = pddby_array_new(0);
+    pddby_traffregs_t* traffregs_copy = pddby_array_new((pddby_array_free_func_t)pddby_traffreg_free);
     for (size_t i = 0; i < pddby_array_size(traffregs); i++)
     {
         pddby_traffreg_t const* traffreg = pddby_array_index(traffregs, i);
@@ -211,5 +218,5 @@ pddby_traffregs_t* pddby_traffreg_copy_all(pddby_traffregs_t* traffregs)
 void pddby_traffreg_free_all(pddby_traffregs_t* traffregs)
 {
     //pddby_array_foreach(traffregs, (GFunc)traffreg_free, NULL);
-    pddby_array_free(traffregs);
+    pddby_array_free(traffregs, 1);
 }

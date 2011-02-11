@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_image_t* pddby_image_new_with_id(int64_t id, char const* name, void const* data, size_t data_length)
 {
     pddby_image_t *image = malloc(sizeof(pddby_image_t));
@@ -157,7 +161,7 @@ pddby_images_t* pddby_image_find_by_traffreg(int64_t traffreg_id)
     result = sqlite3_bind_int64(stmt, 1, traffreg_id);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pddby_images_t* images = pddby_array_new(0);
+    pddby_images_t* images = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
 
     for (;;)
     {
@@ -181,7 +185,7 @@ pddby_images_t* pddby_image_find_by_traffreg(int64_t traffreg_id)
 
 pddby_images_t* pddby_image_copy_all(pddby_images_t const* images)
 {
-    pddby_images_t* images_copy = pddby_array_new(0);
+    pddby_images_t* images_copy = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
     for (size_t i = 0; i < pddby_array_size(images); i++)
     {
         pddby_image_t const* image = pddby_array_index(images, i);
@@ -193,5 +197,5 @@ pddby_images_t* pddby_image_copy_all(pddby_images_t const* images)
 void pddby_image_free_all(pddby_images_t *images)
 {
     //pddby_array_foreach(images, (GFunc)image_free, NULL);
-    pddby_array_free(images);
+    pddby_array_free(images, 1);
 }

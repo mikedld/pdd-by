@@ -4,6 +4,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 void pddby_report_error(char const* message, ...)
 {
     va_list args;

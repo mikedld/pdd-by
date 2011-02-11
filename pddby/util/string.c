@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 struct pddby_iconv_s
 {
     iconv_t conv;
@@ -55,18 +59,18 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
         dst_len = length;
     }
 
-    result_len -= dst_len - 1;
+    result_len -= dst_len;
     result = realloc(result, result_len);
-    result[result_len] = '\0';
+    result[result_len - 1] = '\0';
     return result;
 }
 
 char* pddby_string_upcase(char const* string)
 {
     char* result = strdup(string);
-    for (size_t i = 0, len = strlen(result); i < len; i++)
+    for (char* p = result; *p; p++)
     {
-        result[i] = toupper(result[i]);
+        *p = toupper(*p);
     }
     return result;
 }
@@ -74,9 +78,9 @@ char* pddby_string_upcase(char const* string)
 char* pddby_string_downcase(char const* string)
 {
     char* result = strdup(string);
-    for (size_t i = 0, len = strlen(result); i < len; i++)
+    for (char* p = result; *p; p++)
     {
-        result[i] = tolower(result[i]);
+        *p = tolower(*p);
     }
     return result;
 }

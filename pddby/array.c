@@ -2,6 +2,10 @@
 
 #include <stdlib.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 struct pddby_array_s
 {
     size_t used_size;
@@ -13,7 +17,7 @@ struct pddby_array_s
 static int pddby_array_realloc(pddby_array_t* arr, size_t new_size)
 {
     arr->reserved_size = new_size;
-    arr->data = realloc(arr->data, new_size);
+    arr->data = realloc(arr->data, new_size * sizeof(void*));
     return arr->data != 0;
 }
 
@@ -38,15 +42,16 @@ pddby_array_t* pddby_array_new(pddby_array_free_func_t free_func)
     return result;
 }
 
-void pddby_array_free(pddby_array_t* arr)
+void pddby_array_free(pddby_array_t* arr, int free_objects)
 {
-    if (arr->free_func)
+    if (free_objects && arr->free_func)
     {
         for (size_t i = 0; i < arr->used_size; i++)
         {
             arr->free_func(arr->data[i]);
         }
     }
+    free(arr->data);
     free(arr);
 }
 

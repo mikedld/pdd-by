@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static uint64_t rand_seed = 0xccba8e81;
 
 inline uint32_t delphi_random(uint32_t limit)

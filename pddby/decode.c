@@ -26,6 +26,10 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 struct __attribute__((__packed__)) topic_question_s
 {
     int8_t topic_number;
@@ -601,7 +605,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
     for (size_t i = 0; i < table_size; i++)
     {
         void* object = NULL;
-        pddby_images_t* object_images = pddby_array_new(0);
+        pddby_images_t* object_images = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
         if (table[i] == -1)
         {
             object = object_new(table[i], NULL);
@@ -630,7 +634,6 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
             {
                 pddby_report_error("unable to match simple data\n");
             }
-            // FIXME: memleak
             char* number = pddby_string_chomp(pddby_regex_match_fetch(match, 1));
             char* images = pddby_string_chomp(pddby_regex_match_fetch(match, 2));
             char* text = pddby_string_chomp(pddby_regex_match_fetch(match, 3));
@@ -778,9 +781,9 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
         free(text);
         char** p = parts + 1;
         pddby_question_t* question = pddby_question_new(topic_number, NULL, 0, NULL, 0);
-        pddby_traffregs_t* question_traffregs = pddby_array_new(0);
-        pddby_sections_t* question_sections = pddby_array_new(0);
-        pddby_answers_t* question_answers = pddby_array_new(0);
+        pddby_traffregs_t* question_traffregs = pddby_array_new((pddby_array_free_func_t)pddby_traffreg_free);
+        pddby_sections_t* question_sections = pddby_array_new((pddby_array_free_func_t)pddby_section_free);
+        pddby_answers_t* question_answers = pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
         size_t answer_number = 0;
         while (*p)
         {
@@ -834,9 +837,10 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
                     while (*a)
                     {
                         char* answer_text = pddby_regex_replace_literal(word_break_regex, *a, "");
-                        // FIXME: memleak
-                        pddby_answer_t *answer = pddby_answer_new(0, pddby_regex_replace_literal(spaces_regex, answer_text, " "), 0);
+                        char* answer_text2 = pddby_regex_replace_literal(spaces_regex, answer_text, " ");
                         free(answer_text);
+                        pddby_answer_t *answer = pddby_answer_new(0, answer_text2, 0);
+                        free(answer_text2);
                         pddby_string_chomp(answer->text);
                         pddby_array_add(question_answers, answer);
                         a++;
@@ -1004,5 +1008,6 @@ static int decode_questions(decode_context_t* context)
         }
     }
     pddby_topic_free_all(topics);
+    free(sections_data);
     return 1;
 }

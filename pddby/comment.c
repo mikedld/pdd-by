@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_comment_t* pddby_comment_new_with_id(int64_t id, int32_t number, char const* text)
 {
     pddby_comment_t* comment = malloc(sizeof(pddby_comment_t));
@@ -21,7 +25,10 @@ pddby_comment_t* pddby_comment_new(int32_t number, char const* text)
 
 void pddby_comment_free(pddby_comment_t* comment)
 {
-    free(comment->text);
+    if (comment->text)
+    {
+        free(comment->text);
+    }
     free(comment);
 }
 

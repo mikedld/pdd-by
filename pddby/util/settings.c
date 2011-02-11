@@ -4,6 +4,10 @@
 
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 char* pddby_settings_get(char const* key)
 {
     static sqlite3_stmt* stmt = 0;

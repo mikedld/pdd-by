@@ -6,7 +6,12 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
 
 static int use_cache = 0;
 static char* share_dir = 0;
@@ -27,6 +32,9 @@ int pddby_database_exists()
 void pddby_database_init(char const* dir)
 {
     share_dir = strdup(dir);
+
+    // TODO: move this to appropriate place
+    srand(time(0));
 }
 
 void pddby_database_cleanup()
@@ -84,13 +92,15 @@ sqlite3* pddby_database_get()
     }
     free(bootstrap_sql_filename);
 
-    result = sqlite3_exec(database, bootstrap_sql, NULL, NULL, NULL);
+    char* error_text;
+    result = sqlite3_exec(database, bootstrap_sql, NULL, NULL, &error_text);
     if (result != SQLITE_OK)
     {
         sqlite3_close(database);
         unlink(database_file);
-        pddby_report_error("unable to bootstrap database (%d)\n", result);
+        pddby_report_error("unable to bootstrap database: %s (%d)\n", error_text, result);
     }
+    free(bootstrap_sql);
 
     return database;
 }

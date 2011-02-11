@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_topic_t* pddby_topic_new_with_id(int64_t id, int number, char const* title)
 {
     pddby_topic_t* topic = malloc(sizeof(pddby_topic_t));
@@ -134,7 +138,7 @@ pddby_topics_t* pddby_topic_find_all()
     result = sqlite3_reset(stmt);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
-    pddby_topics_t* topics = pddby_array_new(0);
+    pddby_topics_t* topics = pddby_array_new((pddby_array_free_func_t)pddby_topic_free);
 
     for (;;)
     {
@@ -158,7 +162,7 @@ pddby_topics_t* pddby_topic_find_all()
 void pddby_topic_free_all(pddby_topics_t* topics)
 {
     //pddby_array_foreach(topics, (GFunc)topic_free, NULL);
-    pddby_array_free(topics);
+    pddby_array_free(topics, 1);
 }
 
 size_t pddby_topic_get_question_count(pddby_topic_t const* topic)

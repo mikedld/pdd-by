@@ -5,6 +5,10 @@
 #include <pcre.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 struct pddby_regex_s
 {
     pcre* regex;
@@ -25,7 +29,13 @@ pddby_regex_t* pddby_regex_new(char const* pattern, int options)
 
     char const* error_text;
     int error_offset;
-    result->regex = pcre_compile(pattern, options, &error_text, &error_offset, 0);
+
+    int pcre_options = 0;
+    pcre_options |= (options & PDDBY_REGEX_MULTILINE) ? PCRE_MULTILINE : 0;
+    pcre_options |= (options & PDDBY_REGEX_DOTALL) ? PCRE_DOTALL : 0;
+    pcre_options |= (options & PDDBY_REGEX_NEWLINE_ANY) ? PCRE_NEWLINE_ANY : 0;
+
+    result->regex = pcre_compile(pattern, pcre_options, &error_text, &error_offset, 0);
     if (!result->regex)
     {
         pddby_report_error("unable to compile regular expression: %s (%d)", error_text, error_offset);
@@ -87,6 +97,7 @@ char* pddby_regex_replace(pddby_regex_t* regex, char const* string, char const* 
         }
         size_t const r_length = strlen(r);
         char* new_result = pddby_string_replace(result, start + match->caps[0], start + match->caps[1], r, r_length);
+        free(r);
         free(result);
         result = new_result;
         start += match->caps[0] + r_length;
@@ -121,8 +132,7 @@ char** pddby_regex_split(pddby_regex_t* regex, char const* string)
     char const* p = string;
     while (pddby_regex_match(regex, p, &match))
     {
-        size_t const part_length = match->caps[1] - match->caps[0];
-        result[size - 1] = pddby_string_ndup(p, part_length);
+        result[size - 1] = pddby_string_ndup(p, match->caps[0]);
         size++;
         result = realloc(result, (size + 1) * sizeof(char*));
         p += match->caps[1];

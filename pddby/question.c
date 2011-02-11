@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static int* ticket_topics_distribution = 0;
 
 static pddby_question_t* pddby_question_new_with_id(int64_t id, int64_t topic_id, char const* text, int64_t image_id,
@@ -17,9 +21,9 @@ static pddby_question_t* pddby_question_new_with_id(int64_t id, int64_t topic_id
     pddby_question_t* question = malloc(sizeof(pddby_question_t));
     question->id = id;
     question->topic_id = topic_id;
-    question->text = strdup(text);
+    question->text = text ? strdup(text) : 0;
     question->image_id = image_id;
-    question->advice = strdup(advice);
+    question->advice = advice ? strdup(advice) : 0;
     question->comment_id = comment_id;
     return question;
 }
@@ -32,8 +36,14 @@ pddby_question_t* pddby_question_new(int64_t topic_id, char const* text, int64_t
 
 void pddby_question_free(pddby_question_t *question)
 {
-    free(question->text);
-    free(question->advice);
+    if (question->text)
+    {
+        free(question->text);
+    }
+    if (question->advice)
+    {
+        free(question->advice);
+    }
     free(question);
 }
 
@@ -197,7 +207,7 @@ pddby_questions_t* pddby_question_find_by_section(int64_t section_id)
     result = sqlite3_bind_int64(stmt, 1, section_id);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pddby_questions_t* questions = pddby_array_new(0);
+    pddby_questions_t* questions = pddby_array_new((pddby_array_free_func_t)pddby_question_free);
 
     for (;;)
     {
@@ -246,7 +256,7 @@ static pddby_questions_t* pddby_question_find_with_offset(int64_t topic_id, int 
     result = sqlite3_bind_int(stmt, 3, count);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    pddby_questions_t* questions = pddby_array_new(0);
+    pddby_questions_t* questions = pddby_array_new((pddby_array_free_func_t)pddby_question_free);
 
     for (;;)
     {
@@ -255,7 +265,7 @@ static pddby_questions_t* pddby_question_find_with_offset(int64_t topic_id, int 
         {
             break;
         }
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to perform statement");
+        pddby_database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
 
         int64_t id = sqlite3_column_int64(stmt, 0);
         char const* text = (char const*)sqlite3_column_text(stmt, 1);
@@ -307,9 +317,9 @@ pddby_questions_t* pddby_question_find_by_ticket(int ticket_number)
 {
     pddby_load_ticket_topics_distribution();
 
-    pddby_topics_t const* topics = pddby_topic_find_all();
+    pddby_topics_t* topics = pddby_topic_find_all();
     int j;
-    pddby_questions_t* questions = pddby_array_new(0);
+    pddby_questions_t* questions = pddby_array_new((pddby_array_free_func_t)pddby_question_free);
     for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
         pddby_topic_t const* topic = pddby_array_index(topics, i);
@@ -319,9 +329,10 @@ pddby_questions_t* pddby_question_find_by_ticket(int ticket_number)
             pddby_questions_t* topic_questions = pddby_question_find_with_offset(topic->id,
                 ((ticket_number - 1) * 10 + j) % count, 1);
             pddby_array_add(questions, pddby_array_index(topic_questions, 0));
-            pddby_array_free(topic_questions);
+            pddby_array_free(topic_questions, 0);
         }
     }
+    pddby_topic_free_all(topics);
     return questions;
 }
 
@@ -329,9 +340,9 @@ pddby_questions_t* pddby_question_find_random()
 {
     pddby_load_ticket_topics_distribution();
 
-    pddby_topics_t const* topics = pddby_topic_find_all();
+    pddby_topics_t* topics = pddby_topic_find_all();
     int j;
-    pddby_questions_t* questions = pddby_array_new(0);
+    pddby_questions_t* questions = pddby_array_new((pddby_array_free_func_t)pddby_question_free);
     for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
         pddby_topic_t const* topic = pddby_array_index(topics, i);
@@ -341,14 +352,15 @@ pddby_questions_t* pddby_question_find_random()
             pddby_questions_t* topic_questions = pddby_question_find_with_offset(topic->id, pddby_aux_random_int_range(0, count - 1),
                 1);
             pddby_array_add(questions, pddby_array_index(topic_questions, 0));
-            pddby_array_free(topic_questions);
+            pddby_array_free(topic_questions, 0);
         }
     }
+    pddby_topic_free_all(topics);
     return questions;
 }
 
 void pddby_question_free_all(pddby_questions_t* questions)
 {
     //pddby_array_foreach(questions, (GFunc)pddby_question_free, NULL);
-    pddby_array_free(questions);
+    pddby_array_free(questions, 1);
 }

@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 static pddby_section_t* pddby_section_new_with_id(int64_t id, char const* name, char const* title_prefix,
     char const* title)
 {
@@ -150,7 +154,7 @@ pddby_sections_t* pddby_section_find_all()
     result = sqlite3_reset(stmt);
     pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
-    pddby_sections_t* sections = pddby_array_new(0);
+    pddby_sections_t* sections = pddby_array_new((pddby_array_free_func_t)pddby_section_free);
 
     for (;;)
     {
@@ -174,7 +178,7 @@ pddby_sections_t* pddby_section_find_all()
 
 pddby_sections_t* pddby_section_copy_all(pddby_sections_t* sections)
 {
-    pddby_sections_t* sections_copy = pddby_array_new(0);
+    pddby_sections_t* sections_copy = pddby_array_new((pddby_array_free_func_t)pddby_section_free);
     for (size_t i = 0; i < pddby_array_size(sections); i++)
     {
         pddby_section_t const* section = pddby_array_index(sections, i);
@@ -186,7 +190,7 @@ pddby_sections_t* pddby_section_copy_all(pddby_sections_t* sections)
 void pddby_section_free_all(pddby_sections_t* sections)
 {
     //pddby_array_foreach(sections, (GFunc)pddby_section_free, NULL);
-    pddby_array_free(sections);
+    pddby_array_free(sections, 1);
 }
 
 size_t pddby_section_get_question_count(pddby_section_t* section)
