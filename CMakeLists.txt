@@ -22,6 +22,9 @@ if(PDDBY_BUILD_GTK_FRONTEND)
     find_package(GTK2 REQUIRED COMPONENTS gtk)
 endif()
 
+include(TestBigEndian)
+test_big_endian(PDDBY_BIG_ENDIAN)
+
 add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -D_GNU_SOURCE)
 
 if(APPLE)

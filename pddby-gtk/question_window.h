@@ -1,5 +1,5 @@
-#ifndef CHOOSERWINDOW_H
-#define CHOOSERWINDOW_H
+#ifndef PDDBY_GTK_QUESTION_WINDOW_H
+#define PDDBY_GTK_QUESTION_WINDOW_H
 
 #include "pddby/section.h"
 #include "pddby/topic.h"
@@ -11,4 +11,4 @@ GtkWidget *question_window_new_with_topic(pddby_topic_t *topic, gint ticket_numb
 GtkWidget *question_window_new_with_ticket(gint ticket_number, gboolean is_exam);
 GtkWidget *question_window_new_with_random_ticket(gboolean is_exam);
 
-#endif // CHOOSERWINDOW_H
+#endif // PDDBY_GTK_QUESTION_WINDOW_H

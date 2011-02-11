@@ -1,5 +1,5 @@
-#ifndef MAIN_WINDOW_H
-#define MAIN_WINDOW_H
+#ifndef PDDBY_GTK_MAIN_WINDOW_H
+#define PDDBY_GTK_MAIN_WINDOW_H
 
 #include <gtk/gtk.h>
 
@@ -13,4 +13,4 @@ void on_exam_topic();
 void on_exam_ticket();
 void on_exam_random_ticket();
 
-#endif // MAIN_WINDOW_H
+#endif // PDDBY_GTK_MAIN_WINDOW_H

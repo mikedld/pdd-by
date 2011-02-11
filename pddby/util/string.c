@@ -4,6 +4,7 @@
 #define LIBICONV_PLUG
 
 #include <ctype.h>
+#include <errno.h>
 #include <iconv.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,7 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
     char* result = malloc(length);
     size_t result_len = length;
 
-    char* src = string;
+    char* src = (char*)string;
     size_t src_len = length;
     char* dst = result;
     size_t dst_len = length;
