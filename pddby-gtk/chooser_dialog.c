@@ -6,6 +6,10 @@
 
 #include <string.h>
 
+#if !GTK_CHECK_VERSION(2, 20, 0)
+#define gtk_widget_get_visible(x) GTK_WIDGET_VISIBLE(x)
+#endif
+
 gint last_index[2] = {0, 0};
 
 void on_chooser_dialog_item_changed(GtkWidget *widget);
@@ -110,7 +114,7 @@ GNUC_VISIBLE void on_chooser_dialog_destroy(GtkWidget *widget)
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(gtk_widget_get_toplevel(widget)), "pdd-builder"));
     GtkComboBox *items_combo = GTK_COMBO_BOX(gtk_builder_get_object(builder, "cb_items"));
     GtkLabel *title_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_title"));
-    last_index[GTK_WIDGET_VISIBLE(title_label) ? 0 : 1] = gtk_combo_box_get_active(items_combo);
+    last_index[gtk_widget_get_visible(GTK_WIDGET(title_label)) ? 0 : 1] = gtk_combo_box_get_active(items_combo);
 }
 
 GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
@@ -122,7 +126,7 @@ GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(gtk_widget_get_toplevel(widget)), "pdd-builder"));
 
     GtkLabel *title_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_title"));
-    if (GTK_WIDGET_VISIBLE(title_label))
+    if (gtk_widget_get_visible(GTK_WIDGET(title_label)))
     {
         GValue title;
         memset(&title, 0, sizeof(title));
@@ -136,7 +140,7 @@ GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
     GValue count;
     memset(&count, 0, sizeof(count));
     gchar *count_text = NULL;
-    if (GTK_WIDGET_VISIBLE(title_label))
+    if (gtk_widget_get_visible(GTK_WIDGET(title_label)))
     {
         gtk_tree_model_get_value(GTK_TREE_MODEL(model), &iter, 4, &count);
         count_text = g_strdup_printf("Количество вопросов: %d", g_value_get_int(&count));

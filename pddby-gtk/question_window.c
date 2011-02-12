@@ -6,8 +6,20 @@
 #include "pddby/question.h"
 #include "settings.h"
 
+#if GTK_MAJOR_VERSION > 2
+#include <gdk/gdk.h>
+#else
 #include <gdk/gdkkeysyms.h>
+#endif
 #include <math.h>
+
+#if !GTK_CHECK_VERSION(2, 22, 0)
+#define GDK_KEY_Return GDK_Return
+#define GDK_KEY_space  GDK_space
+#define GDK_KEY_Escape GDK_Escape
+#define GDK_KEY_F1     GDK_F1
+#define GDK_KEY_F2     GDK_F2
+#endif
 
 #define EXAM_TIMEOUT (15 * 60)
 
@@ -73,17 +85,17 @@ static GtkWidget *question_window_new(gchar *title, pddby_questions_t *questions
     g_free(window_title);
 
     GtkAccelGroup *accel_group = gtk_accel_group_new();
-    gtk_accel_group_connect(accel_group, GDK_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer, window,
-        NULL));
-    gtk_accel_group_connect(accel_group, GDK_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window,
+    gtk_accel_group_connect(accel_group, GDK_KEY_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer,
+        window, NULL));
+    gtk_accel_group_connect(accel_group, GDK_KEY_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window,
         NULL));
     if (!is_exam)
     {
-        gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window,
-            NULL));
-        gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs,
+        gtk_accel_group_connect(accel_group, GDK_KEY_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit,
             window, NULL));
-        gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment,
+        gtk_accel_group_connect(accel_group, GDK_KEY_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(
+            on_question_show_traffregs, window, NULL));
+        gtk_accel_group_connect(accel_group, GDK_KEY_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment,
             window, NULL));
     }
     gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
