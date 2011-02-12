@@ -1,4 +1,6 @@
-project(pddby C)
+project(pddby NONE)
+
+add_definitions(-std=c99)
 
 set(${PROJECT_NAME}_HEADERS
     answer.h

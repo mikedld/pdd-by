@@ -1,8 +1,10 @@
-project(pddby-gtk C)
+project(pddby-gtk NONE)
+
+find_package(GTK2 REQUIRED COMPONENTS gtk)
 
 set(MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}")
-set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
-set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
+
+add_definitions(-std=c99)
 
 add_definitions(
     -DGTK_DISABLE_SINGLE_INCLUDES

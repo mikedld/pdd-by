@@ -3,6 +3,9 @@ project(pddby-main C)
 
 set(PDDBY_VERSION "0.4")
 
+set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
+set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
+
 option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
 option(PDDBY_BUILD_QT_FRONTEND "Build Qt frontend" OFF)
 option(PDDBY_BUILD_COCOA_FRONTEND "Build Cocoa frontend" OFF)
@@ -18,14 +21,10 @@ find_package(PCRE REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Iconv REQUIRED)
 
-if(PDDBY_BUILD_GTK_FRONTEND)
-    find_package(GTK2 REQUIRED COMPONENTS gtk)
-endif()
-
 include(TestBigEndian)
 test_big_endian(PDDBY_BIG_ENDIAN)
 
-add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden -D_GNU_SOURCE)
+add_definitions(-W -Wall -Wextra -fvisibility=hidden -D_GNU_SOURCE)
 
 if(APPLE)
     add_definitions(-D_DARWIN_PLATFORM_)
@@ -46,6 +45,13 @@ add_subdirectory(pddby)
 
 if(PDDBY_BUILD_GTK_FRONTEND)
     add_subdirectory(pddby-gtk)
+endif()
+if(PDDBY_BUILD_QT_FRONTEND)
+    enable_language(CXX)
+    add_subdirectory(pddby-qt)
+endif()
+if(PDDBY_BUILD_COCOA_FRONTEND)
+    add_subdirectory(pddby-cocoa)
 endif()
 
 message(STATUS "----------------------------------------")
