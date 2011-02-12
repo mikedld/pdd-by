@@ -269,7 +269,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     }
     else
     {
-        gtk_widget_hide_all(GTK_WIDGET(image_frame));
+        gtk_widget_hide(GTK_WIDGET(image_frame));
         gtk_image_set_from_pixbuf(question_image, NULL);
     }
 }
