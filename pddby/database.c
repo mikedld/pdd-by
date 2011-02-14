@@ -23,7 +23,7 @@ int pddby_database_exists()
 {
     if (!database_file)
     {
-        database_file = pddby_aux_build_filename(pddby_aux_get_user_cache_dir(), "pdd.db", 0);
+        database_file = pddby_aux_build_filename(pddby_aux_get_user_cache_dir(), "pddby.sqlite", 0);
     }
 
     return access(database_file, R_OK) == 0;
