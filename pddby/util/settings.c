@@ -2,6 +2,7 @@
 #include "config.h"
 #include "../database.h"
 
+#include <assert.h>
 #include <string.h>
 
 #ifdef DMALLOC
@@ -10,8 +11,17 @@
 
 char* pddby_settings_get(char const* key)
 {
+    assert(key);
+
     static sqlite3_stmt* stmt = 0;
+
     sqlite3* db = pddby_database_get();
+    if (!db)
+    {
+        // TODO: report error
+        return 0;
+    }
+
     int result;
 
     if (!stmt)

@@ -1,6 +1,7 @@
 #include "delphi.h"
 #include "string.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -29,7 +30,14 @@ inline uint64_t get_randseed()
 
 void init_randseed_for_image(char const* name, uint16_t magic)
 {
+    assert(name);
+
     char* name_up = pddby_string_upcase(name);
+    if (!name_up)
+    {
+        // TODO: report error
+        return;
+    }
 
     rand_seed = magic;
     for (size_t i = 0; name_up[i]; i++)
