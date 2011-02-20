@@ -87,9 +87,9 @@ static void add_section_to_model(pddby_section_t *section, GtkListStore *model)
 GtkListStore *sections_model_new()
 {
     GtkListStore *model = gtk_list_store_new(5, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-    pddby_sections_t *sections = pddby_section_find_all();
+    pddby_sections_t *sections = pddby_sections_find_all();
     pddby_array_foreach(sections, (GFunc)add_section_to_model, model);
-    pddby_section_free_all(sections);
+    pddby_sections_free(sections);
     return model;
 }
 
@@ -103,9 +103,9 @@ static void add_topic_to_model(pddby_topic_t *topic, GtkListStore *model)
 GtkListStore *topics_model_new()
 {
     GtkListStore *model = gtk_list_store_new(3, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_INT);
-    pddby_topics_t *topics = pddby_topic_find_all();
+    pddby_topics_t *topics = pddby_topics_find_all();
     pddby_array_foreach(topics, (GFunc)add_topic_to_model, model);
-    pddby_topic_free_all(topics);
+    pddby_topics_free(topics);
     return model;
 }
 

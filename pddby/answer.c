@@ -1,7 +1,9 @@
 #include "answer.h"
-#include "config.h"
-#include "database.h"
 
+#include "config.h"
+#include "util/database.h"
+
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -11,12 +13,31 @@
 
 static pddby_answer_t* pddby_answer_new_with_id(int64_t id, int64_t question_id, char const* text, int is_correct)
 {
-    pddby_answer_t *answer = malloc(sizeof(pddby_answer_t));
+    pddby_answer_t *answer = calloc(1, sizeof(pddby_answer_t));
+    if (!answer)
+    {
+        goto error;
+    }
+
+    answer->text = text ? strdup(text) : NULL;
+    if (text && !answer->text)
+    {
+        goto error;
+    }
+
     answer->id = id;
     answer->question_id = question_id;
-    answer->text = strdup(text);
     answer->is_correct = is_correct;
+
     return answer;
+
+error:
+    // TODO: report error
+    if (answer)
+    {
+        pddby_answer_free(answer);
+    }
+    return NULL;
 }
 
 pddby_answer_t* pddby_answer_new(int64_t question_id, char const* text, int is_correct)
@@ -26,118 +47,152 @@ pddby_answer_t* pddby_answer_new(int64_t question_id, char const* text, int is_c
 
 void pddby_answer_free(pddby_answer_t* answer)
 {
-    free(answer->text);
+    assert(answer);
+
+    if (answer->text)
+    {
+        free(answer->text);
+    }
     free(answer);
 }
 
 int pddby_answer_save(pddby_answer_t* answer)
 {
-    static sqlite3_stmt* stmt = NULL;
-    sqlite3* db = pddby_database_get();
-    int result;
+    assert(answer);
 
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)",
-            -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    if (!pddby_db_reset(db_stmt) ||
+        !(answer->question_id ?
+            pddby_db_bind_int64(db_stmt, 1, answer->question_id) :
+            pddby_db_bind_null(db_stmt, 1)) ||
+        !pddby_db_bind_text(db_stmt, 2, answer->text) ||
+        !pddby_db_bind_int(db_stmt, 3, answer->is_correct))
+    {
+        goto error;
+    }
 
-    result = answer->question_id ? sqlite3_bind_int64(stmt, 1, answer->question_id) : sqlite3_bind_null(stmt, 1);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    int ret = pddby_db_step(db_stmt);
+    if (ret == -1)
+    {
+        goto error;
+    }
 
-    result = sqlite3_bind_text(stmt, 2, answer->text, -1, NULL);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    assert(ret == 0);
 
-    result = sqlite3_bind_int(stmt, 3, answer->is_correct);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-
-    answer->id = sqlite3_last_insert_rowid(db);
+    answer->id = pddby_db_last_insert_id();
 
     return 1;
+
+error:
+    // TODO: report error
+    return 0;
 }
 
 pddby_answer_t* pddby_answer_find_by_id(int64_t id)
 {
-    static sqlite3_stmt* stmt = NULL;
-    sqlite3* db = pddby_database_get();
-    int result;
-
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? "
-            "LIMIT 1", -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, id);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, id))
     {
-        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
         return NULL;
     }
 
-    int64_t question_id = sqlite3_column_int64(stmt, 0);
-    char const* text = (char const*)sqlite3_column_text(stmt, 1);
-    int is_correct = sqlite3_column_int(stmt, 2);
+    int64_t question_id = pddby_db_column_int64(db_stmt, 0);
+    char const* text = pddby_db_column_text(db_stmt, 1);
+    int is_correct = pddby_db_column_int(db_stmt, 2);
 
     return pddby_answer_new_with_id(id, question_id, text, is_correct);
+
+error:
+    // TODO: report error
+    return NULL;
 }
 
-pddby_answers_t* pddby_answer_find_by_question(int64_t question_id)
+pddby_answers_t* pddby_answers_new()
 {
-    static sqlite3_stmt* stmt = NULL;
-    sqlite3* db = pddby_database_get();
-    int result;
+    return pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
+}
 
-    if (!stmt)
+pddby_answers_t* pddby_answers_find_by_question(int64_t question_id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?", -1,
-            &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, question_id);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    pddby_answers_t* answers = pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
-
-    for (;;)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, question_id))
     {
-        result = sqlite3_step(stmt);
-        if (result == SQLITE_DONE)
+        goto error;
+    }
+
+    pddby_answers_t* answers = pddby_answers_new();
+    if (!answers)
+    {
+        goto error;
+    }
+
+    int ret;
+    while ((ret = pddby_db_step(db_stmt)) == 1)
+    {
+        int64_t id = pddby_db_column_int64(db_stmt, 0);
+        char const* text = pddby_db_column_text(db_stmt, 1);
+        int is_correct = pddby_db_column_int(db_stmt, 2);
+
+        if (!pddby_array_add(answers, pddby_answer_new_with_id(id, question_id, text, is_correct)))
         {
+            ret = -1;
             break;
         }
-        pddby_database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+    }
 
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        char const* text = (char const*)sqlite3_column_text(stmt, 1);
-        int is_correct = sqlite3_column_int(stmt, 2);
-
-        pddby_array_add(answers, pddby_answer_new_with_id(id, question_id, text, is_correct));
+    if (ret == -1)
+    {
+        pddby_answers_free(answers);
+        goto error;
     }
 
     return answers;
+
+error:
+    // TODO: report error
+    return NULL;
 }
 
-void pddby_answer_free_all(pddby_answers_t* answers)
+void pddby_answers_free(pddby_answers_t* answers)
 {
-    //pddby_array_foreach(answers, (pddby_array_foreach_func_t)pddby_answer_free, NULL);
+    assert(answers);
+
     pddby_array_free(answers, 1);
 }

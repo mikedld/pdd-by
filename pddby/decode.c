@@ -4,14 +4,15 @@
 #include "callback.h"
 #include "comment.h"
 #include "config.h"
-#include "database.h"
 #include "decode_image.h"
 #include "image.h"
+#include "pddby.h"
 #include "question.h"
 #include "section.h"
 #include "topic.h"
 #include "traffreg.h"
 #include "util/aux.h"
+#include "util/database.h"
 #include "util/delphi.h"
 #include "util/regex.h"
 #include "util/settings.h"
@@ -20,6 +21,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <openssl/md5.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,8 +75,10 @@ static const decode_stage_t decode_stages[] =
     0
 };
 
-int decode(char const* root_path)
+int pddby_decode(pddby_t* pddby, char const* root_path)
 {
+    // TODO: check if root_path corresponds to mounted CD-ROM device
+
     decode_context_t context;
     context.root_path = root_path;
     context.iconv = pddby_iconv_new("cp1251", "utf-8");
@@ -338,7 +342,7 @@ static int decode_images(decode_context_t* context)
     free(raw_image_dirs);
 
     int result = 1;
-    pddby_database_tx_begin();
+    pddby_db_tx_begin();
     char** dir_name = image_dirs;
     while (*dir_name)
     {
@@ -375,7 +379,7 @@ static int decode_images(decode_context_t* context)
 
         dir_name++;
     }
-    pddby_database_tx_commit();
+    pddby_db_tx_commit();
     pddby_stringv_free(image_dirs);
     return result;
 }
@@ -601,11 +605,11 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
     }
 
     int result = 1;
-    pddby_database_tx_begin();
+    pddby_db_tx_begin();
     for (size_t i = 0; i < table_size; i++)
     {
         void* object = NULL;
-        pddby_images_t* object_images = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
+        pddby_images_t* object_images = pddby_images_new();
         if (table[i] == -1)
         {
             object = object_new(table[i], NULL);
@@ -671,7 +675,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
         {
             object_set_images(object, object_images);
         }
-        pddby_image_free_all(object_images);
+        pddby_images_free(object_images);
         if (!result)
         {
             pddby_report_error("unable to save object\n");
@@ -679,7 +683,7 @@ static int decode_simple_data(decode_context_t* context, char const* dat_path, c
         object_free(object);
         printf(".");
     }
-    pddby_database_tx_commit();
+    pddby_db_tx_commit();
 
     printf("\n");
 
@@ -753,12 +757,13 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
     char* str = context->decode_string(context->data_magic, dbt_path, &str_size, topic_number);
 
     pddby_regex_t* question_data_regex = pddby_regex_new("\\s*\\[|\\]\\s*", PDDBY_REGEX_NEWLINE_ANY);
-    pddby_regex_t* answers_regex = pddby_regex_new("^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY);
+    pddby_regex_t* answers_regex = pddby_regex_new("^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE |
+        PDDBY_REGEX_NEWLINE_ANY);
     pddby_regex_t* word_break_regex = pddby_regex_new("(?<!\\s)-\\s+", PDDBY_REGEX_NEWLINE_ANY);
     pddby_regex_t* spaces_regex = pddby_regex_new("\\s{2,}", PDDBY_REGEX_NEWLINE_ANY);
 
     int result = 1;
-    pddby_database_tx_begin();
+    pddby_db_tx_begin();
     for (size_t i = 0; i < table_size; i++)
     {
         int32_t next_offset = str_size;
@@ -781,9 +786,9 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
         free(text);
         char** p = parts + 1;
         pddby_question_t* question = pddby_question_new(topic_number, NULL, 0, NULL, 0);
-        pddby_traffregs_t* question_traffregs = pddby_array_new((pddby_array_free_func_t)pddby_traffreg_free);
-        pddby_sections_t* question_sections = pddby_array_new((pddby_array_free_func_t)pddby_section_free);
-        pddby_answers_t* question_answers = pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
+        pddby_traffregs_t* question_traffregs = pddby_traffregs_new();
+        pddby_sections_t* question_sections = pddby_sections_new();
+        pddby_answers_t* question_answers = pddby_answers_new();
         size_t answer_number = 0;
         while (*p)
         {
@@ -916,23 +921,23 @@ static int decode_questions_data(decode_context_t* context, char const* dbt_path
                 pddby_report_error("unable to save answer\n");
             }
         }
-        pddby_answer_free_all(question_answers);
+        pddby_answers_free(question_answers);
         result = pddby_question_set_sections(question, question_sections);
         if (!result)
         {
             pddby_report_error("unable to set question sections\n");
         }
-        pddby_section_free_all(question_sections);
+        pddby_sections_free(question_sections);
         result = pddby_question_set_traffregs(question, question_traffregs);
         if (!result)
         {
             pddby_report_error("unable to set question traffregs\n");
         }
-        pddby_traffreg_free_all(question_traffregs);
+        pddby_traffregs_free(question_traffregs);
         pddby_question_free(question);
         printf(".");
     }
-    pddby_database_tx_commit();
+    pddby_db_tx_commit();
 
     printf("\n");
 
@@ -963,7 +968,7 @@ static int compare_topic_questions(void const* first, void const* second)
 
 static int decode_questions(decode_context_t* context)
 {
-    pddby_sections_t* sections = pddby_section_find_all();
+    pddby_sections_t* sections = pddby_sections_find_all();
     topic_question_t* sections_data = NULL;
     size_t sections_data_size = 0;
     for (size_t i = 0; i < pddby_array_size(sections); i++)
@@ -984,11 +989,11 @@ static int decode_questions(decode_context_t* context)
         sections_data_size += size;
         free(data);
     }
-    pddby_section_free_all(sections);
+    pddby_sections_free(sections);
 
     qsort(sections_data, sections_data_size, sizeof(topic_question_t), compare_topic_questions);
 
-    pddby_topics_t* topics = pddby_topic_find_all();
+    pddby_topics_t* topics = pddby_topics_find_all();
     for (size_t i = 0; i < pddby_array_size(topics); i++)
     {
         pddby_topic_t *topic = pddby_array_index(topics, i);
@@ -1007,7 +1012,7 @@ static int decode_questions(decode_context_t* context)
             pddby_report_error("unable to decode questions\n");
         }
     }
-    pddby_topic_free_all(topics);
+    pddby_topics_free(topics);
     free(sections_data);
     return 1;
 }

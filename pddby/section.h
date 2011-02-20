@@ -29,9 +29,9 @@ int pddby_section_save(pddby_section_t* section);
 pddby_section_t* pddby_section_find_by_id(int64_t id);
 pddby_section_t* pddby_section_find_by_name(char const* name);
 
-pddby_sections_t* pddby_section_find_all();
-pddby_sections_t* pddby_section_copy_all(pddby_sections_t* sections);
-void pddby_section_free_all(pddby_sections_t* sections);
+pddby_sections_t* pddby_sections_new();
+pddby_sections_t* pddby_sections_find_all();
+void pddby_sections_free(pddby_sections_t* sections);
 
 size_t pddby_section_get_question_count(pddby_section_t* section);
 

@@ -16,7 +16,7 @@ typedef void (*pddby_array_foreach_func_t)(void* object, void* user_data);
 
 pddby_array_t* pddby_array_new(pddby_array_free_func_t free_func);
 void pddby_array_free(pddby_array_t* arr, int free_objects);
-void pddby_array_add(pddby_array_t* arr, void* object);
+int pddby_array_add(pddby_array_t* arr, void* object);
 void* pddby_array_index(pddby_array_t const* arr, size_t index);
 void pddby_array_foreach(pddby_array_t* arr, pddby_array_foreach_func_t foreach_func, void* user_data);
 size_t pddby_array_size(pddby_array_t const* arr);

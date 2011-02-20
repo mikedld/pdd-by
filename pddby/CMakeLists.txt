@@ -7,10 +7,10 @@ set(${PROJECT_NAME}_HEADERS
     array.h
     callback.h
     comment.h
-    database.h
     decode.h
     decode_image.h
     image.h
+    pddby.h
     question.h
     section.h
     topic.h
@@ -22,10 +22,10 @@ set(${PROJECT_NAME}_SOURCES
     array.c
     callback.c
     comment.c
-    database.c
     decode.c
     decode_image.c
     image.c
+    pddby.c
     question.c
     section.c
     topic.c
@@ -34,6 +34,7 @@ set(${PROJECT_NAME}_SOURCES
 
 set(${PROJECT_NAME}_UTIL_HEADERS
     util/aux.h
+    util/database.h
     util/delphi.h
     util/regex.h
     util/settings.h
@@ -42,6 +43,7 @@ set(${PROJECT_NAME}_UTIL_HEADERS
 
 set(${PROJECT_NAME}_UTIL_SOURCES
     util/aux.c
+    util/database.c
     util/delphi.c
     util/regex.c
     util/settings.c

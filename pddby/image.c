@@ -1,10 +1,11 @@
 #include "image.h"
 
 #include "config.h"
-#include "database.h"
 #include "util/aux.h"
+#include "util/database.h"
 #include "util/string.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,19 +15,41 @@
 
 static pddby_image_t* pddby_image_new_with_id(int64_t id, char const* name, void const* data, size_t data_length)
 {
-    pddby_image_t *image = malloc(sizeof(pddby_image_t));
-    image->id = id;
-    image->name = strdup(name);
-    //image->data = g_memdup(data, data_length);
-    image->data = malloc(data_length);
-    memcpy(image->data, data, data_length);
-    image->data_length = data_length;
-    return image;
-}
+    pddby_image_t *image = calloc(1, sizeof(pddby_image_t));
+    if (!image)
+    {
+        goto error;
+    }
 
-static pddby_image_t* pddby_image_copy(pddby_image_t const* image)
-{
-    return pddby_image_new_with_id(image->id, image->name, image->data, image->data_length);
+    image->name = name ? strdup(name) : NULL;
+    if (name && !image->name)
+    {
+        goto error;
+    }
+
+    if (data && data_length)
+    {
+        image->data = malloc(data_length);
+        if (!image->data)
+        {
+            goto error;
+        }
+
+        memcpy(image->data, data, data_length);
+        image->data_length = data_length;
+    }
+
+    image->id = id;
+
+    return image;
+
+error:
+    // TODO: report error
+    if (image)
+    {
+        pddby_image_free(image);
+    }
+    return NULL;
 }
 
 pddby_image_t* pddby_image_new(char const* name, void const* data, size_t data_length)
@@ -36,166 +59,213 @@ pddby_image_t* pddby_image_new(char const* name, void const* data, size_t data_l
 
 void pddby_image_free(pddby_image_t* image)
 {
-    free(image->name);
-    free(image->data);
+    assert(image);
+
+    if (image->name)
+    {
+        free(image->name);
+    }
+    if (image->data)
+    {
+        free(image->data);
+    }
     free(image);
 }
 
 int pddby_image_save(pddby_image_t* image)
 {
-    static sqlite3_stmt* stmt = 0;
-    sqlite3* db = pddby_database_get();
-    int result;
+    assert(image);
 
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `images` (`name`, `data`) VALUES (?, ?)", -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("INSERT INTO `images` (`name`, `data`) VALUES (?, ?)");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
     char* image_name = pddby_string_downcase(image->name);
+    if (!image_name)
+    {
+        goto error;
+    }
+
     free(image->name);
     image->name = image_name;
-    result = sqlite3_bind_text(stmt, 1, image->name, -1, NULL);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
 
-    result = sqlite3_bind_blob(stmt, 2, image->data, image->data_length, NULL);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_text(db_stmt, 1, image->name) ||
+        !pddby_db_bind_blob(db_stmt, 2, image->data, image->data_length))
+    {
+        goto error;
+    }
 
-    result = sqlite3_step(stmt);
-    pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+    int ret = pddby_db_step(db_stmt);
+    if (ret == -1)
+    {
+        goto error;
+    }
 
-    image->id = sqlite3_last_insert_rowid(db);
+    assert(ret == 0);
+
+    image->id = pddby_db_last_insert_id();
 
     return 1;
+
+error:
+    // TODO: report error
+    return 0;
 }
 
 pddby_image_t* pddby_image_find_by_id(int64_t id)
 {
-    static sqlite3_stmt* stmt = 0;
-    sqlite3* db = pddby_database_get();
-    int result;
-
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `name`, `data` FROM `images` WHERE `rowid`=? LIMIT 1", -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("SELECT `name`, `data` FROM `images` WHERE `rowid`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, id);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, id))
     {
-        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return 0;
+        goto error;
     }
 
-    char const* name = (char const*)sqlite3_column_text(stmt, 0);
-    void const* data = sqlite3_column_blob(stmt, 1);
-    size_t data_length = sqlite3_column_bytes(stmt, 1);
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    char const* name = pddby_db_column_text(db_stmt, 0);
+    void const* data = pddby_db_column_blob(db_stmt, 1);
+    size_t data_length = pddby_db_column_bytes(db_stmt, 1);
 
     return pddby_image_new_with_id(id, name, data, data_length);
+
+error:
+    // TODO: report error
+    return NULL;
 }
 
 pddby_image_t* pddby_image_find_by_name(char const* name)
 {
-    static sqlite3_stmt* stmt = 0;
-    sqlite3* db = pddby_database_get();
-    int result;
+    assert(name);
 
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `data` FROM `images` WHERE `name`=? LIMIT 1", -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("SELECT `rowid`, `data` FROM `images` WHERE `name`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
-
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
 
     char *image_name = pddby_string_downcase(name);
-    result = sqlite3_bind_text(stmt, 1, image_name, -1, NULL);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
+    if (!image_name)
     {
-        pddby_database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return 0;
+        goto error;
     }
 
-    int64_t id = sqlite3_column_int64(stmt, 0);
-    void const* data = sqlite3_column_blob(stmt, 1);
-    size_t data_length = sqlite3_column_bytes(stmt, 1);
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_text(db_stmt, 1, image_name))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    int64_t id = pddby_db_column_int64(db_stmt, 0);
+    void const* data = pddby_db_column_blob(db_stmt, 1);
+    size_t data_length = pddby_db_column_bytes(db_stmt, 1);
 
     pddby_image_t* image = pddby_image_new_with_id(id, image_name, data, data_length);
 
     free(image_name);
 
     return image;
+
+error:
+    // TODO: report error
+    return NULL;
 }
 
-pddby_images_t* pddby_image_find_by_traffreg(int64_t traffreg_id)
+pddby_images_t* pddby_images_new()
 {
-    static sqlite3_stmt* stmt = 0;
-    sqlite3* db = pddby_database_get();
-    int result;
+    return pddby_array_new((pddby_array_free_func_t)pddby_image_free);
+}
 
-    if (!stmt)
+pddby_images_t* pddby_images_find_by_traffreg(int64_t traffreg_id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
-            "`images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?", -1, &stmt, NULL);
-        pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare("SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
+            "`images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, traffreg_id);
-    pddby_database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    pddby_images_t* images = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
-
-    for (;;)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, traffreg_id))
     {
-        result = sqlite3_step(stmt);
-        if (result == SQLITE_DONE)
+        goto error;
+    }
+
+    pddby_images_t* images = pddby_images_new();
+    if (!images)
+    {
+        goto error;
+    }
+
+    int ret;
+    while ((ret = pddby_db_step(db_stmt)) == 1)
+    {
+        int64_t id = pddby_db_column_int64(db_stmt, 0);
+        char const* name = pddby_db_column_text(db_stmt, 1);
+        void const* data = pddby_db_column_blob(db_stmt, 2);
+        size_t data_length = pddby_db_column_bytes(db_stmt, 2);
+
+        if (!pddby_array_add(images, pddby_image_new_with_id(id, name, data, data_length)))
         {
+            ret = -1;
             break;
         }
-        pddby_database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+    }
 
-        int64_t id = sqlite3_column_int64(stmt, 0);
-        char const* name = (char const*)sqlite3_column_text(stmt, 1);
-        void const* data = sqlite3_column_blob(stmt, 2);
-        size_t data_length = sqlite3_column_bytes(stmt, 2);
-
-        pddby_array_add(images, pddby_image_new_with_id(id, name, data, data_length));
+    if (ret == -1)
+    {
+        pddby_images_free(images);
+        goto error;
     }
 
     return images;
+
+error:
+    // TODO: report error
+    return NULL;
 }
 
-pddby_images_t* pddby_image_copy_all(pddby_images_t const* images)
+void pddby_images_free(pddby_images_t* images)
 {
-    pddby_images_t* images_copy = pddby_array_new((pddby_array_free_func_t)pddby_image_free);
-    for (size_t i = 0; i < pddby_array_size(images); i++)
-    {
-        pddby_image_t const* image = pddby_array_index(images, i);
-        pddby_array_add(images_copy, pddby_image_copy(image));
-    }
-    return images_copy;
-}
+    assert(images);
 
-void pddby_image_free_all(pddby_images_t *images)
-{
-    //pddby_array_foreach(images, (GFunc)image_free, NULL);
     pddby_array_free(images, 1);
 }

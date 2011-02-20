@@ -29,9 +29,9 @@ int pddby_image_save(pddby_image_t* image);
 pddby_image_t* pddby_image_find_by_id(int64_t id);
 pddby_image_t* pddby_image_find_by_name(char const* name);
 
-pddby_images_t* pddby_image_find_by_traffreg(int64_t traffreg_id);
-pddby_images_t* pddby_image_copy_all(pddby_images_t const* images);
-void pddby_image_free_all(pddby_images_t* images);
+pddby_images_t* pddby_images_new();
+pddby_images_t* pddby_images_find_by_traffreg(int64_t traffreg_id);
+void pddby_images_free(pddby_images_t* images);
 
 #ifdef __cplusplus
 }

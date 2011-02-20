@@ -30,8 +30,9 @@ int pddby_topic_save(pddby_topic_t* topic);
 pddby_topic_t* pddby_topic_find_by_id(int64_t id);
 pddby_topic_t* pddby_topic_find_by_number(int number);
 
-pddby_topics_t* pddby_topic_find_all();
-void pddby_topic_free_all(pddby_topics_t* topics);
+pddby_topics_t* pddby_topics_new();
+pddby_topics_t* pddby_topics_find_all();
+void pddby_topics_free(pddby_topics_t* topics);
 
 size_t pddby_topic_get_question_count(pddby_topic_t const* topic);
 

@@ -70,41 +70,6 @@ char* pddby_aux_path_get_basename(char const* path)
     return result;
 }
 
-char const* pddby_aux_get_user_cache_dir()
-{
-    static char* s_result = 0;
-    if (s_result)
-    {
-        return s_result;
-    }
-
-    char* xdg_cache_home = getenv("XDG_CACHE_HOME");
-    if (xdg_cache_home && *xdg_cache_home)
-    {
-        s_result = xdg_cache_home;
-        return s_result;
-    }
-
-    struct passwd const* ent = getpwuid(getuid());
-    if (!ent)
-    {
-        // TODO: report error
-        return 0;
-    }
-
-    size_t const length = strlen(ent->pw_dir);
-    s_result = malloc(length + 7 + 1);
-    if (!s_result)
-    {
-        // TODO: report error
-        return 0;
-    }
-
-    memcpy(s_result, ent->pw_dir, length);
-    strcpy(s_result + length, "/.cache");
-    return s_result;
-}
-
 int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buffer_size)
 {
     assert(filename);

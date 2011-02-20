@@ -1,6 +1,5 @@
 #include "main_window.h"
-#include "pddby/database.h"
-#include "pddby/decode.h"
+#include "pddby/pddby.h"
 #include "settings.h"
 
 #include <gtk/gtk.h>
@@ -14,11 +13,16 @@ int main(int argc, char *argv[])
 #else
     gtk_init(&argc, &argv);
 
-    pddby_database_init(get_share_dir());
+    gchar* cache_dir = g_build_filename(g_get_user_cache_dir(), "pddby", NULL);
+    g_mkdir_with_parents(cache_dir, 0755);
 
-    if (pddby_database_exists())
+    pddby_t* pddby = pddby_init(get_share_dir(), cache_dir);
+
+    g_free(cache_dir);
+
+    if (pddby_cache_exists(pddby))
     {
-        pddby_database_use_cache(TRUE);
+        pddby_use_cache(pddby, TRUE);
     }
     else
     {
@@ -32,14 +36,16 @@ int main(int argc, char *argv[])
         {
             return 1;
         }
+
         gchar *pdd32_path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(directory_dialog));
-        pddby_database_use_cache(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_cache_checkbutton)));
+        pddby_use_cache(pddby, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_cache_checkbutton)));
         gtk_widget_destroy(directory_dialog);
-        // TODO: check if path corresponds to mounted CD-ROM device
-        if (!decode(pdd32_path))
+
+        if (!pddby_decode(pddby, pdd32_path))
         {
             g_error("ERROR: unable to decode");
         }
+
         g_free(pdd32_path);
     }
 
@@ -47,7 +53,7 @@ int main(int argc, char *argv[])
     gtk_widget_show(main_window);
     gtk_main();
 
-    pddby_database_cleanup();
+    pddby_close(pddby);
 
     return 0;
 #endif

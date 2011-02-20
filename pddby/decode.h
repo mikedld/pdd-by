@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-int decode(char const* root_path);
+//int pddby_decode(char const* root_path);
 
 #ifdef __cplusplus
 }
