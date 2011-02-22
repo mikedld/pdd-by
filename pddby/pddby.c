@@ -1,5 +1,6 @@
 #include "pddby.h"
 
+#include "decode/decode.h"
 #include "util/database.h"
 
 #include <assert.h>
@@ -29,6 +30,39 @@ void pddby_close(pddby_t* pddby)
     pddby_db_cleanup();
 
     free(pddby);
+}
+
+int pddby_decode(pddby_t* pddby, char const* root_path)
+{
+    // TODO: check if root_path corresponds to mounted CD-ROM device
+
+    typedef int (*pddby_decode_stage_t)(pddby_decode_context_t* context);
+
+    static pddby_decode_stage_t const s_decode_stages[] =
+    {
+        &pddby_decode_init_magic,
+        &pddby_decode_images,
+        &pddby_decode_comments,
+        &pddby_decode_traffregs,
+        &pddby_decode_questions,
+        NULL
+    };
+
+    pddby_decode_context_t context;
+    context.root_path = root_path;
+    context.iconv = pddby_iconv_new("cp1251", "utf-8");
+
+    for (pddby_decode_stage_t const* stage = s_decode_stages; *stage; stage++)
+    {
+        if (!(*stage)(&context))
+        {
+            return 0;
+        }
+    }
+
+    pddby_iconv_free(context.iconv);
+
+    return 1;
 }
 
 int pddby_cache_exists(pddby_t* pddby)

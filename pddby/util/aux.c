@@ -1,9 +1,12 @@
 #include "aux.h"
 
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
+#include <openssl/md5.h>
 #include <pwd.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,6 +14,35 @@
 #ifdef DMALLOC
 #include <dmalloc.h>
 #endif
+
+static char* pddby_aux_find_file_ci(char const* path, char const* fname)
+{
+    DIR* dir = opendir(path);
+    if (!dir)
+    {
+        //pddby_report_error("");
+        return NULL;
+    }
+
+    char* result = NULL;
+    struct dirent* ent;
+    while ((ent = readdir(dir)))
+    {
+        if (!strcasecmp(ent->d_name, fname))
+        {
+            result = pddby_aux_build_filename(path, ent->d_name, 0);
+            break;
+        }
+    }
+    closedir(dir);
+
+    if (!result)
+    {
+        // TODO: report error
+    }
+
+    return result;
+}
 
 char* pddby_aux_build_filename(char const* first_part, ...)
 {
@@ -20,7 +52,7 @@ char* pddby_aux_build_filename(char const* first_part, ...)
     if (!result)
     {
         // TODO: report error
-        return 0;
+        return NULL;
     }
 
     va_list args;
@@ -37,13 +69,42 @@ char* pddby_aux_build_filename(char const* first_part, ...)
         if (!result)
         {
             // TODO: report error
-            return 0;
+            return NULL;
         }
 
         strcat(result, "/");
         strcat(result, part);
     }
     va_end(args);
+    return result;
+}
+
+char* pddby_aux_build_filename_ci(char const* first_part, ...)
+{
+    char* result = strdup(first_part);
+    if (!result)
+    {
+        // TODO: report error
+        return NULL;
+    }
+
+    va_list list;
+    va_start(list, first_part);
+    char const* path_part;
+    while ((path_part = va_arg(list, char const*)))
+    {
+        char* path = pddby_aux_find_file_ci(result, path_part);
+        free(result);
+        if (!path)
+        {
+            // TODO: report error
+            return NULL;
+        }
+
+        result = path;
+    }
+    va_end(list);
+    printf("make_path: %s\n", result);
     return result;
 }
 
@@ -63,7 +124,7 @@ char* pddby_aux_path_get_basename(char const* path)
     if (!result)
     {
         // TODO: report error
-        return 0;
+        return NULL;
     }
 
     strncpy(result, path + length, result_length + 1);
@@ -80,14 +141,12 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     off_t file_size = lseek(fd, 0, SEEK_END);
     if (file_size == -1)
     {
-        // TODO: report error
         goto error;
     }
 
@@ -98,20 +157,17 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
 
     if (lseek(fd, 0, SEEK_SET) == -1)
     {
-        // TODO: report error
         goto error;
     }
 
     *buffer = malloc(file_size + 1);
     if (!*buffer)
     {
-        // TODO: report error
         goto error;
     }
 
     if (read(fd, *buffer, file_size) == -1)
     {
-        // TODO: report error
         goto error;
     }
 
@@ -124,6 +180,8 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
     return 1;
 
 error:
+    // TODO: report error
+
     if (*buffer)
     {
         free(*buffer);
@@ -138,6 +196,83 @@ error:
     }
 
     return 0;
+}
+
+char* pddby_aux_file_get_checksum(char const* file_path)
+{
+    assert(file_path);
+
+    uint8_t* buffer = NULL;
+
+    FILE* f = fopen(file_path, "rb");
+    if (!f)
+    {
+        goto error;
+    }
+
+    MD5_CTX md5ctx;
+    MD5_Init(&md5ctx);
+
+    buffer = malloc(32 * 1024);
+    if (!buffer)
+    {
+        goto error;
+    }
+
+    do
+    {
+        size_t bytes_read = fread(buffer, 1, 32 * 1024, f);
+        if (!bytes_read)
+        {
+            if (feof(f))
+            {
+                break;
+            }
+            goto error;
+        }
+        MD5_Update(&md5ctx, buffer, bytes_read);
+    }
+    while (!feof(f));
+
+    uint8_t md5sum[MD5_DIGEST_LENGTH];
+    MD5_Final(md5sum, &md5ctx);
+
+    char* result = malloc(MD5_DIGEST_LENGTH * 2 + 1);
+    if (!result)
+    {
+        goto error;
+    }
+
+    for (size_t i = 0; i < MD5_DIGEST_LENGTH; i++)
+    {
+        if (sprintf(result + i * 2, "%02x", md5sum[i]) != 2)
+        {
+            goto error;
+        }
+    }
+
+    free(buffer);
+    if (fclose(f) == EOF)
+    {
+        // TODO: report warning
+    }
+
+    return result;
+
+error:
+    // TODO: report error
+    if (buffer)
+    {
+        free(buffer);
+    }
+    if (f)
+    {
+        if (fclose(f) == EOF)
+        {
+            // TODO: report warning
+        }
+    }
+    return NULL;
 }
 
 int32_t pddby_aux_random_int_range(int32_t begin, int32_t end)

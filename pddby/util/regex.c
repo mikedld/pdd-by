@@ -1,6 +1,8 @@
 #include "regex.h"
-#include "../callback.h"
+
 #include "string.h"
+
+#include "callback.h"
 
 #include <assert.h>
 #include <pcre.h>

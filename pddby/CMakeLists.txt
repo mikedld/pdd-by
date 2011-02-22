@@ -7,8 +7,6 @@ set(${PROJECT_NAME}_HEADERS
     array.h
     callback.h
     comment.h
-    decode.h
-    decode_image.h
     image.h
     pddby.h
     question.h
@@ -22,14 +20,22 @@ set(${PROJECT_NAME}_SOURCES
     array.c
     callback.c
     comment.c
-    decode.c
-    decode_image.c
     image.c
     pddby.c
     question.c
     section.c
     topic.c
     traffreg.c
+)
+
+set(${PROJECT_NAME}_DECODE_HEADERS
+    decode/decode.h
+    decode/decode_image.h
+)
+
+set(${PROJECT_NAME}_DECODE_SOURCES
+    decode/decode.c
+    decode/decode_image.c
 )
 
 set(${PROJECT_NAME}_UTIL_HEADERS
@@ -50,6 +56,16 @@ set(${PROJECT_NAME}_UTIL_SOURCES
     util/string.c
 )
 
+if (APPLE)
+    list(APPEND ${PROJECT_NAME}_UTIL_SOURCES
+        util/string_mac.c
+    )
+else()
+    list(APPEND ${PROJECT_NAME}_UTIL_SOURCES
+        util/string_iconv.c
+    )
+endif()
+
 set(${PROJECT_NAME}_SQL_FILES
     ${${PROJECT_NAME}_SOURCE_DIR}/data/10.sql
     ${${PROJECT_NAME}_SOURCE_DIR}/data/11.sql
@@ -57,6 +73,7 @@ set(${PROJECT_NAME}_SQL_FILES
 )
 
 include_directories(
+    ${${PROJECT_NAME}_SOURCE_DIR}
     ${SQLITE3_INCLUDE_DIRS}
     ${PCRE_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIRS}
@@ -66,6 +83,8 @@ include_directories(
 add_library(${PROJECT_NAME}
     ${${PROJECT_NAME}_HEADERS}
     ${${PROJECT_NAME}_SOURCES}
+    ${${PROJECT_NAME}_DECODE_HEADERS}
+    ${${PROJECT_NAME}_DECODE_SOURCES}
     ${${PROJECT_NAME}_UTIL_HEADERS}
     ${${PROJECT_NAME}_UTIL_SOURCES}
     ${${PROJECT_NAME}_SQL_FILES}

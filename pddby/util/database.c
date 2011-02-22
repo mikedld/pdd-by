@@ -1,9 +1,10 @@
 #include "database.h"
 
 #include "aux.h"
-#include "../callback.h"
 #include "config.h"
 #include "settings.h"
+
+#include "callback.h"
 
 #include <sqlite3.h>
 #include <stdlib.h>

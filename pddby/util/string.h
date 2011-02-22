@@ -13,7 +13,6 @@ typedef struct pddby_iconv_s pddby_iconv_t;
 
 pddby_iconv_t* pddby_iconv_new(char const* from_code, char const* to_code);
 void pddby_iconv_free(pddby_iconv_t* conv);
-
 char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t length);
 
 char* pddby_string_upcase(char const* string);
