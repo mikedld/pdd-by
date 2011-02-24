@@ -7,8 +7,10 @@
 #include <dmalloc.h>
 #endif
 
-struct pddby_array_s
+struct pddby_array
 {
+    pddby_t* pddby;
+
     size_t used_size;
     size_t reserved_size;
     void** data;
@@ -28,7 +30,7 @@ static int pddby_array_realloc(pddby_array_t* arr, size_t new_size)
     return arr->data != 0;
 }
 
-pddby_array_t* pddby_array_new(pddby_array_free_func_t free_func)
+pddby_array_t* pddby_array_new(pddby_t* pddby, pddby_array_free_func_t free_func)
 {
     pddby_array_t* result = malloc(sizeof(pddby_array_t));
     if (!result)
@@ -47,6 +49,7 @@ pddby_array_t* pddby_array_new(pddby_array_free_func_t free_func)
 
     result->used_size = 0;
     result->free_func = free_func;
+    result->pddby = pddby;
 
     return result;
 }

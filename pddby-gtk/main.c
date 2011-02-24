@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     gchar* cache_dir = g_build_filename(g_get_user_cache_dir(), "pddby", NULL);
     g_mkdir_with_parents(cache_dir, 0755);
 
-    pddby_t* pddby = pddby_init(get_share_dir(), cache_dir);
+    pddby_t* pddby = pddby_init(get_share_dir(), cache_dir, NULL);
 
     g_free(cache_dir);
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         g_free(pdd32_path);
     }
 
-    main_window = main_window_new();
+    main_window = main_window_new(pddby);
     gtk_widget_show(main_window);
     gtk_main();
 

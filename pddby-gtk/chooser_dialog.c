@@ -13,8 +13,8 @@
 gint last_index[2] = {0, 0};
 
 void on_chooser_dialog_item_changed(GtkWidget *widget);
-GtkListStore *sections_model_new();
-GtkListStore *topics_model_new();
+GtkListStore *sections_model_new(pddby_t* pddby);
+GtkListStore *topics_model_new(pddby_t* pddby);
 
 static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text_column, gint index,
     gboolean need_title)
@@ -53,14 +53,14 @@ static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gi
     return dialog;
 }
 
-GtkWidget *chooser_dialog_new_with_sections()
+GtkWidget *chooser_dialog_new_with_sections(pddby_t* pddby)
 {
-    return chooser_dialog_new("Выберите главу", sections_model_new(), 2, last_index[0], TRUE);
+    return chooser_dialog_new("Выберите главу", sections_model_new(pddby), 2, last_index[0], TRUE);
 }
 
-GtkWidget *chooser_dialog_new_with_topics()
+GtkWidget *chooser_dialog_new_with_topics(pddby_t* pddby)
 {
-    return chooser_dialog_new("Выберите тематический раздел", topics_model_new(), 1, last_index[1], FALSE);
+    return chooser_dialog_new("Выберите тематический раздел", topics_model_new(pddby), 1, last_index[1], FALSE);
 }
 
 gint64 chooser_dialog_get_id(GtkWidget *dialog)
@@ -84,10 +84,10 @@ static void add_section_to_model(pddby_section_t *section, GtkListStore *model)
         pddby_section_get_question_count(section), -1);
 }
 
-GtkListStore *sections_model_new()
+GtkListStore *sections_model_new(pddby_t* pddby)
 {
     GtkListStore *model = gtk_list_store_new(5, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-    pddby_sections_t *sections = pddby_sections_find_all();
+    pddby_sections_t *sections = pddby_sections_find_all(pddby);
     pddby_array_foreach(sections, (GFunc)add_section_to_model, model);
     pddby_sections_free(sections);
     return model;
@@ -100,10 +100,10 @@ static void add_topic_to_model(pddby_topic_t *topic, GtkListStore *model)
     gtk_list_store_set(model, &iter, 0, topic->id, 1, topic->title, 2, (pddby_topic_get_question_count(topic) + 9) / 10, -1);
 }
 
-GtkListStore *topics_model_new()
+GtkListStore *topics_model_new(pddby_t* pddby)
 {
     GtkListStore *model = gtk_list_store_new(3, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_INT);
-    pddby_topics_t *topics = pddby_topics_find_all();
+    pddby_topics_t *topics = pddby_topics_find_all(pddby);
     pddby_array_foreach(topics, (GFunc)add_topic_to_model, model);
     pddby_topics_free(topics);
     return model;

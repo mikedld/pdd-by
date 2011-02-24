@@ -1,11 +1,11 @@
 #include "question.h"
 
 #include "config.h"
+#include "private/util/aux.h"
+#include "private/util/database.h"
+#include "private/util/settings.h"
+#include "private/util/string.h"
 #include "topic.h"
-#include "util/aux.h"
-#include "util/database.h"
-#include "util/settings.h"
-#include "util/string.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@
 
 static int* ticket_topics_distribution = NULL;
 
-static pddby_question_t* pddby_question_new_with_id(int64_t id, int64_t topic_id, char const* text, int64_t image_id,
+static pddby_question_t* pddby_question_new_with_id(pddby_t* pddby, int64_t id, int64_t topic_id, char const* text, int64_t image_id,
     char const* advice, int64_t comment_id)
 {
     pddby_question_t* question = calloc(1, sizeof(pddby_question_t));
@@ -42,6 +42,7 @@ static pddby_question_t* pddby_question_new_with_id(int64_t id, int64_t topic_id
     question->topic_id = topic_id;
     question->image_id = image_id;
     question->comment_id = comment_id;
+    question->pddby = pddby;
 
     return question;
 
@@ -54,10 +55,10 @@ error:
     return NULL;
 }
 
-pddby_question_t* pddby_question_new(int64_t topic_id, char const* text, int64_t image_id, char const* advice,
+pddby_question_t* pddby_question_new(pddby_t* pddby, int64_t topic_id, char const* text, int64_t image_id, char const* advice,
     int64_t comment_id)
 {
-    return pddby_question_new_with_id(0, topic_id, text, image_id, advice, comment_id);
+    return pddby_question_new_with_id(pddby, 0, topic_id, text, image_id, advice, comment_id);
 }
 
 void pddby_question_free(pddby_question_t *question)
@@ -82,7 +83,7 @@ int pddby_question_save(pddby_question_t* question)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `questions` (`topic_id`, `text`, `image_id`, `advice`, `comment_id`) "
+        db_stmt = pddby_db_prepare(question->pddby, "INSERT INTO `questions` (`topic_id`, `text`, `image_id`, `advice`, `comment_id`) "
             "VALUES (?, ?, ?, ?, ?)");
         if (!db_stmt)
         {
@@ -114,7 +115,7 @@ int pddby_question_save(pddby_question_t* question)
 
     assert(ret == 0);
 
-    question->id = pddby_db_last_insert_id();
+    question->id = pddby_db_last_insert_id(question->pddby);
 
     return 1;
 
@@ -128,7 +129,7 @@ int pddby_question_set_sections(pddby_question_t* question, pddby_sections_t* se
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `questions_sections` (`question_id`, `section_id`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(question->pddby, "INSERT INTO `questions_sections` (`question_id`, `section_id`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -167,7 +168,7 @@ int pddby_question_set_traffregs(pddby_question_t* question, pddby_traffregs_t* 
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `questions_traffregs` (`question_id`, `traffreg_id`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(question->pddby, "INSERT INTO `questions_traffregs` (`question_id`, `traffreg_id`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -201,12 +202,12 @@ error:
     return 0;
 }
 
-pddby_question_t* pddby_question_find_by_id(int64_t id)
+pddby_question_t* pddby_question_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `topic_id`, `text`, `image_id`, `advice`, `comment_id` FROM "
+        db_stmt = pddby_db_prepare(pddby, "SELECT `topic_id`, `text`, `image_id`, `advice`, `comment_id` FROM "
             "`questions` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
@@ -234,24 +235,24 @@ pddby_question_t* pddby_question_find_by_id(int64_t id)
     char const* advice = pddby_db_column_text(db_stmt, 3);
     int64_t comment_id = pddby_db_column_int64(db_stmt, 4);
 
-    return pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id);
+    return pddby_question_new_with_id(pddby, id, topic_id, text, image_id, advice, comment_id);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_questions_t* pddby_questions_new()
+pddby_questions_t* pddby_questions_new(pddby_t* pddby)
 {
-    return pddby_array_new((pddby_array_free_func_t)pddby_question_free);
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_question_free);
 }
 
-pddby_questions_t* pddby_questions_find_by_section(int64_t section_id)
+pddby_questions_t* pddby_questions_find_by_section(pddby_t* pddby, int64_t section_id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT q.`rowid`, q.`topic_id`, q.`text`, q.`image_id`, q.`advice`, "
+        db_stmt = pddby_db_prepare(pddby, "SELECT q.`rowid`, q.`topic_id`, q.`text`, q.`image_id`, q.`advice`, "
             "q.`comment_id` FROM `questions` q INNER JOIN `questions_sections` qs ON q.`rowid`=qs.`question_id` WHERE "
             "qs.`section_id`=?");
         if (!db_stmt)
@@ -266,7 +267,7 @@ pddby_questions_t* pddby_questions_find_by_section(int64_t section_id)
         goto error;
     }
 
-    pddby_questions_t* questions = pddby_questions_new();
+    pddby_questions_t* questions = pddby_questions_new(pddby);
     if (!questions)
     {
         goto error;
@@ -282,7 +283,7 @@ pddby_questions_t* pddby_questions_find_by_section(int64_t section_id)
         char const* advice = pddby_db_column_text(db_stmt, 4);
         int64_t comment_id = pddby_db_column_int64(db_stmt, 5);
 
-        if (!pddby_array_add(questions, pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id)))
+        if (!pddby_array_add(questions, pddby_question_new_with_id(pddby, id, topic_id, text, image_id, advice, comment_id)))
         {
             ret = -1;
             break;
@@ -302,12 +303,12 @@ error:
     return NULL;
 }
 
-static pddby_questions_t* pddby_questions_find_with_offset(int64_t topic_id, int offset, int count)
+static pddby_questions_t* pddby_questions_find_with_offset(pddby_t* pddby, int64_t topic_id, int offset, int count)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` "
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text`, `image_id`, `advice`, `comment_id` FROM `questions` "
             "WHERE `topic_id`=? LIMIT ?,?");
         if (!db_stmt)
         {
@@ -323,7 +324,7 @@ static pddby_questions_t* pddby_questions_find_with_offset(int64_t topic_id, int
         goto error;
     }
 
-    pddby_questions_t* questions = pddby_questions_new();
+    pddby_questions_t* questions = pddby_questions_new(pddby);
     if (!questions)
     {
         goto error;
@@ -338,7 +339,7 @@ static pddby_questions_t* pddby_questions_find_with_offset(int64_t topic_id, int
         char const* advice = pddby_db_column_text(db_stmt, 3);
         int64_t comment_id = pddby_db_column_int64(db_stmt, 4);
 
-        if (!pddby_array_add(questions, pddby_question_new_with_id(id, topic_id, text, image_id, advice, comment_id)))
+        if (!pddby_array_add(questions, pddby_question_new_with_id(pddby, id, topic_id, text, image_id, advice, comment_id)))
         {
             ret = -1;
             break;
@@ -358,23 +359,23 @@ error:
     return NULL;
 }
 
-pddby_questions_t* pddby_questions_find_by_topic(int64_t topic_id, int ticket_number)
+pddby_questions_t* pddby_questions_find_by_topic(pddby_t* pddby, int64_t topic_id, int ticket_number)
 {
     if (ticket_number > 0)
     {
-        return pddby_questions_find_with_offset(topic_id, (ticket_number - 1) * 10, 10);
+        return pddby_questions_find_with_offset(pddby, topic_id, (ticket_number - 1) * 10, 10);
     }
-    return pddby_questions_find_with_offset(topic_id, 0, -1);
+    return pddby_questions_find_with_offset(pddby, topic_id, 0, -1);
 }
 
-static void pddby_load_ticket_topics_distribution()
+static void pddby_load_ticket_topics_distribution(pddby_t* pddby)
 {
     if (ticket_topics_distribution)
     {
         return;
     }
 
-    char *raw_ttd = pddby_settings_get("ticket_topics_distribution");
+    char *raw_ttd = pddby_settings_get(pddby, "ticket_topics_distribution");
     char **ttd = pddby_string_split(raw_ttd, ":");
     free(raw_ttd);
 
@@ -392,19 +393,19 @@ static void pddby_load_ticket_topics_distribution()
     pddby_stringv_free(ttd);
 }
 
-pddby_questions_t* pddby_questions_find_by_ticket(int ticket_number)
+pddby_questions_t* pddby_questions_find_by_ticket(pddby_t* pddby, int ticket_number)
 {
-    pddby_load_ticket_topics_distribution();
+    pddby_load_ticket_topics_distribution(pddby);
 
-    pddby_topics_t* topics = pddby_topics_find_all();
-    pddby_questions_t* questions = pddby_questions_new();
+    pddby_topics_t* topics = pddby_topics_find_all(pddby);
+    pddby_questions_t* questions = pddby_questions_new(pddby);
     for (size_t i = 0, size = pddby_array_size(topics); i < size; i++)
     {
         pddby_topic_t const* topic = pddby_array_index(topics, i);
         int32_t count = pddby_topic_get_question_count(topic);
         for (int j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pddby_questions_t* topic_questions = pddby_questions_find_with_offset(topic->id,
+            pddby_questions_t* topic_questions = pddby_questions_find_with_offset(pddby, topic->id,
                 ((ticket_number - 1) * 10 + j) % count, 1);
             pddby_array_add(questions, pddby_array_index(topic_questions, 0));
             pddby_array_free(topic_questions, 0);
@@ -414,19 +415,19 @@ pddby_questions_t* pddby_questions_find_by_ticket(int ticket_number)
     return questions;
 }
 
-pddby_questions_t* pddby_questions_find_random()
+pddby_questions_t* pddby_questions_find_random(pddby_t* pddby)
 {
-    pddby_load_ticket_topics_distribution();
+    pddby_load_ticket_topics_distribution(pddby);
 
-    pddby_topics_t* topics = pddby_topics_find_all();
-    pddby_questions_t* questions = pddby_questions_new();
+    pddby_topics_t* topics = pddby_topics_find_all(pddby);
+    pddby_questions_t* questions = pddby_questions_new(pddby);
     for (size_t i = 0, size = pddby_array_size(topics); i < size; i++)
     {
         pddby_topic_t const* topic = pddby_array_index(topics, i);
         int32_t count = pddby_topic_get_question_count(topic);
         for (int j = 0; j < ticket_topics_distribution[i]; j++)
         {
-            pddby_questions_t* topic_questions = pddby_questions_find_with_offset(topic->id,
+            pddby_questions_t* topic_questions = pddby_questions_find_with_offset(pddby, topic->id,
                 pddby_aux_random_int_range(0, count - 1), 1);
             pddby_array_add(questions, pddby_array_index(topic_questions, 0));
             pddby_array_free(topic_questions, 0);

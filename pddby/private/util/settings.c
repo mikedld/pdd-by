@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "database.h"
+#include "report.h"
 
 #include <assert.h>
 #include <string.h>
@@ -10,14 +11,14 @@
 #include <dmalloc.h>
 #endif
 
-char* pddby_settings_get(char const* key)
+char* pddby_settings_get(pddby_t* pddby, char const* key)
 {
     assert(key);
 
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `value` FROM `settings` WHERE `key`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `value` FROM `settings` WHERE `key`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -43,6 +44,6 @@ char* pddby_settings_get(char const* key)
     return strdup(value);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to get settings value for key \"%s\"", key);
     return NULL;
 }

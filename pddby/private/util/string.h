@@ -1,15 +1,10 @@
-#ifndef PDDBY_STRING_H
-#define PDDBY_STRING_H
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#ifndef PDDBY_PRIVATE_STRING_H
+#define PDDBY_PRIVATE_STRING_H
 
 #include <stddef.h>
 
-struct pddby_iconv_s;
-typedef struct pddby_iconv_s pddby_iconv_t;
+struct pddby_iconv;
+typedef struct pddby_iconv pddby_iconv_t;
 
 pddby_iconv_t* pddby_iconv_new(char const* from_code, char const* to_code);
 void pddby_iconv_free(pddby_iconv_t* conv);
@@ -27,8 +22,4 @@ char** pddby_string_split(char const* string, char const* delimiter);
 size_t pddby_stringv_length(char* const* str_array);
 void pddby_stringv_free(char** str_array);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif // PDDBY_STRING_H
+#endif // PDDBY_PRIVATE_STRING_H

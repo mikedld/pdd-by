@@ -5,7 +5,7 @@
 #include <iconv.h>
 #include <stdlib.h>
 
-struct pddby_iconv_s
+struct pddby_iconv
 {
     iconv_t conv;
 };

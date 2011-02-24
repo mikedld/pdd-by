@@ -1,7 +1,7 @@
 #include "comment.h"
 
 #include "config.h"
-#include "util/database.h"
+#include "private/util/database.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 #include <dmalloc.h>
 #endif
 
-static pddby_comment_t* pddby_comment_new_with_id(int64_t id, int32_t number, char const* text)
+static pddby_comment_t* pddby_comment_new_with_id(pddby_t* pddby, int64_t id, int32_t number, char const* text)
 {
     pddby_comment_t* comment = calloc(1, sizeof(pddby_comment_t));
     if (!comment)
@@ -27,6 +27,7 @@ static pddby_comment_t* pddby_comment_new_with_id(int64_t id, int32_t number, ch
 
     comment->id = id;
     comment->number = number;
+    comment->pddby = pddby;
 
     return comment;
 
@@ -39,9 +40,9 @@ error:
     return NULL;
 }
 
-pddby_comment_t* pddby_comment_new(int32_t number, char const* text)
+pddby_comment_t* pddby_comment_new(pddby_t* pddby, int32_t number, char const* text)
 {
-    return pddby_comment_new_with_id(0, number, text);
+    return pddby_comment_new_with_id(pddby, 0, number, text);
 }
 
 void pddby_comment_free(pddby_comment_t* comment)
@@ -57,10 +58,12 @@ void pddby_comment_free(pddby_comment_t* comment)
 
 int pddby_comment_save(pddby_comment_t* comment)
 {
+    assert(comment);
+
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `comments` (`number`, `text`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(comment->pddby, "INSERT INTO `comments` (`number`, `text`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -82,7 +85,7 @@ int pddby_comment_save(pddby_comment_t* comment)
 
     assert(ret == 0);
 
-    comment->id = pddby_db_last_insert_id();
+    comment->id = pddby_db_last_insert_id(comment->pddby);
 
     return 1;
 
@@ -91,12 +94,12 @@ error:
     return 0;
 }
 
-pddby_comment_t* pddby_comment_find_by_id(int64_t id)
+pddby_comment_t* pddby_comment_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -120,19 +123,19 @@ pddby_comment_t* pddby_comment_find_by_id(int64_t id)
     int32_t number = pddby_db_column_int(db_stmt, 0);
     char const* text = pddby_db_column_text(db_stmt, 1);
 
-    return pddby_comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(pddby, id, number, text);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_comment_t* pddby_comment_find_by_number(int32_t number)
+pddby_comment_t* pddby_comment_find_by_number(pddby_t* pddby, int32_t number)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -156,7 +159,7 @@ pddby_comment_t* pddby_comment_find_by_number(int32_t number)
     int64_t id = pddby_db_column_int64(db_stmt, 0);
     char const* text = pddby_db_column_text(db_stmt, 1);
 
-    return pddby_comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(pddby, id, number, text);
 
 error:
     // TODO: report error

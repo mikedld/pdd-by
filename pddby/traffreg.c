@@ -1,8 +1,8 @@
 #include "traffreg.h"
 
 #include "config.h"
+#include "private/util/database.h"
 #include "question.h"
-#include "util/database.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include <dmalloc.h>
 #endif
 
-static pddby_traffreg_t* pddby_traffreg_new_with_id(int64_t id, int32_t number, char const* text)
+static pddby_traffreg_t* pddby_traffreg_new_with_id(pddby_t* pddby, int64_t id, int32_t number, char const* text)
 {
     pddby_traffreg_t *traffreg = malloc(sizeof(pddby_traffreg_t));
     if (!traffreg)
@@ -28,6 +28,7 @@ static pddby_traffreg_t* pddby_traffreg_new_with_id(int64_t id, int32_t number, 
 
     traffreg->id = id;
     traffreg->number = number;
+    traffreg->pddby = pddby;
 
     return traffreg;
 
@@ -40,9 +41,9 @@ error:
     return NULL;
 }
 
-pddby_traffreg_t* pddby_traffreg_new(int32_t number, char const* text)
+pddby_traffreg_t* pddby_traffreg_new(pddby_t* pddby, int32_t number, char const* text)
 {
-    return pddby_traffreg_new_with_id(0, number, text);
+    return pddby_traffreg_new_with_id(pddby, 0, number, text);
 }
 
 void pddby_traffreg_free(pddby_traffreg_t* traffreg)
@@ -63,7 +64,7 @@ int pddby_traffreg_save(pddby_traffreg_t* traffreg)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `traffregs` (`number`, `text`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(traffreg->pddby, "INSERT INTO `traffregs` (`number`, `text`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -85,7 +86,7 @@ int pddby_traffreg_save(pddby_traffreg_t* traffreg)
 
     assert(ret == 0);
 
-    traffreg->id = pddby_db_last_insert_id();
+    traffreg->id = pddby_db_last_insert_id(traffreg->pddby);
 
     return 1;
 
@@ -102,7 +103,7 @@ int pddby_traffreg_set_images(pddby_traffreg_t* traffreg, pddby_images_t* images
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(traffreg->pddby, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -136,12 +137,12 @@ error:
     return 0;
 }
 
-pddby_traffreg_t* pddby_traffreg_find_by_id(int64_t id)
+pddby_traffreg_t* pddby_traffreg_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -165,19 +166,19 @@ pddby_traffreg_t* pddby_traffreg_find_by_id(int64_t id)
     int32_t number = pddby_db_column_int(db_stmt, 0);
     char const*text = pddby_db_column_text(db_stmt, 1);
 
-    return pddby_traffreg_new_with_id(id, number, text);
+    return pddby_traffreg_new_with_id(pddby, id, number, text);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_traffreg_t* pddby_traffreg_find_by_number(int32_t number)
+pddby_traffreg_t* pddby_traffreg_find_by_number(pddby_t* pddby, int32_t number)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -201,24 +202,24 @@ pddby_traffreg_t* pddby_traffreg_find_by_number(int32_t number)
     int64_t id = pddby_db_column_int64(db_stmt, 0);
     char const*text = pddby_db_column_text(db_stmt, 1);
 
-    return pddby_traffreg_new_with_id(id, number, text);
+    return pddby_traffreg_new_with_id(pddby, id, number, text);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_traffregs_t* pddby_traffregs_new()
+pddby_traffregs_t* pddby_traffregs_new(pddby_t* pddby)
 {
-    return pddby_array_new((pddby_array_free_func_t)pddby_traffreg_free);
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_traffreg_free);
 }
 
-pddby_traffregs_t* pddby_traffregs_find_by_question(int64_t question_id)
+pddby_traffregs_t* pddby_traffregs_find_by_question(pddby_t* pddby, int64_t question_id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
+        db_stmt = pddby_db_prepare(pddby, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
             "`questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?");
         if (!db_stmt)
         {
@@ -232,7 +233,7 @@ pddby_traffregs_t* pddby_traffregs_find_by_question(int64_t question_id)
         goto error;
     }
 
-    pddby_traffregs_t* traffregs = pddby_traffregs_new();
+    pddby_traffregs_t* traffregs = pddby_traffregs_new(pddby);
     if (!traffregs)
     {
         goto error;
@@ -245,7 +246,7 @@ pddby_traffregs_t* pddby_traffregs_find_by_question(int64_t question_id)
         int32_t number = pddby_db_column_int(db_stmt, 1);
         char const*text = pddby_db_column_text(db_stmt, 2);
 
-        if (!pddby_array_add(traffregs, pddby_traffreg_new_with_id(id, number, text)))
+        if (!pddby_array_add(traffregs, pddby_traffreg_new_with_id(pddby, id, number, text)))
         {
             ret = -1;
             break;

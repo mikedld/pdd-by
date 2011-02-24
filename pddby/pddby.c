@@ -1,24 +1,23 @@
 #include "pddby.h"
 
-#include "decode/decode.h"
-#include "util/database.h"
+#include "private/decode/decode.h"
+#include "private/decode/decode_context.h"
+#include "private/pddby.h"
+#include "private/util/database.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
 
-struct pddby_s
-{
-    //
-};
-
-pddby_t* pddby_init(char const* share_dir, char const* cache_dir)
+pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callbacks_t* callbacks)
 {
     srand(time(0));
 
     pddby_t* result = calloc(1, sizeof(pddby_t));
 
-    pddby_db_init(share_dir, cache_dir);
+    result->callbacks = callbacks;
+
+    pddby_db_init(result, share_dir, cache_dir);
 
     return result;
 }
@@ -27,20 +26,21 @@ void pddby_close(pddby_t* pddby)
 {
     assert(pddby);
 
-    pddby_db_cleanup();
+    pddby_db_cleanup(pddby);
 
     free(pddby);
 }
 
 int pddby_decode(pddby_t* pddby, char const* root_path)
 {
+    assert(pddby);
+
     // TODO: check if root_path corresponds to mounted CD-ROM device
 
-    typedef int (*pddby_decode_stage_t)(pddby_decode_context_t* context);
+    typedef int (*pddby_decode_stage_t)(pddby_t* pddby);
 
     static pddby_decode_stage_t const s_decode_stages[] =
     {
-        &pddby_decode_init_magic,
         &pddby_decode_images,
         &pddby_decode_comments,
         &pddby_decode_traffregs,
@@ -48,29 +48,32 @@ int pddby_decode(pddby_t* pddby, char const* root_path)
         NULL
     };
 
-    pddby_decode_context_t context;
-    context.root_path = root_path;
-    context.iconv = pddby_iconv_new("cp1251", "utf-8");
+    pddby->decode_context = pddby_decode_context_new(pddby, root_path);
 
     for (pddby_decode_stage_t const* stage = s_decode_stages; *stage; stage++)
     {
-        if (!(*stage)(&context))
+        if (!(*stage)(pddby))
         {
             return 0;
         }
     }
 
-    pddby_iconv_free(context.iconv);
+    pddby_decode_context_free(pddby->decode_context);
+    pddby->decode_context = NULL;
 
     return 1;
 }
 
 int pddby_cache_exists(pddby_t* pddby)
 {
-    return pddby_db_exists();
+    assert(pddby);
+
+    return pddby_db_exists(pddby);
 }
 
 void pddby_use_cache(pddby_t* pddby, int value)
 {
-    pddby_db_use_cache(value);
+    assert(pddby);
+
+    pddby_db_use_cache(pddby, value);
 }

@@ -137,27 +137,27 @@ static GtkWidget *question_window_new(gchar *title, pddby_questions_t *questions
 GtkWidget *question_window_new_with_section(pddby_section_t *section, gboolean is_exam)
 {
     questions_type = 0;
-    return question_window_new(g_strdup(section->title_prefix), pddby_questions_find_by_section(section->id), is_exam);
+    return question_window_new(g_strdup(section->title_prefix), pddby_questions_find_by_section(section->pddby, section->id), is_exam);
 }
 
 GtkWidget *question_window_new_with_topic(pddby_topic_t *topic, gint ticket_number, gboolean is_exam)
 {
     questions_type = 1;
     return question_window_new(g_strdup_printf("Раздел %d, билет %d", topic->number, ticket_number),
-        pddby_questions_find_by_topic(topic->id, ticket_number), is_exam);
+        pddby_questions_find_by_topic(topic->pddby, topic->id, ticket_number), is_exam);
 }
 
-GtkWidget *question_window_new_with_ticket(gint ticket_number, gboolean is_exam)
+GtkWidget *question_window_new_with_ticket(pddby_t* pddby, gint ticket_number, gboolean is_exam)
 {
     questions_type = 2;
     return question_window_new(g_strdup_printf("Билет %d", ticket_number),
-        pddby_questions_find_by_ticket(ticket_number), is_exam);
+        pddby_questions_find_by_ticket(pddby, ticket_number), is_exam);
 }
 
-GtkWidget *question_window_new_with_random_ticket(gboolean is_exam)
+GtkWidget *question_window_new_with_random_ticket(pddby_t* pddby, gboolean is_exam)
 {
     questions_type = 3;
-    return question_window_new(g_strdup("Случайный билет"), pddby_questions_find_random(), is_exam);
+    return question_window_new(g_strdup("Случайный билет"), pddby_questions_find_random(pddby), is_exam);
 }
 
 static void statistics_free(statistics_t *statistics)
@@ -219,7 +219,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     g_list_free(list);
 
     gtk_container_foreach(GTK_CONTAINER(answers_box), (GtkCallback)gtk_widget_destroy, NULL);
-    pddby_answers_t *answers = pddby_answers_find_by_question(question->id);
+    pddby_answers_t *answers = pddby_answers_find_by_question(question->pddby, question->id);
     GtkWidget *answer_radio = NULL;
     for (i = 0; i < pddby_array_size(answers); i++)
     {
@@ -249,7 +249,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     {
         gtk_widget_show_all(GTK_WIDGET(image_frame));
         GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
-        pddby_image_t *image = pddby_image_find_by_id(question->image_id);
+        pddby_image_t *image = pddby_image_find_by_id(question->pddby, question->image_id);
         GError *err = NULL;
         if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
         {

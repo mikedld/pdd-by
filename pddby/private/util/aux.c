@@ -1,5 +1,7 @@
 #include "aux.h"
 
+#include "report.h"
+
 #include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -15,12 +17,12 @@
 #include <dmalloc.h>
 #endif
 
-static char* pddby_aux_find_file_ci(char const* path, char const* fname)
+static char* pddby_aux_find_file_ci(pddby_t* pddby, char const* path, char const* fname)
 {
     DIR* dir = opendir(path);
     if (!dir)
     {
-        //pddby_report_error("");
+        pddby_report(pddby, pddby_message_type_error, "unable to find file \"%s\" inside \"%s\"", fname, path);
         return NULL;
     }
 
@@ -30,7 +32,7 @@ static char* pddby_aux_find_file_ci(char const* path, char const* fname)
     {
         if (!strcasecmp(ent->d_name, fname))
         {
-            result = pddby_aux_build_filename(path, ent->d_name, 0);
+            result = pddby_aux_build_filename(pddby, path, ent->d_name, 0);
             break;
         }
     }
@@ -38,20 +40,20 @@ static char* pddby_aux_find_file_ci(char const* path, char const* fname)
 
     if (!result)
     {
-        // TODO: report error
+        pddby_report(pddby, pddby_message_type_error, "unable to find file \"%s\" inside \"%s\"", fname, path);
     }
 
     return result;
 }
 
-char* pddby_aux_build_filename(char const* first_part, ...)
+char* pddby_aux_build_filename(pddby_t* pddby, char const* first_part, ...)
 {
     assert(first_part);
 
     char* result = strdup(first_part);
     if (!result)
     {
-        // TODO: report error
+        pddby_report(pddby, pddby_message_type_error, "unable to build filename");
         return NULL;
     }
 
@@ -68,7 +70,7 @@ char* pddby_aux_build_filename(char const* first_part, ...)
         result = realloc(result, strlen(result) + strlen(part) + 2);
         if (!result)
         {
-            // TODO: report error
+            pddby_report(pddby, pddby_message_type_error, "unable to build filename");
             return NULL;
         }
 
@@ -76,15 +78,16 @@ char* pddby_aux_build_filename(char const* first_part, ...)
         strcat(result, part);
     }
     va_end(args);
+
     return result;
 }
 
-char* pddby_aux_build_filename_ci(char const* first_part, ...)
+char* pddby_aux_build_filename_ci(pddby_t* pddby, char const* first_part, ...)
 {
     char* result = strdup(first_part);
     if (!result)
     {
-        // TODO: report error
+        pddby_report(pddby, pddby_message_type_error, "unable to build filename (case-insensitive)");
         return NULL;
     }
 
@@ -93,22 +96,24 @@ char* pddby_aux_build_filename_ci(char const* first_part, ...)
     char const* path_part;
     while ((path_part = va_arg(list, char const*)))
     {
-        char* path = pddby_aux_find_file_ci(result, path_part);
+        char* path = pddby_aux_find_file_ci(pddby, result, path_part);
         free(result);
         if (!path)
         {
-            // TODO: report error
+            pddby_report(pddby, pddby_message_type_error, "unable to build filename (case-insensitive)");
             return NULL;
         }
 
         result = path;
     }
     va_end(list);
-    printf("make_path: %s\n", result);
+
+    pddby_report(pddby, pddby_message_type_debug, "path (ci): %s", result);
+
     return result;
 }
 
-char* pddby_aux_path_get_basename(char const* path)
+char* pddby_aux_path_get_basename(pddby_t* pddby, char const* path)
 {
     assert(path);
 
@@ -123,7 +128,7 @@ char* pddby_aux_path_get_basename(char const* path)
     char* result = malloc(result_length + 1);
     if (!result)
     {
-        // TODO: report error
+        pddby_report(pddby, pddby_message_type_error, "unable to get base name of \"%s\"", path);
         return NULL;
     }
 
@@ -131,7 +136,7 @@ char* pddby_aux_path_get_basename(char const* path)
     return result;
 }
 
-int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buffer_size)
+int pddby_aux_file_get_contents(pddby_t* pddby, char const* filename, char** buffer, size_t* buffer_size)
 {
     assert(filename);
     assert(buffer);
@@ -173,14 +178,14 @@ int pddby_aux_file_get_contents(char const* filename, char** buffer, size_t* buf
 
     if (close(fd) == -1)
     {
-        // TODO: report warning
+        pddby_report(pddby, pddby_message_type_warning, "unable to close file %d", fd);
     }
 
     (*buffer)[file_size] = '\0';
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to get contents of \"%s\"", filename);
 
     if (*buffer)
     {
@@ -191,14 +196,14 @@ error:
     {
         if (close(fd) == -1)
         {
-            // TODO: report warning
+            pddby_report(pddby, pddby_message_type_warning, "unable to close file %d", fd);
         }
     }
 
     return 0;
 }
 
-char* pddby_aux_file_get_checksum(char const* file_path)
+char* pddby_aux_file_get_checksum(pddby_t* pddby, char const* file_path)
 {
     assert(file_path);
 
@@ -254,22 +259,24 @@ char* pddby_aux_file_get_checksum(char const* file_path)
     free(buffer);
     if (fclose(f) == EOF)
     {
-        // TODO: report warning
+        pddby_report(pddby, pddby_message_type_warning, "unable to close file %d", fileno(f));
     }
 
     return result;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to get checksum of \"%s\"", file_path);
+
     if (buffer)
     {
         free(buffer);
     }
+
     if (f)
     {
         if (fclose(f) == EOF)
         {
-            // TODO: report warning
+            pddby_report(pddby, pddby_message_type_warning, "unable to close file %d", fileno(f));
         }
     }
     return NULL;

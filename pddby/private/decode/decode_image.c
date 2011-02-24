@@ -1,10 +1,9 @@
 #include "decode_image.h"
 
-#include "callback.h"
 #include "image.h"
-#include "util/aux.h"
-#include "util/delphi.h"
-#include "util/string.h"
+#include "private/util/aux.h"
+#include "private/util/delphi.h"
+#include "private/util/string.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -46,7 +45,7 @@ static void swap(uint32_t* left, uint32_t* right)
     *right = temp;
 }
 
-static pddby_image_t* decode_image_a8(char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
     // v9 image format
 
@@ -89,10 +88,10 @@ static pddby_image_t* decode_image_a8(char* basename, uint16_t magic, char* data
         }
     }
 
-    return pddby_image_new(pddby_string_delimit(basename, ".", '\0'), data, data_size);
+    return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data, data_size);
 }
 
-static pddby_image_t* decode_image_bpft(char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* decode_image_bpft(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
     // v10 & v11 image format
 
@@ -103,7 +102,7 @@ static pddby_image_t* decode_image_bpft(char* basename, uint16_t magic, char* da
         data[i] ^= delphi_random(255);
     }
 
-    return pddby_image_new(pddby_string_delimit(basename, ".", '\0'), data + 4, data_size - 4);
+    return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 4, data_size - 4);
 }
 
 static void decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
@@ -184,7 +183,7 @@ static uint8_t decode_image_bpftcam_next(bpftcam_context_t* ctx)
     return *ctx->x;
 }
 
-static pddby_image_t* decode_image_bpftcam(char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* decode_image_bpftcam(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
     // v12 image format
 
@@ -196,34 +195,34 @@ static pddby_image_t* decode_image_bpftcam(char* basename, uint16_t magic, char*
         data[i] ^= decode_image_bpftcam_next(&context);
     }
 
-    return pddby_image_new(pddby_string_delimit(basename, ".", '\0'), data + 7, data_size - 7);
+    return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 7, data_size - 7);
 }
 
-int decode_image(char const* path, uint16_t magic)
+int decode_image(pddby_t* pddby, char const* path, uint16_t magic)
 {
     char* data;
     size_t data_size;
 
-    if (!pddby_aux_file_get_contents(path, &data, &data_size))
+    if (!pddby_aux_file_get_contents(pddby, path, &data, &data_size))
     {
-        pddby_report_error("");
+        //pddby_report_error("");
         //pddby_report_error("%s\n", err->message);
     }
 
     pddby_image_t* image = 0;
-    char* basename = pddby_aux_path_get_basename(path);
+    char* basename = pddby_aux_path_get_basename(pddby, path);
 
     if (!strncmp(data, "A8", 2))
     {
-        image = decode_image_a8(basename, magic, data, data_size);
+        image = decode_image_a8(pddby, basename, magic, data, data_size);
     }
     else if (!strncmp(data, "BPFTCAM", 7))
     {
-        image = decode_image_bpftcam(basename, magic, data, data_size);
+        image = decode_image_bpftcam(pddby, basename, magic, data, data_size);
     }
     else if (!strncmp(data, "BPFT", 4))
     {
-        image = decode_image_bpft(basename, magic, data, data_size);
+        image = decode_image_bpft(pddby, basename, magic, data, data_size);
     }
 
     free(data);
@@ -236,12 +235,12 @@ int decode_image(char const* path, uint16_t magic)
 
         if (!result)
         {
-            pddby_report_error("unable to save image");
+            //pddby_report_error("unable to save image");
         }
     }
     else
     {
-        pddby_report_error("unknown image format\n");
+        //pddby_report_error("unknown image format\n");
     }
 
     return 1;

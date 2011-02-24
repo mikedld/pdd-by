@@ -1,7 +1,7 @@
 #include "answer.h"
 
 #include "config.h"
-#include "util/database.h"
+#include "private/util/database.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 #include <dmalloc.h>
 #endif
 
-static pddby_answer_t* pddby_answer_new_with_id(int64_t id, int64_t question_id, char const* text, int is_correct)
+static pddby_answer_t* pddby_answer_new_with_id(pddby_t* pddby, int64_t id, int64_t question_id, char const* text, int is_correct)
 {
     pddby_answer_t *answer = calloc(1, sizeof(pddby_answer_t));
     if (!answer)
@@ -28,6 +28,7 @@ static pddby_answer_t* pddby_answer_new_with_id(int64_t id, int64_t question_id,
     answer->id = id;
     answer->question_id = question_id;
     answer->is_correct = is_correct;
+    answer->pddby = pddby;
 
     return answer;
 
@@ -40,9 +41,9 @@ error:
     return NULL;
 }
 
-pddby_answer_t* pddby_answer_new(int64_t question_id, char const* text, int is_correct)
+pddby_answer_t* pddby_answer_new(pddby_t* pddby, int64_t question_id, char const* text, int is_correct)
 {
-    return pddby_answer_new_with_id(0, question_id, text, is_correct);
+    return pddby_answer_new_with_id(pddby, 0, question_id, text, is_correct);
 }
 
 void pddby_answer_free(pddby_answer_t* answer)
@@ -63,7 +64,7 @@ int pddby_answer_save(pddby_answer_t* answer)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)");
+        db_stmt = pddby_db_prepare(answer->pddby, "INSERT INTO `answers` (`question_id`, `text`, `is_correct`) VALUES (?, ?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -88,7 +89,7 @@ int pddby_answer_save(pddby_answer_t* answer)
 
     assert(ret == 0);
 
-    answer->id = pddby_db_last_insert_id();
+    answer->id = pddby_db_last_insert_id(answer->pddby);
 
     return 1;
 
@@ -97,12 +98,12 @@ error:
     return 0;
 }
 
-pddby_answer_t* pddby_answer_find_by_id(int64_t id)
+pddby_answer_t* pddby_answer_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `question_id`, `text`, `is_correct` FROM `answers` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -127,24 +128,24 @@ pddby_answer_t* pddby_answer_find_by_id(int64_t id)
     char const* text = pddby_db_column_text(db_stmt, 1);
     int is_correct = pddby_db_column_int(db_stmt, 2);
 
-    return pddby_answer_new_with_id(id, question_id, text, is_correct);
+    return pddby_answer_new_with_id(pddby, id, question_id, text, is_correct);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_answers_t* pddby_answers_new()
+pddby_answers_t* pddby_answers_new(pddby_t* pddby)
 {
-    return pddby_array_new((pddby_array_free_func_t)pddby_answer_free);
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_answer_free);
 }
 
-pddby_answers_t* pddby_answers_find_by_question(int64_t question_id)
+pddby_answers_t* pddby_answers_find_by_question(struct pddby* pddby, int64_t question_id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text`, `is_correct` FROM `answers` WHERE `question_id`=?");
         if (!db_stmt)
         {
             goto error;
@@ -157,7 +158,7 @@ pddby_answers_t* pddby_answers_find_by_question(int64_t question_id)
         goto error;
     }
 
-    pddby_answers_t* answers = pddby_answers_new();
+    pddby_answers_t* answers = pddby_answers_new(pddby);
     if (!answers)
     {
         goto error;
@@ -170,7 +171,7 @@ pddby_answers_t* pddby_answers_find_by_question(int64_t question_id)
         char const* text = pddby_db_column_text(db_stmt, 1);
         int is_correct = pddby_db_column_int(db_stmt, 2);
 
-        if (!pddby_array_add(answers, pddby_answer_new_with_id(id, question_id, text, is_correct)))
+        if (!pddby_array_add(answers, pddby_answer_new_with_id(pddby, id, question_id, text, is_correct)))
         {
             ret = -1;
             break;

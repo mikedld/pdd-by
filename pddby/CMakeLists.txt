@@ -5,7 +5,6 @@ add_definitions(-std=c99)
 set(${PROJECT_NAME}_HEADERS
     answer.h
     array.h
-    callback.h
     comment.h
     image.h
     pddby.h
@@ -18,7 +17,6 @@ set(${PROJECT_NAME}_HEADERS
 set(${PROJECT_NAME}_SOURCES
     answer.c
     array.c
-    callback.c
     comment.c
     image.c
     pddby.c
@@ -28,41 +26,42 @@ set(${PROJECT_NAME}_SOURCES
     traffreg.c
 )
 
-set(${PROJECT_NAME}_DECODE_HEADERS
-    decode/decode.h
-    decode/decode_image.h
+set(${PROJECT_NAME}_PRIVATE_HEADERS
+    private/decode/decode.h
+    private/decode/decode_context.h
+    private/decode/decode_image.h
+    private/decode/decode_questions.h
+    private/pddby.h
+    private/util/aux.h
+    private/util/database.h
+    private/util/delphi.h
+    private/util/regex.h
+    private/util/report.h
+    private/util/settings.h
+    private/util/string.h
 )
 
-set(${PROJECT_NAME}_DECODE_SOURCES
-    decode/decode.c
-    decode/decode_image.c
-)
-
-set(${PROJECT_NAME}_UTIL_HEADERS
-    util/aux.h
-    util/database.h
-    util/delphi.h
-    util/regex.h
-    util/settings.h
-    util/string.h
-)
-
-set(${PROJECT_NAME}_UTIL_SOURCES
-    util/aux.c
-    util/database.c
-    util/delphi.c
-    util/regex.c
-    util/settings.c
-    util/string.c
+set(${PROJECT_NAME}_PRIVATE_SOURCES
+    private/decode/decode.c
+    private/decode/decode_context.c
+    private/decode/decode_image.c
+    private/decode/decode_questions.c
+    private/util/aux.c
+    private/util/database.c
+    private/util/delphi.c
+    private/util/regex.c
+    private/util/report.c
+    private/util/settings.c
+    private/util/string.c
 )
 
 if (APPLE)
-    list(APPEND ${PROJECT_NAME}_UTIL_SOURCES
-        util/string_mac.c
+    list(APPEND ${PROJECT_NAME}_PRIVATE_SOURCES
+        private/util/string_mac.c
     )
 else()
-    list(APPEND ${PROJECT_NAME}_UTIL_SOURCES
-        util/string_iconv.c
+    list(APPEND ${PROJECT_NAME}_PRIVATE_SOURCES
+        private/util/string_iconv.c
     )
 endif()
 
@@ -83,9 +82,7 @@ include_directories(
 add_library(${PROJECT_NAME}
     ${${PROJECT_NAME}_HEADERS}
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_DECODE_HEADERS}
-    ${${PROJECT_NAME}_DECODE_SOURCES}
-    ${${PROJECT_NAME}_UTIL_HEADERS}
-    ${${PROJECT_NAME}_UTIL_SOURCES}
+    ${${PROJECT_NAME}_PRIVATE_HEADERS}
+    ${${PROJECT_NAME}_PRIVATE_SOURCES}
     ${${PROJECT_NAME}_SQL_FILES}
 )

@@ -1,10 +1,5 @@
-#ifndef PDDBY_DELPHI_H
-#define PDDBY_DELPHI_H
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#ifndef PDDBY_PRIVATE_DELPHI_H
+#define PDDBY_PRIVATE_DELPHI_H
 
 #include <stdint.h>
 
@@ -14,8 +9,4 @@ void set_randseed(uint64_t seed);
 uint64_t get_randseed();
 void init_randseed_for_image(char const* name, uint16_t magic);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif // PDDBY_DELPHI_H
+#endif // PDDBY_PRIVATE_DELPHI_H

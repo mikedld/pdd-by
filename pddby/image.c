@@ -1,9 +1,9 @@
 #include "image.h"
 
 #include "config.h"
-#include "util/aux.h"
-#include "util/database.h"
-#include "util/string.h"
+#include "private/util/aux.h"
+#include "private/util/database.h"
+#include "private/util/string.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 #include <dmalloc.h>
 #endif
 
-static pddby_image_t* pddby_image_new_with_id(int64_t id, char const* name, void const* data, size_t data_length)
+static pddby_image_t* pddby_image_new_with_id(pddby_t* pddby, int64_t id, char const* name, void const* data, size_t data_length)
 {
     pddby_image_t *image = calloc(1, sizeof(pddby_image_t));
     if (!image)
@@ -40,6 +40,7 @@ static pddby_image_t* pddby_image_new_with_id(int64_t id, char const* name, void
     }
 
     image->id = id;
+    image->pddby = pddby;
 
     return image;
 
@@ -52,9 +53,9 @@ error:
     return NULL;
 }
 
-pddby_image_t* pddby_image_new(char const* name, void const* data, size_t data_length)
+pddby_image_t* pddby_image_new(pddby_t* pddby, char const* name, void const* data, size_t data_length)
 {
-    return pddby_image_new_with_id(0, name, data, data_length);
+    return pddby_image_new_with_id(pddby, 0, name, data, data_length);
 }
 
 void pddby_image_free(pddby_image_t* image)
@@ -79,7 +80,7 @@ int pddby_image_save(pddby_image_t* image)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `images` (`name`, `data`) VALUES (?, ?)");
+        db_stmt = pddby_db_prepare(image->pddby, "INSERT INTO `images` (`name`, `data`) VALUES (?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -110,7 +111,7 @@ int pddby_image_save(pddby_image_t* image)
 
     assert(ret == 0);
 
-    image->id = pddby_db_last_insert_id();
+    image->id = pddby_db_last_insert_id(image->pddby);
 
     return 1;
 
@@ -119,12 +120,12 @@ error:
     return 0;
 }
 
-pddby_image_t* pddby_image_find_by_id(int64_t id)
+pddby_image_t* pddby_image_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `name`, `data` FROM `images` WHERE `rowid`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `name`, `data` FROM `images` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -149,21 +150,21 @@ pddby_image_t* pddby_image_find_by_id(int64_t id)
     void const* data = pddby_db_column_blob(db_stmt, 1);
     size_t data_length = pddby_db_column_bytes(db_stmt, 1);
 
-    return pddby_image_new_with_id(id, name, data, data_length);
+    return pddby_image_new_with_id(pddby, id, name, data, data_length);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_image_t* pddby_image_find_by_name(char const* name)
+pddby_image_t* pddby_image_find_by_name(pddby_t* pddby, char const* name)
 {
     assert(name);
 
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `data` FROM `images` WHERE `name`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `data` FROM `images` WHERE `name`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -194,7 +195,7 @@ pddby_image_t* pddby_image_find_by_name(char const* name)
     void const* data = pddby_db_column_blob(db_stmt, 1);
     size_t data_length = pddby_db_column_bytes(db_stmt, 1);
 
-    pddby_image_t* image = pddby_image_new_with_id(id, image_name, data, data_length);
+    pddby_image_t* image = pddby_image_new_with_id(pddby, id, image_name, data, data_length);
 
     free(image_name);
 
@@ -205,17 +206,17 @@ error:
     return NULL;
 }
 
-pddby_images_t* pddby_images_new()
+pddby_images_t* pddby_images_new(pddby_t* pddby)
 {
-    return pddby_array_new((pddby_array_free_func_t)pddby_image_free);
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_image_free);
 }
 
-pddby_images_t* pddby_images_find_by_traffreg(int64_t traffreg_id)
+pddby_images_t* pddby_images_find_by_traffreg(pddby_t* pddby, int64_t traffreg_id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
+        db_stmt = pddby_db_prepare(pddby, "SELECT i.`rowid`, i.`name`, i.`data` FROM `images` i INNER JOIN "
             "`images_traffregs` it ON i.`rowid`=it.`image_id` WHERE it.`traffreg_id`=?");
         if (!db_stmt)
         {
@@ -229,7 +230,7 @@ pddby_images_t* pddby_images_find_by_traffreg(int64_t traffreg_id)
         goto error;
     }
 
-    pddby_images_t* images = pddby_images_new();
+    pddby_images_t* images = pddby_images_new(pddby);
     if (!images)
     {
         goto error;
@@ -243,7 +244,7 @@ pddby_images_t* pddby_images_find_by_traffreg(int64_t traffreg_id)
         void const* data = pddby_db_column_blob(db_stmt, 2);
         size_t data_length = pddby_db_column_bytes(db_stmt, 2);
 
-        if (!pddby_array_add(images, pddby_image_new_with_id(id, name, data, data_length)))
+        if (!pddby_array_add(images, pddby_image_new_with_id(pddby, id, name, data, data_length)))
         {
             ret = -1;
             break;

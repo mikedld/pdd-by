@@ -1,27 +1,24 @@
-#ifndef PDDBY_DATABASE_H
-#define PDDBY_DATABASE_H
+#ifndef PDDBY_PRIVATE_DATABASE_H
+#define PDDBY_PRIVATE_DATABASE_H
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include "pddby.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-typedef void pddby_db_t;
-typedef void pddby_db_stmt_t;
+typedef struct pddby_db pddby_db_t;
+typedef struct pddby_db_stmt pddby_db_stmt_t;
 
-int pddby_db_exists();
-void pddby_db_init(char const* share_dir, char const* cache_dir);
-void pddby_db_cleanup();
-void pddby_db_use_cache(int value);
+int pddby_db_exists(pddby_t* pddby);
+void pddby_db_init(pddby_t* pddby, char const* share_dir, char const* cache_dir);
+void pddby_db_cleanup(pddby_t* pddby);
+void pddby_db_use_cache(pddby_t* pddby, int value);
 
-void pddby_db_tx_begin();
-void pddby_db_tx_commit();
-void pddby_db_tx_rollback();
+int pddby_db_tx_begin(pddby_t* pddby);
+int pddby_db_tx_commit(pddby_t* pddby);
+int pddby_db_tx_rollback(pddby_t* pddby);
 
-pddby_db_stmt_t* pddby_db_prepare(char const* sql);
+pddby_db_stmt_t* pddby_db_prepare(pddby_t* pddby, char const* sql);
 int pddby_db_reset(pddby_db_stmt_t* stmt);
 
 int pddby_db_bind_null(pddby_db_stmt_t* stmt, int field);
@@ -37,10 +34,6 @@ void const* pddby_db_column_blob(pddby_db_stmt_t* stmt, int column);
 size_t pddby_db_column_bytes(pddby_db_stmt_t* stmt, int column);
 
 int pddby_db_step(pddby_db_stmt_t* stmt);
-int64_t pddby_db_last_insert_id();
+int64_t pddby_db_last_insert_id(pddby_t* pddby);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif // PDDBY_DATABASE_H
+#endif // PDDBY_PRIVATE_DATABASE_H

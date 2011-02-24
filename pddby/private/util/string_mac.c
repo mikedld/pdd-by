@@ -2,7 +2,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 
-struct pddby_iconv_s
+struct pddby_iconv
 {
     CFStringEncoding src_encoding;
     CFStringEncoding dst_encoding;

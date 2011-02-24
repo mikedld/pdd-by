@@ -69,7 +69,7 @@ GtkWidget *help_dialog_new_with_comment(const pddby_question_t *question)
     GtkBuilder *builder;
     GtkWidget *dialog = help_dialog_new(&builder);
 
-    pddby_comment_t *comment = pddby_comment_find_by_id(question->comment_id);
+    pddby_comment_t *comment = pddby_comment_find_by_id(question->pddby, question->comment_id);
     GtkWidget *help_box = GTK_WIDGET(gtk_builder_get_object(builder, "box_help"));
     add_text_to_box(help_box, comment->text);
     gtk_widget_show_all(help_box);
@@ -83,12 +83,12 @@ GtkWidget *help_dialog_new_with_traffregs(const pddby_question_t *question)
     GtkBuilder *builder;
     GtkWidget *dialog = help_dialog_new(&builder);
 
-    pddby_traffregs_t *traffregs = pddby_traffregs_find_by_question(question->id);
+    pddby_traffregs_t *traffregs = pddby_traffregs_find_by_question(question->pddby, question->id);
     GtkWidget *help_box = GTK_WIDGET(gtk_builder_get_object(builder, "box_help"));
     for (gsize i = 0, size = pddby_array_size(traffregs); i < size; i++)
     {
         pddby_traffreg_t *traffreg = pddby_array_index(traffregs, i);
-        pddby_images_t *images = pddby_images_find_by_traffreg(traffreg->id);
+        pddby_images_t *images = pddby_images_find_by_traffreg(traffreg->pddby, traffreg->id);
         add_images_to_box(help_box, images);
         add_text_to_box(help_box, traffreg->text);
         pddby_images_free(images);

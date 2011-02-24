@@ -1,8 +1,8 @@
 #include "section.h"
 
 #include "config.h"
+#include "private/util/database.h"
 #include "question.h"
-#include "util/database.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include <dmalloc.h>
 #endif
 
-static pddby_section_t* pddby_section_new_with_id(int64_t id, char const* name, char const* title_prefix,
+static pddby_section_t* pddby_section_new_with_id(pddby_t* pddby, int64_t id, char const* name, char const* title_prefix,
     char const* title)
 {
     pddby_section_t* section = calloc(1, sizeof(pddby_section_t));
@@ -40,6 +40,7 @@ static pddby_section_t* pddby_section_new_with_id(int64_t id, char const* name, 
     }
 
     section->id = id;
+    section->pddby = pddby;
 
     return section;
 
@@ -48,9 +49,9 @@ error:
     return NULL;
 }
 
-pddby_section_t* pddby_section_new(char const* name, char const* title_prefix, char const* title)
+pddby_section_t* pddby_section_new(pddby_t* pddby, char const* name, char const* title_prefix, char const* title)
 {
-    return pddby_section_new_with_id(0, name, title_prefix, title);
+    return pddby_section_new_with_id(pddby, 0, name, title_prefix, title);
 }
 
 void pddby_section_free(pddby_section_t* section)
@@ -79,7 +80,7 @@ int pddby_section_save(pddby_section_t* section)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)");
+        db_stmt = pddby_db_prepare(section->pddby, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)");
         if (!db_stmt)
         {
             goto error;
@@ -102,7 +103,7 @@ int pddby_section_save(pddby_section_t* section)
 
     assert(ret == 0);
 
-    section->id = pddby_db_last_insert_id();
+    section->id = pddby_db_last_insert_id(section->pddby);
 
     return 1;
 
@@ -111,12 +112,12 @@ error:
     return 0;
 }
 
-pddby_section_t* pddby_section_find_by_id(int64_t id)
+pddby_section_t* pddby_section_find_by_id(pddby_t* pddby, int64_t id)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -141,21 +142,21 @@ pddby_section_t* pddby_section_find_by_id(int64_t id)
     char const* title_prefix = pddby_db_column_text(db_stmt, 1);
     char const* title = pddby_db_column_text(db_stmt, 2);
 
-    return pddby_section_new_with_id(id, name, title_prefix, title);
+    return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_section_t* pddby_section_find_by_name(char const* name)
+pddby_section_t* pddby_section_find_by_name(pddby_t* pddby, char const* name)
 {
     assert(name);
 
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? LIMIT 1");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? LIMIT 1");
         if (!db_stmt)
         {
             goto error;
@@ -180,24 +181,24 @@ pddby_section_t* pddby_section_find_by_name(char const* name)
     char const* title_prefix = pddby_db_column_text(db_stmt, 1);
     char const* title = pddby_db_column_text(db_stmt, 2);
 
-    return pddby_section_new_with_id(id, name, title_prefix, title);
+    return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
 
 error:
     // TODO: report error
     return NULL;
 }
 
-pddby_sections_t* pddby_sections_new()
+pddby_sections_t* pddby_sections_new(pddby_t* pddby)
 {
-    return pddby_array_new((pddby_array_free_func_t)pddby_section_free);
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_section_free);
 }
 
-pddby_sections_t* pddby_sections_find_all()
+pddby_sections_t* pddby_sections_find_all(pddby_t* pddby)
 {
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`");
         if (!db_stmt)
         {
             goto error;
@@ -209,7 +210,7 @@ pddby_sections_t* pddby_sections_find_all()
         goto error;
     }
 
-    pddby_sections_t* sections = pddby_sections_new();
+    pddby_sections_t* sections = pddby_sections_new(pddby);
     if (!sections)
     {
         goto error;
@@ -223,7 +224,7 @@ pddby_sections_t* pddby_sections_find_all()
         char const* title_prefix = pddby_db_column_text(db_stmt, 2);
         char const* title = pddby_db_column_text(db_stmt, 3);
 
-        if (!pddby_array_add(sections, pddby_section_new_with_id(id, name, title_prefix, title)))
+        if (!pddby_array_add(sections, pddby_section_new_with_id(pddby, id, name, title_prefix, title)))
         {
             ret = -1;
             break;
@@ -257,7 +258,7 @@ size_t pddby_section_get_question_count(pddby_section_t* section)
     static pddby_db_stmt_t* db_stmt = NULL;
     if (!db_stmt)
     {
-        db_stmt = pddby_db_prepare("SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?");
+        db_stmt = pddby_db_prepare(section->pddby, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?");
         if (!db_stmt)
         {
             goto error;

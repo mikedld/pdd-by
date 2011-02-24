@@ -10,7 +10,7 @@ extern GtkWidget *main_window;
 
 void on_quit();
 
-GtkWidget *main_window_new()
+GtkWidget *main_window_new(pddby_t* pddby)
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
@@ -25,6 +25,7 @@ GtkWidget *main_window_new()
     gtk_builder_connect_signals(builder, NULL);
     GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
 
+    g_object_set_data(G_OBJECT(window), "pdd-pddby-handle", pddby);
     g_object_set_data_full(G_OBJECT(window), "pdd-builder", builder, g_object_unref);
 
     g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_quit), NULL);
@@ -35,11 +36,12 @@ GtkWidget *main_window_new()
 GNUC_VISIBLE void on_training_section()
 {
     gtk_widget_hide(main_window);
-    GtkWidget *dialog = chooser_dialog_new_with_sections();
+    pddby_t* pddby = g_object_get_data(G_OBJECT(main_window), "pdd-pddby-handle");
+    GtkWidget *dialog = chooser_dialog_new_with_sections(pddby);
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
     {
         gtk_widget_destroy(dialog);
-        pddby_section_t *section = pddby_section_find_by_id(chooser_dialog_get_id(dialog));
+        pddby_section_t *section = pddby_section_find_by_id(pddby, chooser_dialog_get_id(dialog));
         GtkWidget *question_window = question_window_new_with_section(section, FALSE);
         gtk_widget_show(question_window);
     }
@@ -53,11 +55,13 @@ GNUC_VISIBLE void on_training_section()
 static void on_topic(gboolean is_exam)
 {
     gtk_widget_hide(main_window);
-    GtkWidget *dialog = chooser_dialog_new_with_topics();
+    pddby_t* pddby = g_object_get_data(G_OBJECT(main_window), "pdd-pddby-handle");
+    GtkWidget *dialog = chooser_dialog_new_with_topics(pddby);
+
 once_again:
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
     {
-        pddby_topic_t *topic = pddby_topic_find_by_id(chooser_dialog_get_id(dialog));
+        pddby_topic_t *topic = pddby_topic_find_by_id(pddby, chooser_dialog_get_id(dialog));
         GtkWidget *ticket_dialog = ticket_dialog_new((pddby_topic_get_question_count(topic) + 9) / 10);
         if (gtk_dialog_run(GTK_DIALOG(ticket_dialog)) != GTK_RESPONSE_OK)
         {
@@ -80,11 +84,12 @@ once_again:
 static void on_ticket(gboolean is_exam)
 {
     gtk_widget_hide(main_window);
+    pddby_t* pddby = g_object_get_data(G_OBJECT(main_window), "pdd-pddby-handle");
     GtkWidget *ticket_dialog = ticket_dialog_new(999);
     if (gtk_dialog_run(GTK_DIALOG(ticket_dialog)) == GTK_RESPONSE_OK)
     {
         gtk_widget_destroy(ticket_dialog);
-        GtkWidget *question_window = question_window_new_with_ticket(ticket_dialog_get_number(ticket_dialog), is_exam);
+        GtkWidget *question_window = question_window_new_with_ticket(pddby, ticket_dialog_get_number(ticket_dialog), is_exam);
         gtk_widget_destroy(ticket_dialog);
         gtk_widget_show(question_window);
     }
@@ -98,7 +103,8 @@ static void on_ticket(gboolean is_exam)
 static void on_random_ticket(gboolean is_exam)
 {
     gtk_widget_hide(main_window);
-    GtkWidget *question_window = question_window_new_with_random_ticket(is_exam);
+    pddby_t* pddby = g_object_get_data(G_OBJECT(main_window), "pdd-pddby-handle");
+    GtkWidget *question_window = question_window_new_with_random_ticket(pddby, is_exam);
     gtk_widget_show(question_window);
 }
 
