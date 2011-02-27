@@ -2,6 +2,7 @@
 #include "chooser_dialog.h"
 #include "config.h"
 #include "pddby/topic.h"
+#include "platform.h"
 #include "question_window.h"
 #include "settings.h"
 #include "ticket_dialog.h"

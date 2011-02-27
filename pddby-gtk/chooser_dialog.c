@@ -2,6 +2,7 @@
 #include "config.h"
 #include "pddby/section.h"
 #include "pddby/topic.h"
+#include "platform.h"
 #include "settings.h"
 
 #include <string.h>

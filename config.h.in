@@ -4,23 +4,6 @@
 #cmakedefine PDDBY_VERSION "${PDDBY_VERSION}"
 #cmakedefine PDDBY_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/${PDDBY_SHARE_DIR}"
 
-#if __GNUC__ >= 4
-#define GNUC_VISIBLE __attribute__((visibility("default")))
-#else
-#define GNUC_VISIBLE
-#endif
-
-#ifndef sqlite3_prepare_v2
-#define sqlite3_prepare_v2 sqlite3_prepare
-#endif
-
 #cmakedefine PDDBY_BIG_ENDIAN
-
-#ifdef PDDBY_BIG_ENDIAN
-// generic, could be better
-#define PDDBY_INT32_FROM_LE(x) (((x) << 24) | (((x) << 8) & 0x0ff0000) | (((x) >> 8) & 0x0ff00) | (((x) >> 24) & 0x0ff))
-#else
-#define PDDBY_INT32_FROM_LE(x) (x)
-#endif
 
 #endif // PDDBY_CONFIG_H

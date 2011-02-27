@@ -4,6 +4,7 @@
 #include "main_window.h"
 #include "pddby/answer.h"
 #include "pddby/question.h"
+#include "platform.h"
 #include "settings.h"
 
 #if GTK_MAJOR_VERSION > 2

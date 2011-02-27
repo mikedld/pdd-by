@@ -32,6 +32,7 @@ set(${PROJECT_NAME}_PRIVATE_HEADERS
     private/decode/decode_image.h
     private/decode/decode_questions.h
     private/pddby.h
+    private/platform.h
     private/util/aux.h
     private/util/database.h
     private/util/delphi.h

@@ -7,6 +7,7 @@
 #include "comment.h"
 #include "config.h"
 #include "private/pddby.h"
+#include "private/platform.h"
 #include "private/util/aux.h"
 #include "private/util/database.h"
 #include "private/util/delphi.h"
