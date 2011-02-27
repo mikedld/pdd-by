@@ -13,7 +13,7 @@ enum pddby_message_type
     pddby_message_type_debug,
     pddby_message_type_log,
     pddby_message_type_warning,
-    pddby_message_type_error,
+    pddby_message_type_error
 };
 
 struct pddby_callbacks
