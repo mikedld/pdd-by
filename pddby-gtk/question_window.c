@@ -35,6 +35,7 @@ enum QuestionState
 
 typedef struct statistics_s
 {
+    gboolean is_active;
     pddby_questions_t *questions;
     GArray *states;
     gboolean is_exam;
@@ -101,6 +102,7 @@ static GtkWidget *question_window_new(gchar *title, pddby_questions_t *questions
     gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
     statistics_t *statistics = g_new(statistics_t, 1);
+    statistics->is_active = TRUE;
     statistics->questions = questions;
     statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), pddby_array_size(questions));
     g_array_set_size(statistics->states, pddby_array_size(questions));
@@ -319,6 +321,7 @@ static void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 
     if (statistics->index == old_index)
     {
+        statistics->is_active = FALSE;
         show_results(window, statistics);
         return;
     }
@@ -450,7 +453,7 @@ GNUC_VISIBLE void on_question_pause(GtkWidget *widget)
 {
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    if (!statistics->is_exam)
+    if (!statistics->is_active || !statistics->is_exam)
     {
         return;
     }
@@ -477,7 +480,7 @@ GNUC_VISIBLE void on_question_resume(GtkWidget *widget)
 {
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    if (!statistics->is_exam)
+    if (!statistics->is_active || !statistics->is_exam)
     {
         return;
     }
@@ -511,6 +514,7 @@ static gboolean on_exam_timer(GtkWindow *window)
     if (!approx_remaining)
     {
         statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
+        statistics->is_active = FALSE;
         show_results(window, statistics);
         return FALSE;
     }
