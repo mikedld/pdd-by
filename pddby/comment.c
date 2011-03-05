@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@ static pddby_comment_t* pddby_comment_new_with_id(pddby_t* pddby, int64_t id, in
     return comment;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create comment object");
     if (comment)
     {
         pddby_comment_free(comment);
@@ -90,7 +91,7 @@ int pddby_comment_save(pddby_comment_t* comment)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(comment->pddby, pddby_message_type_error, "unable to save comment object");
     return 0;
 }
 
@@ -126,7 +127,7 @@ pddby_comment_t* pddby_comment_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_comment_new_with_id(pddby, id, number, text);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find comment object with id = %lld", id);
     return NULL;
 }
 
@@ -162,6 +163,6 @@ pddby_comment_t* pddby_comment_find_by_number(pddby_t* pddby, int32_t number)
     return pddby_comment_new_with_id(pddby, id, number, text);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find comment object with number = %d", number);
     return NULL;
 }

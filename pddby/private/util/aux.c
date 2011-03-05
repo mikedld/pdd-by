@@ -200,6 +200,12 @@ error:
         }
     }
 
+    *buffer = NULL;
+    if (buffer_size)
+    {
+        *buffer_size = 0;
+    }
+
     return 0;
 }
 

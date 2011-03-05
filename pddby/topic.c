@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "question.h"
 
 #include <assert.h>
@@ -33,7 +34,7 @@ static pddby_topic_t* pddby_topic_new_with_id(pddby_t* pddby, int64_t id, int nu
     return topic;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create topic object");
     return NULL;
 }
 
@@ -87,7 +88,7 @@ int pddby_topic_save(pddby_topic_t* topic)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(topic->pddby, pddby_message_type_error, "unable to save topic object");
     return 0;
 }
 
@@ -123,7 +124,7 @@ pddby_topic_t* pddby_topic_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_topic_new_with_id(pddby, id, number, title);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find topic object with id = %lld", id);
     return NULL;
 }
 
@@ -159,7 +160,7 @@ pddby_topic_t* pddby_topic_find_by_number(pddby_t* pddby, int number)
     return pddby_topic_new_with_id(pddby, id, number, title);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find topic object with number = %d", number);
     return NULL;
 }
 
@@ -214,7 +215,7 @@ pddby_topics_t* pddby_topics_find_all(pddby_t* pddby)
     return topics;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find all topic objects");
     return NULL;
 }
 
@@ -253,6 +254,6 @@ size_t pddby_topic_get_question_count(pddby_topic_t const* topic)
     return pddby_db_column_int(db_stmt, 0);
 
 error:
-    // TODO: report error
+    pddby_report(topic->pddby, pddby_message_type_error, "unable to get questions count of topic object");
     return 0;
 }

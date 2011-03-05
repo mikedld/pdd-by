@@ -1,5 +1,7 @@
 #include "string.h"
 
+#include "report.h"
+
 #include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -9,15 +11,15 @@
 #include <dmalloc.h>
 #endif
 
-char* pddby_string_upcase(char const* string)
+char* pddby_string_upcase(pddby_t* pddby, char const* string)
 {
     assert(string);
 
     char* result = strdup(string);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        pddby_report(pddby, pddby_message_type_error, "unable to transform string to upper case");
+        return NULL;
     }
 
     for (char* p = result; *p; p++)
@@ -27,15 +29,15 @@ char* pddby_string_upcase(char const* string)
     return result;
 }
 
-char* pddby_string_downcase(char const* string)
+char* pddby_string_downcase(pddby_t* pddby, char const* string)
 {
     assert(string);
 
     char* result = strdup(string);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        pddby_report(pddby, pddby_message_type_error, "unable to transform string to lower case");
+        return NULL;
     }
 
     for (char* p = result; *p; p++)
@@ -75,7 +77,7 @@ char* pddby_string_chomp(char* string)
     return string;
 }
 
-char* pddby_string_ndup(char const* string, size_t length)
+char* pddby_string_ndup(pddby_t* pddby, char const* string, size_t length)
 {
     assert(string);
 
@@ -87,8 +89,8 @@ char* pddby_string_ndup(char const* string, size_t length)
     char* result = malloc(length + 1);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        pddby_report(pddby, pddby_message_type_error, "unable to duplicate string");
+        return NULL;
     }
 
     memcpy(result, string, length);
@@ -96,7 +98,7 @@ char* pddby_string_ndup(char const* string, size_t length)
     return result;
 }
 
-char* pddby_string_replace(char const* string, size_t start, size_t end, char const* replacement,
+char* pddby_string_replace(pddby_t* pddby, char const* string, size_t start, size_t end, char const* replacement,
     size_t replacement_length)
 {
     assert(string);
@@ -112,8 +114,8 @@ char* pddby_string_replace(char const* string, size_t start, size_t end, char co
     char* result = malloc(old_length - match_length + replacement_length + 1);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        pddby_report(pddby, pddby_message_type_error, "unable to replace substring using string");
+        return NULL;
     }
 
     memcpy(result, string, start);
@@ -123,18 +125,17 @@ char* pddby_string_replace(char const* string, size_t start, size_t end, char co
     return result;
 }
 
-char** pddby_string_split(char const* string, char const* delimiter)
+char** pddby_string_split(pddby_t* pddby, char const* string, char const* delimiter)
 {
     assert(string);
     assert(delimiter);
 
     size_t const delimiter_length = strlen(delimiter);
     size_t size = 1;
-    char** result = malloc((size + 1) * sizeof(char*));
+    char** result = calloc(size + 1, sizeof(char*));
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     char const* p1 = string;
@@ -142,10 +143,9 @@ char** pddby_string_split(char const* string, char const* delimiter)
     while ((p2 = strstr(p1, delimiter)))
     {
         size_t const part_length = p2 - p1;
-        result[size - 1] = pddby_string_ndup(p1, part_length);
+        result[size - 1] = pddby_string_ndup(pddby, p1, part_length);
         if (!result[size - 1])
         {
-            // TODO: report error
             goto error;
         }
 
@@ -153,24 +153,24 @@ char** pddby_string_split(char const* string, char const* delimiter)
         result = realloc(result, (size + 1) * sizeof(char*));
         if (!result)
         {
-            // TODO: report error
             goto error;
         }
 
         p1 = p2 + delimiter_length;
     }
 
-    result[size - 1] = pddby_string_ndup(p1, -1);
+    result[size - 1] = pddby_string_ndup(pddby, p1, -1);
     if (!result[size - 1])
     {
-        // TODO: report error
         goto error;
     }
 
-    result[size] = 0;
+    result[size] = NULL;
     return result;
 
 error:
+    pddby_report(pddby, pddby_message_type_error, "unable to split string using string");
+
     if (result)
     {
         for (size_t i = 0; i < size; i++)
@@ -183,7 +183,7 @@ error:
         free(result);
     }
 
-    return 0;
+    return NULL;
 }
 
 size_t pddby_stringv_length(char* const* str_array)

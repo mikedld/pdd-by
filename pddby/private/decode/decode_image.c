@@ -3,6 +3,7 @@
 #include "image.h"
 #include "private/util/aux.h"
 #include "private/util/delphi.h"
+#include "private/util/report.h"
 #include "private/util/string.h"
 
 #include <assert.h>
@@ -14,7 +15,7 @@
 #include <dmalloc.h>
 #endif
 
-struct bpftcam_context_s
+struct bpftcam_context
 {
     uint32_t c1;
     uint32_t c2;
@@ -26,7 +27,7 @@ struct bpftcam_context_s
     uint32_t x[4];
 };
 
-typedef struct bpftcam_context_s bpftcam_context_t;
+typedef struct bpftcam_context bpftcam_context_t;
 
 static uint32_t rol(uint32_t value, uint8_t shift)
 {
@@ -45,11 +46,36 @@ static void swap(uint32_t* left, uint32_t* right)
     *right = temp;
 }
 
+static int init_randseed_for_image(char const* name, uint16_t magic)
+{
+    assert(name);
+
+    uint16_t rand_seed = magic;
+    for (size_t i = 0; name[i]; i++)
+    {
+        uint8_t ch = toupper(name[i]);
+        for (size_t j = 0; j < 8; j++)
+        {
+            uint64_t const old_seed = rand_seed;
+            rand_seed >>= 1;
+            if ((ch ^ old_seed) & 1)
+            {
+                // TODO: magic number?
+                rand_seed ^= 0x0a001;
+            }
+            ch >>= 1;
+        }
+    }
+
+    set_randseed(rand_seed);
+    return 1;
+}
+
 static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
     // v9 image format
 
-    struct __attribute__((packed)) data_header_s
+    struct __attribute__((packed)) data_header
     {
         // file header
         uint16_t signature;
@@ -63,7 +89,7 @@ static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t m
         uint16_t planes;
         uint16_t bpp;
         // ... not important
-    } *header = (struct data_header_s *)data;
+    } *header = (struct data_header *)data;
 
     header->signature = 0x4d42; // 'BM'
 
@@ -95,7 +121,10 @@ static pddby_image_t* decode_image_bpft(pddby_t* pddby, char* basename, uint16_t
 {
     // v10 & v11 image format
 
-    init_randseed_for_image(basename, magic);
+    if (!init_randseed_for_image(basename, magic))
+    {
+        return NULL;
+    }
 
     for (size_t i = 4; i < data_size; i++)
     {
@@ -105,9 +134,12 @@ static pddby_image_t* decode_image_bpft(pddby_t* pddby, char* basename, uint16_t
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 4, data_size - 4);
 }
 
-static void decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
+static int decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
 {
-    init_randseed_for_image(basename, magic);
+    if (!init_randseed_for_image(basename, magic))
+    {
+        return 0;
+    }
 
     ctx->a[0] = get_randseed();
     // initializes both `a` and `x`
@@ -137,6 +169,8 @@ static void decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basena
     ctx->c1 = (ctx->c1 ^ (ctx->c1 >> 16)) & 3;
     ctx->c2 = (ctx->c2 ^ (ctx->c2 >> 16)) & 3;
     ctx->c3 = (ctx->c3 ^ (ctx->c3 >> 16)) & 3;
+
+    return 1;
 }
 
 static uint8_t decode_image_bpftcam_next(bpftcam_context_t* ctx)
@@ -188,7 +222,10 @@ static pddby_image_t* decode_image_bpftcam(pddby_t* pddby, char* basename, uint1
     // v12 image format
 
     bpftcam_context_t context;
-    decode_image_bpftcam_init(&context, basename, magic);
+    if (!decode_image_bpftcam_init(&context, basename, magic))
+    {
+        return NULL;
+    }
 
     for (size_t i = 7; i < data_size; i++)
     {
@@ -200,17 +237,21 @@ static pddby_image_t* decode_image_bpftcam(pddby_t* pddby, char* basename, uint1
 
 int decode_image(pddby_t* pddby, char const* path, uint16_t magic)
 {
-    char* data;
+    char* data = NULL;
     size_t data_size;
+    pddby_image_t* image = NULL;
+    char* basename = NULL;
 
     if (!pddby_aux_file_get_contents(pddby, path, &data, &data_size))
     {
-        //pddby_report_error("");
-        //pddby_report_error("%s\n", err->message);
+        goto error;
     }
 
-    pddby_image_t* image = 0;
-    char* basename = pddby_aux_path_get_basename(pddby, path);
+    basename = pddby_aux_path_get_basename(pddby, path);
+    if (!basename)
+    {
+        goto error;
+    }
 
     if (!strncmp(data, "A8", 2))
     {
@@ -224,24 +265,45 @@ int decode_image(pddby_t* pddby, char const* path, uint16_t magic)
     {
         image = decode_image_bpft(pddby, basename, magic, data, data_size);
     }
-
-    free(data);
-    free(basename);
-
-    if (image)
-    {
-        int result = pddby_image_save(image);
-        pddby_image_free(image);
-
-        if (!result)
-        {
-            //pddby_report_error("unable to save image");
-        }
-    }
     else
     {
-        //pddby_report_error("unknown image format\n");
+        pddby_report(pddby, pddby_message_type_error, "unknown image format: %s", path);
+        goto error;
     }
 
+    free(data);
+    data = NULL;
+    free(basename);
+    basename = NULL;
+
+    if (!image)
+    {
+        goto error;
+    }
+
+    if (!pddby_image_save(image))
+    {
+        goto error;
+    }
+
+    pddby_image_free(image);
     return 1;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to decode image: %s", path);
+
+    if (data)
+    {
+        free(data);
+    }
+    if (basename)
+    {
+        free(basename);
+    }
+    if (image)
+    {
+        pddby_image_free(image);
+    }
+
+    return 0;
 }

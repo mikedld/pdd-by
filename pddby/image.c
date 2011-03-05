@@ -3,6 +3,7 @@
 #include "config.h"
 #include "private/util/aux.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "private/util/string.h"
 
 #include <assert.h>
@@ -45,7 +46,7 @@ static pddby_image_t* pddby_image_new_with_id(pddby_t* pddby, int64_t id, char c
     return image;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create image object");
     if (image)
     {
         pddby_image_free(image);
@@ -87,7 +88,7 @@ int pddby_image_save(pddby_image_t* image)
         }
     }
 
-    char* image_name = pddby_string_downcase(image->name);
+    char* image_name = pddby_string_downcase(image->pddby, image->name);
     if (!image_name)
     {
         goto error;
@@ -116,7 +117,7 @@ int pddby_image_save(pddby_image_t* image)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(image->pddby, pddby_message_type_error, "unable to save image object");
     return 0;
 }
 
@@ -153,7 +154,7 @@ pddby_image_t* pddby_image_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_image_new_with_id(pddby, id, name, data, data_length);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find image object with id = %lld", id);
     return NULL;
 }
 
@@ -171,7 +172,7 @@ pddby_image_t* pddby_image_find_by_name(pddby_t* pddby, char const* name)
         }
     }
 
-    char *image_name = pddby_string_downcase(name);
+    char *image_name = pddby_string_downcase(pddby, name);
     if (!image_name)
     {
         goto error;
@@ -202,7 +203,7 @@ pddby_image_t* pddby_image_find_by_name(pddby_t* pddby, char const* name)
     return image;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find image object with name = \"%s\"", name);
     return NULL;
 }
 
@@ -260,7 +261,7 @@ pddby_images_t* pddby_images_find_by_traffreg(pddby_t* pddby, int64_t traffreg_i
     return images;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find image objects with traffreg id = %lld", traffreg_id);
     return NULL;
 }
 

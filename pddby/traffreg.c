@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "question.h"
 
 #include <assert.h>
@@ -33,7 +34,7 @@ static pddby_traffreg_t* pddby_traffreg_new_with_id(pddby_t* pddby, int64_t id, 
     return traffreg;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create traffreg object");
     if (traffreg)
     {
         pddby_traffreg_free(traffreg);
@@ -91,7 +92,7 @@ int pddby_traffreg_save(pddby_traffreg_t* traffreg)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(traffreg->pddby, pddby_message_type_error, "unable to save traffreg object");
     return 0;
 }
 
@@ -133,7 +134,7 @@ int pddby_traffreg_set_images(pddby_traffreg_t* traffreg, pddby_images_t* images
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(traffreg->pddby, pddby_message_type_error, "unable to set traffreg object images");
     return 0;
 }
 
@@ -169,7 +170,7 @@ pddby_traffreg_t* pddby_traffreg_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_traffreg_new_with_id(pddby, id, number, text);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg object with id = %lld", id);
     return NULL;
 }
 
@@ -205,7 +206,7 @@ pddby_traffreg_t* pddby_traffreg_find_by_number(pddby_t* pddby, int32_t number)
     return pddby_traffreg_new_with_id(pddby, id, number, text);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg object with number = %d", number);
     return NULL;
 }
 
@@ -262,7 +263,8 @@ pddby_traffregs_t* pddby_traffregs_find_by_question(pddby_t* pddby, int64_t ques
     return traffregs;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg objects with question id = %lld",
+        question_id);
     return NULL;
 }
 

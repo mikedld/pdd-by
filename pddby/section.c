@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "question.h"
 
 #include <assert.h>
@@ -45,7 +46,7 @@ static pddby_section_t* pddby_section_new_with_id(pddby_t* pddby, int64_t id, ch
     return section;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create section object");
     return NULL;
 }
 
@@ -108,7 +109,7 @@ int pddby_section_save(pddby_section_t* section)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(section->pddby, pddby_message_type_error, "unable to save section object");
     return 0;
 }
 
@@ -145,7 +146,7 @@ pddby_section_t* pddby_section_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to vind section object with id = %lld", id);
     return NULL;
 }
 
@@ -184,7 +185,7 @@ pddby_section_t* pddby_section_find_by_name(pddby_t* pddby, char const* name)
     return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find section object with name = \"%s\"", name);
     return NULL;
 }
 
@@ -240,7 +241,7 @@ pddby_sections_t* pddby_sections_find_all(pddby_t* pddby)
     return sections;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find all section objects");
     return NULL;
 }
 
@@ -279,6 +280,6 @@ size_t pddby_section_get_question_count(pddby_section_t* section)
     return pddby_db_column_int(db_stmt, 0);
 
 error:
-    // TODO: report error
+    pddby_report(section->pddby, pddby_message_type_error, "unable to get questions count of section object");
     return 0;
 }

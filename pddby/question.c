@@ -3,6 +3,7 @@
 #include "config.h"
 #include "private/util/aux.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "private/util/settings.h"
 #include "private/util/string.h"
 #include "topic.h"
@@ -47,7 +48,7 @@ static pddby_question_t* pddby_question_new_with_id(pddby_t* pddby, int64_t id, 
     return question;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create question object");
     if (question)
     {
         pddby_question_free(question);
@@ -120,7 +121,7 @@ int pddby_question_save(pddby_question_t* question)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(question->pddby, pddby_message_type_error, "unable to save question object");
     return 0;
 }
 
@@ -159,7 +160,7 @@ int pddby_question_set_sections(pddby_question_t* question, pddby_sections_t* se
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(question->pddby, pddby_message_type_error, "unable to set question object sections");
     return 0;
 }
 
@@ -198,7 +199,7 @@ int pddby_question_set_traffregs(pddby_question_t* question, pddby_traffregs_t* 
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(question->pddby, pddby_message_type_error, "unable to set question object traffregs");
     return 0;
 }
 
@@ -238,7 +239,7 @@ pddby_question_t* pddby_question_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_question_new_with_id(pddby, id, topic_id, text, image_id, advice, comment_id);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find question object with id = %lld", id);
     return NULL;
 }
 
@@ -299,7 +300,7 @@ pddby_questions_t* pddby_questions_find_by_section(pddby_t* pddby, int64_t secti
     return questions;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find question objects with section id = %lld", section_id);
     return NULL;
 }
 
@@ -355,7 +356,8 @@ static pddby_questions_t* pddby_questions_find_with_offset(pddby_t* pddby, int64
     return questions;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find %d question object(s) with topic id = %lld and "
+        "offset = %d", count, topic_id, offset);
     return NULL;
 }
 
@@ -376,7 +378,7 @@ static void pddby_load_ticket_topics_distribution(pddby_t* pddby)
     }
 
     char *raw_ttd = pddby_settings_get(pddby, "ticket_topics_distribution");
-    char **ttd = pddby_string_split(raw_ttd, ":");
+    char **ttd = pddby_string_split(pddby, raw_ttd, ":");
     free(raw_ttd);
 
     ticket_topics_distribution = malloc(pddby_stringv_length(ttd) * sizeof(int));

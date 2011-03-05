@@ -1,5 +1,7 @@
 #include "string.h"
 
+#include "report.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <iconv.h>
@@ -7,39 +9,51 @@
 
 struct pddby_iconv
 {
+    pddby_t* pddby;
+
     iconv_t conv;
 };
 
-pddby_iconv_t* pddby_iconv_new(char const* from_code, char const* to_code)
+pddby_iconv_t* pddby_iconv_new(pddby_t* pddby, char const* from_code, char const* to_code)
 {
     assert(from_code);
     assert(to_code);
 
-    pddby_iconv_t* result = malloc(sizeof(pddby_iconv_t));
+    pddby_iconv_t* result = calloc(1, sizeof(pddby_iconv_t));
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
+
+    result->pddby = pddby;
 
     result->conv = iconv_open(to_code, from_code);
     if (result->conv == (iconv_t)-1)
     {
-        // TODO: report error
-        free(result);
-        return 0;
+        result->conv = 0;
+        goto error;
     }
 
     return result;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create iconv context");
+
+    if (result)
+    {
+        pddby_iconv_free(result);
+    }
+
+    return NULL;
 }
 
 void pddby_iconv_free(pddby_iconv_t* conv)
 {
     assert(conv);
 
-    if (iconv_close(conv->conv) == -1)
+    if (conv->conv && iconv_close(conv->conv) == -1)
     {
-        // TODO: report warning
+        pddby_report(conv->pddby, pddby_message_type_warning, "unable to close iconv context");
     }
 
     free(conv);
@@ -54,8 +68,7 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
     char* result = malloc(length);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     size_t result_len = length;
@@ -75,9 +88,7 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
 
         if (errno != E2BIG)
         {
-            // TODO: report error
-            free(result);
-            return 0;
+            goto error;
         }
 
         ptrdiff_t offset = dst - result;
@@ -85,8 +96,7 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
         result = realloc(result, result_len);
         if (!result)
         {
-            // TODO: report error
-            return 0;
+            goto error;
         }
 
         dst = result + offset;
@@ -97,10 +107,19 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
     result = realloc(result, result_len);
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     result[result_len - 1] = '\0';
     return result;
+
+error:
+    pddby_report(conv->pddby, pddby_message_type_error, "unable to convert string");
+
+    if (result)
+    {
+        free(result);
+    }
+
+    return NULL;
 }

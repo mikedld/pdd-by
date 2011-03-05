@@ -1,5 +1,7 @@
 #include "array.h"
 
+#include "private/util/report.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -25,26 +27,23 @@ static int pddby_array_realloc(pddby_array_t* arr, size_t new_size)
     arr->data = realloc(arr->data, new_size * sizeof(void*));
     if (!arr->data)
     {
-        // TODO: report error
+        pddby_report(arr->pddby, pddby_message_type_error, "unable to reallocate array data");
     }
     return arr->data != 0;
 }
 
 pddby_array_t* pddby_array_new(pddby_t* pddby, pddby_array_free_func_t free_func)
 {
-    pddby_array_t* result = malloc(sizeof(pddby_array_t));
+    pddby_array_t* result = calloc(1, sizeof(pddby_array_t));
     if (!result)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     result->data = 0;
     if (!pddby_array_realloc(result, 16))
     {
-        // TODO: report error
-        free(result);
-        return 0;
+        goto error;
     }
 
     result->used_size = 0;
@@ -52,6 +51,16 @@ pddby_array_t* pddby_array_new(pddby_t* pddby, pddby_array_free_func_t free_func
     result->pddby = pddby;
 
     return result;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create array");
+
+    if (result)
+    {
+        pddby_array_free(result, 0);
+    }
+
+    return NULL;
 }
 
 void pddby_array_free(pddby_array_t* arr, int free_objects)
@@ -65,7 +74,10 @@ void pddby_array_free(pddby_array_t* arr, int free_objects)
             arr->free_func(arr->data[i]);
         }
     }
-    free(arr->data);
+    if (arr->data)
+    {
+        free(arr->data);
+    }
     free(arr);
 }
 
@@ -75,21 +87,23 @@ int pddby_array_add(pddby_array_t* arr, void* object)
 
     if (!object)
     {
-        // TODO: report error
-        return 0;
+        goto error;
     }
 
     if (arr->used_size == arr->reserved_size)
     {
         if (!pddby_array_realloc(arr, arr->reserved_size + 16))
         {
-            // TODO: report error
-            return 0;
+            goto error;
         }
     }
 
     arr->data[arr->used_size++] = object;
     return 1;
+
+error:
+    pddby_report(arr->pddby, pddby_message_type_error, "unable to add object to array");
+    return 0;
 }
 
 void* pddby_array_index(pddby_array_t const* arr, size_t index)
@@ -98,7 +112,7 @@ void* pddby_array_index(pddby_array_t const* arr, size_t index)
 
     if (arr->used_size <= index)
     {
-        // TODO: report warning
+        pddby_report(arr->pddby, pddby_message_type_error, "unable to get array object at index = %u", index);
         return 0;
     }
 

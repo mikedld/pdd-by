@@ -139,7 +139,7 @@ char* pddby_regex_replace(pddby_regex_t* regex, char const* string, char const* 
 
         for (size_t i = 0; i < refs_count; i++)
         {
-            char* new_r = pddby_string_replace(r, refs[i].pos, refs[i].pos + 2, match->string +
+            char* new_r = pddby_string_replace(regex->pddby, r, refs[i].pos, refs[i].pos + 2, match->string +
                 match->caps[refs[i].num * 2], match->caps[refs[i].num * 2 + 1] - match->caps[refs[i].num * 2]);
             free(r);
             if (!new_r)
@@ -151,7 +151,7 @@ char* pddby_regex_replace(pddby_regex_t* regex, char const* string, char const* 
         }
 
         size_t const r_length = strlen(r);
-        char* new_result = pddby_string_replace(result, start + match->caps[0], start + match->caps[1], r, r_length);
+        char* new_result = pddby_string_replace(regex->pddby, result, start + match->caps[0], start + match->caps[1], r, r_length);
         free(r);
         if (!new_result)
         {
@@ -197,7 +197,7 @@ char* pddby_regex_replace_literal(pddby_regex_t* regex, char const* string, char
         assert(match);
         assert(match->caps);
 
-        char* new_result = pddby_string_replace(result, start + match->caps[0], start + match->caps[1], replacement,
+        char* new_result = pddby_string_replace(regex->pddby, result, start + match->caps[0], start + match->caps[1], replacement,
             replacement_length);
         free(result);
         if (!new_result)
@@ -236,7 +236,7 @@ char** pddby_regex_split(pddby_regex_t* regex, char const* string)
         assert(match);
         assert(match->caps);
 
-        result[size - 1] = pddby_string_ndup(p, match->caps[0]);
+        result[size - 1] = pddby_string_ndup(regex->pddby, p, match->caps[0]);
         if (!result[size - 1])
         {
             goto error;
@@ -253,7 +253,7 @@ char** pddby_regex_split(pddby_regex_t* regex, char const* string)
         pddby_regex_match_free(match);
     }
 
-    result[size - 1] = pddby_string_ndup(p, -1);
+    result[size - 1] = pddby_string_ndup(regex->pddby, p, -1);
     result[size] = 0;
     return result;
 
@@ -329,9 +329,11 @@ char* pddby_regex_match_fetch(pddby_regex_match_t* regex_match, int match_num)
 
     if (match_num >= regex_match->count)
     {
+        pddby_report(regex_match->pddby, pddby_message_type_warning, "unable to fetch regex match (%d >= %d)",
+            match_num, regex_match->count);
         return 0;
     }
 
-    return pddby_string_ndup(regex_match->string + regex_match->caps[match_num * 2],
+    return pddby_string_ndup(regex_match->pddby, regex_match->string + regex_match->caps[match_num * 2],
         regex_match->caps[match_num * 2 + 1] - regex_match->caps[match_num * 2]);
 }

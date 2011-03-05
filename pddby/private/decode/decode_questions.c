@@ -10,6 +10,7 @@
 #include "private/platform.h"
 #include "private/util/aux.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 #include "private/util/regex.h"
 #include "question.h"
 #include "section.h"
@@ -19,20 +20,21 @@
 
 pddby_topic_question_t* pddby_decode_topic_questions_table(pddby_decode_context_t* context, char const* path, size_t* table_size)
 {
-    //GError *err = NULL;
-    char* t;
-    pddby_topic_question_t* table;
+    pddby_topic_question_t* table = NULL;
+
+    char* t = NULL;
     if (!pddby_aux_file_get_contents(context->pddby, path, &t, table_size))
     {
-        //pddby_report_error("");
-        //pddby_report_error("%s\n", err->message);
+        goto error;
     }
 
     table = (pddby_topic_question_t*)t;
 
     if (*table_size % sizeof(pddby_topic_question_t))
     {
-        //pddby_report_error("invalid file size: %s (should be multiple of %ld)\n", path, sizeof(pddby_topic_question_t));
+        pddby_report(context->pddby, pddby_message_type_error, "invalid file size: %s (should be multiple of %ld)",
+            path, sizeof(pddby_topic_question_t));
+        goto error;
     }
 
     *table_size /= sizeof(pddby_topic_question_t);
@@ -46,6 +48,16 @@ pddby_topic_question_t* pddby_decode_topic_questions_table(pddby_decode_context_
     }
 
     return table;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to decode topic questions table");
+
+    if (table)
+    {
+        free(table);
+    }
+
+    return NULL;
 }
 
 int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt_path, int8_t topic_number,
@@ -63,17 +75,52 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
         table_size++;
     }
 
-    size_t str_size;
-    char* str = context->pddby->decode_context->decode_string(context, dbt_path, &str_size, topic_number);
+    pddby_regex_t* question_data_regex = NULL;
+    pddby_regex_t* answers_regex = NULL;
+    pddby_regex_t* word_break_regex = NULL;
+    pddby_regex_t* spaces_regex = NULL;
+    char* str = NULL;
 
-    pddby_regex_t* question_data_regex = pddby_regex_new(context->pddby, "\\s*\\[|\\]\\s*", PDDBY_REGEX_NEWLINE_ANY);
-    pddby_regex_t* answers_regex = pddby_regex_new(context->pddby, "^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE |
+    size_t str_size;
+    str = context->pddby->decode_context->decode_string(context, dbt_path, &str_size, topic_number);
+    if (!str)
+    {
+        goto error;
+    }
+
+    question_data_regex = pddby_regex_new(context->pddby, "\\s*\\[|\\]\\s*", PDDBY_REGEX_NEWLINE_ANY);
+    if (!question_data_regex)
+    {
+        goto error;
+    }
+
+    answers_regex = pddby_regex_new(context->pddby, "^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE |
         PDDBY_REGEX_NEWLINE_ANY);
-    pddby_regex_t* word_break_regex = pddby_regex_new(context->pddby, "(?<!\\s)-\\s+", PDDBY_REGEX_NEWLINE_ANY);
-    pddby_regex_t* spaces_regex = pddby_regex_new(context->pddby, "\\s{2,}", PDDBY_REGEX_NEWLINE_ANY);
+    if (!answers_regex)
+    {
+        goto error;
+    }
+
+    word_break_regex = pddby_regex_new(context->pddby, "(?<!\\s)-\\s+", PDDBY_REGEX_NEWLINE_ANY);
+    if (!word_break_regex)
+    {
+        goto error;
+    }
+
+    spaces_regex = pddby_regex_new(context->pddby, "\\s{2,}", PDDBY_REGEX_NEWLINE_ANY);
+    if (!spaces_regex)
+    {
+        goto error;
+    }
+
+    if (!pddby_db_tx_begin(context->pddby))
+    {
+        goto error;
+    }
+
+    pddby_report_progress_begin(context->pddby, table_size);
 
     int result = 1;
-    pddby_db_tx_begin(context->pddby);
     for (size_t i = 0; i < table_size; i++)
     {
         int32_t next_offset = str_size;
@@ -89,17 +136,48 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
             table[i].question_offset);
         if (!text)
         {
-            //pddby_report_error("");
-            //pddby_report_error("%s\n", err->message);
+            goto error;
         }
-        char** parts = pddby_regex_split(question_data_regex, text);
+
+        pddby_question_t* question = NULL;
+        pddby_traffregs_t* question_traffregs = NULL;
+        pddby_sections_t* question_sections = NULL;
+        pddby_answers_t* question_answers = NULL;
+        char** parts = NULL;
+
+        parts = pddby_regex_split(question_data_regex, text);
         free(text);
-        char** p = parts + 1;
-        pddby_question_t* question = pddby_question_new(context->pddby, topic_number, NULL, 0, NULL, 0);
-        pddby_traffregs_t* question_traffregs = pddby_traffregs_new(context->pddby);
-        pddby_sections_t* question_sections = pddby_sections_new(context->pddby);
-        pddby_answers_t* question_answers = pddby_answers_new(context->pddby);
+        if (!parts)
+        {
+            goto cycle_error;
+        }
+
+        question = pddby_question_new(context->pddby, topic_number, NULL, 0, NULL, 0);
+        if (!question)
+        {
+            goto cycle_error;
+        }
+
+        question_traffregs = pddby_traffregs_new(context->pddby);
+        if (!question_traffregs)
+        {
+            goto cycle_error;
+        }
+
+        question_sections = pddby_sections_new(context->pddby);
+        if (!question_sections)
+        {
+            goto cycle_error;
+        }
+
+        question_answers = pddby_answers_new(context->pddby);
+        if (!question_answers)
+        {
+            goto cycle_error;
+        }
+
         size_t answer_number = 0;
+        char** p = parts + 1;
         while (*p)
         {
             switch ((*p)[0])
@@ -107,158 +185,296 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
             case 'R':
                 p++;
                 {
-                    char** section_names = pddby_string_split(*p, " ");
+                    char** section_names = pddby_string_split(context->pddby, *p, " ");
+                    if (!section_names)
+                    {
+                        goto cycle_error;
+                    }
+
                     char** sn = section_names;
                     while (*sn)
                     {
                         pddby_section_t *section = pddby_section_find_by_name(context->pddby, *sn);
                         if (!section)
                         {
-                            //pddby_report_error("unable to find section with name %s\n", *sn);
+                            pddby_stringv_free(section_names);
+                            goto cycle_error;
                         }
-                        pddby_array_add(question_sections, section);
+
+                        if (!pddby_array_add(question_sections, section))
+                        {
+                            pddby_stringv_free(section_names);
+                            goto cycle_error;
+                        }
+
                         sn++;
                     }
                     pddby_stringv_free(section_names);
                 }
                 break;
+
             case 'G':
                 p++;
                 {
                     pddby_image_t *image = pddby_image_find_by_name(context->pddby, *p);
                     if (!image)
                     {
-                        //pddby_report_error("unable to find image with name %s\n", *p);
+                        goto cycle_error;
                     }
                     question->image_id = image->id;
                     pddby_image_free(image);
                 }
                 break;
+
             case 'Q':
                 p++;
                 {
                     char* question_text = pddby_regex_replace_literal(word_break_regex, *p, "");
+                    if (!question_text)
+                    {
+                        goto cycle_error;
+                    }
+    
                     question->text = pddby_regex_replace_literal(spaces_regex, question_text, " ");
                     free(question_text);
+                    if (!question->text)
+                    {
+                        goto cycle_error;
+                    }
+
                     pddby_string_chomp(question->text);
                 }
                 break;
+
             case 'W':
             case 'V':
                 p++;
                 {
                     char** answers = pddby_regex_split(answers_regex, *p);
+                    if (!answers)
+                    {
+                        goto cycle_error;
+                    }
+
                     char** a = answers + 1;
                     while (*a)
                     {
                         char* answer_text = pddby_regex_replace_literal(word_break_regex, *a, "");
+                        if (!answer_text)
+                        {
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
                         char* answer_text2 = pddby_regex_replace_literal(spaces_regex, answer_text, " ");
                         free(answer_text);
+                        if (!answer_text2)
+                        {
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
                         pddby_answer_t *answer = pddby_answer_new(context->pddby, 0, answer_text2, 0);
                         free(answer_text2);
+                        if (!answer)
+                        {
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
                         pddby_string_chomp(answer->text);
-                        pddby_array_add(question_answers, answer);
+                        if (!pddby_array_add(question_answers, answer))
+                        {
+                            pddby_answer_free(answer);
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
                         a++;
                     }
                     pddby_stringv_free(answers);
                 }
                 break;
+
             case 'A':
                 p++;
                 {
                     answer_number = atoi(*p) - 1;
                 }
                 break;
+
             case 'T':
                 p++;
                 {
                     char* advice_text = pddby_regex_replace_literal(word_break_regex, *p, "");
+                    if (!advice_text)
+                    {
+                        goto cycle_error;
+                    }
+
                     question->advice = pddby_regex_replace_literal(spaces_regex, advice_text, " ");
                     free(advice_text);
+                    if (!question->advice)
+                    {
+                        goto cycle_error;
+                    }
+
                     pddby_string_chomp(question->advice);
                 }
                 break;
+
             case 'L':
                 p++;
                 {
-                    char** traffreg_numbers = pddby_string_split(*p, " ");
+                    char** traffreg_numbers = pddby_string_split(context->pddby, *p, " ");
+                    if (!traffreg_numbers)
+                    {
+                        goto cycle_error;
+                    }
+
                     char** trn = traffreg_numbers;
                     while (*trn)
                     {
                         pddby_traffreg_t *traffreg = pddby_traffreg_find_by_number(context->pddby, atoi(*trn));
                         if (!traffreg)
                         {
-                            //pddby_report_error("unable to find traffreg with number %s\n", *trn);
+                            pddby_stringv_free(traffreg_numbers);
+                            goto cycle_error;
                         }
-                        pddby_array_add(question_traffregs, traffreg);
+
+                        if (!pddby_array_add(question_traffregs, traffreg))
+                        {
+                            pddby_stringv_free(traffreg_numbers);
+                            goto cycle_error;
+                        }
+
                         trn++;
                     }
                     pddby_stringv_free(traffreg_numbers);
                 }
                 break;
+
             case 'C':
                 p++;
                 {
                     pddby_comment_t *comment = pddby_comment_find_by_number(context->pddby, atoi(*p));
                     if (!comment)
                     {
-                        //pddby_report_error("unable to find comment with number %s\n", *p);
+                        goto cycle_error;
                     }
+
                     question->comment_id = comment->id;
                     pddby_comment_free(comment);
                 }
                 break;
+
             default:
-                //pddby_report_error("unknown question data section: %s\n", *p);
-                ;
+                pddby_report(context->pddby, pddby_message_type_error, "unknown question data section: %s", *p);
+                goto cycle_error;
             }
             p++;
         }
-        pddby_stringv_free(parts);
 
-        result = pddby_question_save(question);
-        if (!result)
+        if (!pddby_question_save(question))
         {
-            //pddby_report_error("unable to save question\n");
+            goto cycle_error;
         }
-        for (size_t k = 0; k < pddby_array_size(question_answers); k++)
+        for (size_t k = 0, size = pddby_array_size(question_answers); k < size; k++)
         {
             pddby_answer_t* answer = (pddby_answer_t*)pddby_array_index(question_answers, k);
             answer->question_id = question->id;
             answer->is_correct = k == answer_number;
-            result = pddby_answer_save(answer);
-            if (!result)
+            if (!pddby_answer_save(answer))
             {
-                //pddby_report_error("unable to save answer\n");
+                goto cycle_error;
             }
         }
+        if (!pddby_question_set_sections(question, question_sections))
+        {
+            goto cycle_error;
+        }
+        if (!pddby_question_set_traffregs(question, question_traffregs))
+        {
+            goto cycle_error;
+        }
+
+        pddby_stringv_free(parts);
         pddby_answers_free(question_answers);
-        result = pddby_question_set_sections(question, question_sections);
-        if (!result)
-        {
-            //pddby_report_error("unable to set question sections\n");
-        }
         pddby_sections_free(question_sections);
-        result = pddby_question_set_traffregs(question, question_traffregs);
-        if (!result)
-        {
-            //pddby_report_error("unable to set question traffregs\n");
-        }
         pddby_traffregs_free(question_traffregs);
         pddby_question_free(question);
-        //printf(".");
+
+        pddby_report_progress(context->pddby, i);
+        continue;
+
+cycle_error:
+        pddby_report(context->pddby, pddby_message_type_error, "unable to decode question #%lu of topic #%d", i,
+            topic_number);
+
+        if (parts)
+        {
+            pddby_stringv_free(parts);
+        }
+        if (question_answers)
+        {
+            pddby_answers_free(question_answers);
+        }
+        if (question_sections)
+        {
+            pddby_sections_free(question_sections);
+        }
+        if (question_traffregs)
+        {
+            pddby_traffregs_free(question_traffregs);
+        }
+        if (question)
+        {
+            pddby_question_free(question);
+        }
+
+        goto error;
     }
-    pddby_db_tx_commit(context->pddby);
 
-    //printf("\n");
+    pddby_report_progress_end(context->pddby);
 
+    if (!pddby_db_tx_commit(context->pddby))
+    {
+        goto error;
+    }
+
+    free(str);
     pddby_regex_free(spaces_regex);
     pddby_regex_free(word_break_regex);
     pddby_regex_free(answers_regex);
     pddby_regex_free(question_data_regex);
-    free(str);
 
     return result;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to decode questions data");
+
+    if (str)
+    {
+        free(str);
+    }
+    if (spaces_regex)
+    {
+        pddby_regex_free(spaces_regex);
+    }
+    if (word_break_regex)
+    {
+        pddby_regex_free(word_break_regex);
+    }
+    if (answers_regex)
+    {
+        pddby_regex_free(answers_regex);
+    }
+    if (question_data_regex)
+    {
+        pddby_regex_free(question_data_regex);
+    }
+
+    return 0;
 }
 
 int pddby_compare_topic_questions(void const* first, void const* second)

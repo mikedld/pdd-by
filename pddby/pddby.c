@@ -14,6 +14,10 @@ pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callback
     srand(time(0));
 
     pddby_t* result = calloc(1, sizeof(pddby_t));
+    if (!result)
+    {
+        return NULL;
+    }
 
     result->callbacks = callbacks;
 

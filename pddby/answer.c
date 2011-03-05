@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -33,7 +34,7 @@ static pddby_answer_t* pddby_answer_new_with_id(pddby_t* pddby, int64_t id, int6
     return answer;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to create answer object");
     if (answer)
     {
         pddby_answer_free(answer);
@@ -94,7 +95,7 @@ int pddby_answer_save(pddby_answer_t* answer)
     return 1;
 
 error:
-    // TODO: report error
+    pddby_report(answer->pddby, pddby_message_type_error, "unable to save answer object");
     return 0;
 }
 
@@ -131,7 +132,7 @@ pddby_answer_t* pddby_answer_find_by_id(pddby_t* pddby, int64_t id)
     return pddby_answer_new_with_id(pddby, id, question_id, text, is_correct);
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find answer object with id = %lld", id);
     return NULL;
 }
 
@@ -187,7 +188,7 @@ pddby_answers_t* pddby_answers_find_by_question(struct pddby* pddby, int64_t que
     return answers;
 
 error:
-    // TODO: report error
+    pddby_report(pddby, pddby_message_type_error, "unable to find answer objects with question id = %lld", question_id);
     return NULL;
 }
 

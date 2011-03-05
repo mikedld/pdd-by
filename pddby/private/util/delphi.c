@@ -1,11 +1,5 @@
 #include "delphi.h"
 
-#include "string.h"
-
-#include <assert.h>
-#include <stddef.h>
-#include <stdlib.h>
-
 #ifdef DMALLOC
 #include <dmalloc.h>
 #endif
@@ -27,36 +21,4 @@ inline void set_randseed(uint64_t seed)
 inline uint64_t get_randseed()
 {
     return rand_seed;
-}
-
-void init_randseed_for_image(char const* name, uint16_t magic)
-{
-    assert(name);
-
-    char* name_up = pddby_string_upcase(name);
-    if (!name_up)
-    {
-        // TODO: report error
-        return;
-    }
-
-    rand_seed = magic;
-    for (size_t i = 0; name_up[i]; i++)
-    {
-        uint8_t ch = name_up[i];
-        for (size_t j = 0; j < 8; j++)
-        {
-            uint64_t const old_seed = rand_seed;
-            rand_seed >>= 1;
-            if ((ch ^ old_seed) & 1)
-            {
-                // TODO: magic number?
-                rand_seed ^= 0x0a001;
-            }
-            rand_seed &= 0x0ffff;
-            ch >>= 1;
-        }
-    }
-
-    free(name_up);
 }

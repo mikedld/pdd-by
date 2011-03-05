@@ -2,6 +2,7 @@
 
 #include "private/util/aux.h"
 #include "private/util/delphi.h"
+#include "private/util/report.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -21,17 +22,34 @@ pddby_decode_context_t* pddby_decode_context_new(pddby_t* pddby, char const* roo
     pddby_decode_context_t* context = calloc(1, sizeof(pddby_decode_context_t));
     if (!context)
     {
-        // TODO: report error
-        return NULL;
+        goto error;
+    }
+
+    context->iconv = pddby_iconv_new(pddby, "cp1251", "utf-8");
+    if (!context->iconv)
+    {
+        goto error;
     }
 
     context->root_path = root_path;
-    context->iconv = pddby_iconv_new("cp1251", "utf-8");
     context->pddby = pddby;
 
-    pddby_decode_init_magic(context);
+    if (!pddby_decode_init_magic(context))
+    {
+        goto error;
+    }
 
     return context;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create decode context");
+
+    if (context)
+    {
+        pddby_decode_context_free(context);
+    }
+
+    return NULL;
 }
 
 void pddby_decode_context_free(pddby_decode_context_t* context)
@@ -47,19 +65,34 @@ void pddby_decode_context_free(pddby_decode_context_t* context)
 
 static int pddby_decode_init_magic_2006(pddby_decode_context_t* context)
 {
-    char* pdd32_path = pddby_aux_build_filename_ci(context->pddby, context->root_path, "pdd32.exe", 0);
-    FILE* f = fopen(pdd32_path, "rb");
+    FILE* f = NULL;
+    uint8_t* buffer = NULL;
+
+    char* pdd32_path = pddby_aux_build_filename_ci(context->pddby, context->root_path, "pdd32.exe", NULL);
+    if (!pdd32_path)
+    {
+        goto error;
+    }
+
+    f = fopen(pdd32_path, "rb");
     free(pdd32_path);
     if (!f)
     {
-        //pddby_report_error("pdd32.exe not found");
+        goto error;
     }
 
-    uint8_t* buffer = malloc(16 * 1024 + 1);
-    fseek(f, 16 * 1024 + 1, SEEK_SET);
+    buffer = malloc(16 * 1024 + 1);
+    if (!buffer)
+    {
+        goto error;
+    }
+    if (fseek(f, 16 * 1024 + 1, SEEK_SET) == -1)
+    {
+        goto error;
+    }
     if (fread(buffer, 16 * 1024 + 1, 1, f) != 1)
     {
-        //pddby_report_error("pdd32.exe invalid");
+        goto error;
     }
 
     context->data_magic = 0;
@@ -74,23 +107,52 @@ static int pddby_decode_init_magic_2006(pddby_decode_context_t* context)
     free(buffer);
     fclose(f);
     return 1;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to initialize magic number (2006)");
+
+    if (buffer)
+    {
+        free(buffer);
+    }
+    if (f)
+    {
+        fclose(f);
+    }
+
+    return 0;
 }
 
 static int pddby_decode_init_magic_2008(pddby_decode_context_t* context)
 {
+    FILE* f = NULL;
+    uint8_t* buffer = NULL;
+
     char* pdd32_path = pddby_aux_build_filename_ci(context->pddby, context->root_path, "pdd32.exe", 0);
-    FILE* f = fopen(pdd32_path, "rb");
+    if (!pdd32_path)
+    {
+        goto error;
+    }
+
+    f = fopen(pdd32_path, "rb");
     free(pdd32_path);
     if (!f)
     {
-        //pddby_report_error("pdd32.exe not found");
+        goto error;
     }
 
-    uint8_t* buffer = malloc(32 * 1024);
-    fseek(f, 32 * 1024, SEEK_SET);
+    buffer = malloc(32 * 1024);
+    if (!buffer)
+    {
+        goto error;
+    }
+    if (fseek(f, 32 * 1024, SEEK_SET) == -1)
+    {
+        goto error;
+    }
     if (fread(buffer, 32 * 1024, 1, f) != 1)
     {
-        //pddby_report_error("pdd32.exe invalid");
+        goto error;
     }
 
     context->data_magic = 0x2008;
@@ -101,7 +163,11 @@ static int pddby_decode_init_magic_2008(pddby_decode_context_t* context)
         int length = fread(buffer, 1, 32 * 1024, f);
         if (length <= 0)
         {
-            break;
+            if (feof(f))
+            {
+                break;
+            }
+            goto error;
         }
         for (int i = 0; i < 256; i++)
         {
@@ -123,6 +189,20 @@ static int pddby_decode_init_magic_2008(pddby_decode_context_t* context)
     free(buffer);
     fclose(f);
     return 1;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to initialize magic number (2008)");
+
+    if (buffer)
+    {
+        free(buffer);
+    }
+    if (f)
+    {
+        fclose(f);
+    }
+
+    return 0;
 }
 
 static int pddby_decode_init_magic(pddby_decode_context_t* context)
@@ -130,7 +210,7 @@ static int pddby_decode_init_magic(pddby_decode_context_t* context)
     struct stat root_stat;
     if (stat(context->root_path, &root_stat) == -1)
     {
-        //pddby_report_error("unable to stat root directory");
+        goto error;
     }
 
     struct tm root_tm = *gmtime(&root_stat.st_mtime);
@@ -153,14 +233,14 @@ static int pddby_decode_init_magic(pddby_decode_context_t* context)
         break;
     default:   // v12
         {
-            struct checksum_magic_s
+            struct checksum_magic
             {
                 char const* checksum;
                 uint16_t data_magic;
                 uint16_t image_magic; // == data_magic ^ 0x1a80
                 pddby_decode_string_func_t decode_string;
             };
-            struct checksum_magic_s const s_checksums[] =
+            struct checksum_magic const s_checksums[] =
             {
                 // v12
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, pddby_decode_string_v12},
@@ -170,8 +250,16 @@ static int pddby_decode_init_magic(pddby_decode_context_t* context)
             };
 
             char* pdd32_path = pddby_aux_build_filename_ci(context->pddby, context->root_path, "pdd32.exe", 0);
+            if (!pdd32_path)
+            {
+                goto error;
+            }
             char* checksum = pddby_aux_file_get_checksum(context->pddby, pdd32_path);
             free(pdd32_path);
+            if (!checksum)
+            {
+                goto error;
+            }
 
             for (size_t i = 0; i < sizeof(s_checksums) / sizeof(*s_checksums); i++)
             {
@@ -190,21 +278,24 @@ static int pddby_decode_init_magic(pddby_decode_context_t* context)
     }
     if (!result)
     {
-        //pddby_report_error("unable to calculate magic number");
+        goto error;
     }
 
-    printf("magic: 0x%04x\n", context->data_magic);
+    pddby_report(context->pddby, pddby_message_type_log, "magic number: 0x%04x", context->data_magic);
     return 1;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to initialize magic number");
+    return 0;
 }
 
 static char* pddby_decode_string(pddby_decode_context_t* context, char const* path, size_t* str_size, int8_t topic_number)
 {
-    //GError *err = NULL;
     char* str;
     if (!pddby_aux_file_get_contents(context->pddby, path, &str, str_size))
     {
-        //pddby_report_error("");
-        //pddby_report_error("%s\n", err->message);
+        pddby_report(context->pddby, pddby_message_type_error, "unable to decode string");
+        return NULL;
     }
 
     for (size_t i = 0; i < *str_size; i++)
@@ -218,12 +309,11 @@ static char* pddby_decode_string(pddby_decode_context_t* context, char const* pa
 
 static char* pddby_decode_string_v12(pddby_decode_context_t* context, char const* path, size_t* str_size, int8_t topic_number)
 {
-    //GError *err = NULL;
     char* str;
     if (!pddby_aux_file_get_contents(context->pddby, path, &str, str_size))
     {
-        //pddby_report_error("");
-        //pddby_report_error("%s\n", err->message);
+        pddby_report(context->pddby, pddby_message_type_error, "unable to decode string");
+        return NULL;
     }
 
     for (size_t i = 0; i < *str_size; i++)
@@ -236,12 +326,11 @@ static char* pddby_decode_string_v12(pddby_decode_context_t* context, char const
 
 static char* pddby_decode_string_v13(pddby_decode_context_t* context, char const* path, size_t* str_size, int8_t topic_number)
 {
-    //GError *err = NULL;
     char* str;
     if (!pddby_aux_file_get_contents(context->pddby, path, &str, str_size))
     {
-        //pddby_report_error("");
-        //pddby_report_error("%s\n", err->message);
+        pddby_report(context->pddby, pddby_message_type_error, "unable to decode string");
+        return NULL;
     }
 
     for (size_t i = 0; i < *str_size; i++)

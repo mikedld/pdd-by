@@ -174,9 +174,8 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
     const pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
 
-    gsize i;
     gint count[4] = {0, 0, 0, 0};
-    for (i = 0; i < statistics->states->len; i++)
+    for (gsize i = 0; i < statistics->states->len; i++)
     {
         count[g_array_index(statistics->states, gint8, i)]++;
     }
@@ -224,7 +223,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     gtk_container_foreach(GTK_CONTAINER(answers_box), (GtkCallback)gtk_widget_destroy, NULL);
     pddby_answers_t *answers = pddby_answers_find_by_question(question->pddby, question->id);
     GtkWidget *answer_radio = NULL;
-    for (i = 0; i < pddby_array_size(answers); i++)
+    for (gsize i = 0, size = pddby_array_size(answers); i < size; i++)
     {
         const pddby_answer_t *answer = pddby_array_index(answers, i);
         GtkWidget *radio = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answer_radio), answer->text);

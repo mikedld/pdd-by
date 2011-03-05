@@ -1,9 +1,13 @@
 #include "string.h"
 
+#include "report.h"
+
 #include <CoreFoundation/CoreFoundation.h>
 
 struct pddby_iconv
 {
+    pddby_t* pddby;
+
     CFStringEncoding src_encoding;
     CFStringEncoding dst_encoding;
 };
@@ -21,21 +25,32 @@ static CFStringEncoding pddby_iconv_encoding_from_string(char const* code)
     return kCFStringEncodingInvalidId;
 }
 
-pddby_iconv_t* pddby_iconv_new(char const* from_code, char const* to_code)
+pddby_iconv_t* pddby_iconv_new(pddby_t* pddby, char const* from_code, char const* to_code)
 {
     assert(to_code);
 
-    pddby_iconv_t* result = malloc(sizeof(pddby_iconv_t));
+    pddby_iconv_t* result = calloc(1, sizeof(pddby_iconv_t));
     if (!result)
     {
-        // TODO: report error
-        return NULL;
+        goto error;
     }
+
+    result->pddby = pddby;
 
     result->src_encoding = pddby_iconv_encoding_from_string(from_code);
     result->dst_encoding = pddby_iconv_encoding_from_string(to_code);
 
     return result;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create iconv context");
+
+    if (result)
+    {
+        pddby_iconv_free(result);
+    }
+
+    return NULL;
 }
 
 void pddby_iconv_free(pddby_iconv_t* conv)
