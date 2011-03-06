@@ -63,18 +63,61 @@ void pddby_iconv_free(pddby_iconv_t* conv)
 char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t length)
 {
     assert(conv);
+    assert(string);
 
-    // TODO: error checking
+    char* result = NULL;
+    CFStringRef src = NULL;
 
-    CFStringRef src = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, (UInt8 const*)string, length,
-        conv->src_encoding, 0, kCFAllocatorNull);
+    if (!length)
+    {
+        result = calloc(1, sizeof(char));
+        if (!result)
+        {
+            goto error;
+        }
+        return result;
+    }
 
-    CFIndex dst_length;
-    CFStringGetBytes(src, CFRangeMake(0, length), conv->dst_encoding, 0, 0, NULL, 0, &dst_length);
-    char* dst = malloc(dst_length + 1);
-    CFStringGetCString(src, dst, dst_length + 1, conv->dst_encoding);
+    src = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, (UInt8 const*)string, length, conv->src_encoding, 0,
+        kCFAllocatorNull);
+    if (!src)
+    {
+        goto error;
+    }
+
+    CFIndex result_length;
+    if (!CFStringGetBytes(src, CFRangeMake(0, length), conv->dst_encoding, 0, 0, NULL, 0, &result_length) ||
+        !result_length)
+    {
+        goto error;
+    }
+
+    result = malloc(result_length + 1);
+    if (!result)
+    {
+        goto error;
+    }
+
+    if (!CFStringGetCString(src, result, result_length + 1, conv->dst_encoding))
+    {
+        goto error;
+    }
 
     CFRelease(src);
 
-    return dst;
+    return result;
+
+error:
+    pddby_report(conv->pddby, pddby_message_type_error, "unable to convert string");
+
+    if (src)
+    {
+        CFRelease(src);
+    }
+    if (result)
+    {
+        free(result);
+    }
+
+    return NULL;
 }

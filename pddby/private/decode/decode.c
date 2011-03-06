@@ -99,7 +99,7 @@ int pddby_decode_images(pddby_t* pddby)
                 goto cycle_error;
             }
 
-            result = decode_image(pddby, image_path, pddby->decode_context->image_magic);
+            result = pddby_decode_image(pddby, image_path, pddby->decode_context->image_magic);
             free(image_path);
             if (!result)
             {

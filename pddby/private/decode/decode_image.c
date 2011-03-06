@@ -29,24 +29,24 @@ struct bpftcam_context
 
 typedef struct bpftcam_context bpftcam_context_t;
 
-static uint32_t rol(uint32_t value, uint8_t shift)
+static inline uint32_t rol(uint32_t value, uint8_t shift)
 {
     return (value << shift) | (value >> (32 - shift));
 }
 
-static uint32_t ror(uint32_t value, uint8_t shift)
+static inline uint32_t ror(uint32_t value, uint8_t shift)
 {
     return (value >> shift) | (value << (32 - shift));
 }
 
-static void swap(uint32_t* left, uint32_t* right)
+static inline void swap(uint32_t* left, uint32_t* right)
 {
     uint32_t const temp = *left;
     *left = *right;
     *right = temp;
 }
 
-static int init_randseed_for_image(char const* name, uint16_t magic)
+static int pddby_init_randseed_for_image(char const* name, uint16_t magic)
 {
     assert(name);
 
@@ -67,11 +67,12 @@ static int init_randseed_for_image(char const* name, uint16_t magic)
         }
     }
 
-    set_randseed(rand_seed);
+    pddby_delphi_set_randseed(rand_seed);
     return 1;
 }
 
-static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* pddby_decode_image_a8(pddby_t* pddby, char* basename, uint16_t magic, char* data,
+    size_t data_size)
 {
     // v9 image format
 
@@ -102,7 +103,7 @@ static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t m
         }
     }
 
-    set_randseed(seed + magic);
+    pddby_delphi_set_randseed(seed + magic);
 
     for (size_t i = header->image_height; i > 0; i--)
     {
@@ -110,38 +111,39 @@ static pddby_image_t* decode_image_a8(pddby_t* pddby, char* basename, uint16_t m
         for (size_t j = 0; j < (header->image_width + 1) / 2; j++)
         {
             assert(&scanline[j] < data + header->file_size);
-            scanline[j] ^= delphi_random(255);
+            scanline[j] ^= pddby_delphi_random(255);
         }
     }
 
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data, data_size);
 }
 
-static pddby_image_t* decode_image_bpft(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* pddby_decode_image_bpft(pddby_t* pddby, char* basename, uint16_t magic, char* data,
+    size_t data_size)
 {
     // v10 & v11 image format
 
-    if (!init_randseed_for_image(basename, magic))
+    if (!pddby_init_randseed_for_image(basename, magic))
     {
         return NULL;
     }
 
     for (size_t i = 4; i < data_size; i++)
     {
-        data[i] ^= delphi_random(255);
+        data[i] ^= pddby_delphi_random(255);
     }
 
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 4, data_size - 4);
 }
 
-static int decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
+static int pddby_decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
 {
-    if (!init_randseed_for_image(basename, magic))
+    if (!pddby_init_randseed_for_image(basename, magic))
     {
         return 0;
     }
 
-    ctx->a[0] = get_randseed();
+    ctx->a[0] = pddby_delphi_get_randseed();
     // initializes both `a` and `x`
     for (size_t i = 1; i < 12; i++)
     {
@@ -173,7 +175,7 @@ static int decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basenam
     return 1;
 }
 
-static uint8_t decode_image_bpftcam_next(bpftcam_context_t* ctx)
+static uint8_t pddby_decode_image_bpftcam_next(bpftcam_context_t* ctx)
 {
     for (size_t i = 0; i < 4; i++)
     {
@@ -217,25 +219,25 @@ static uint8_t decode_image_bpftcam_next(bpftcam_context_t* ctx)
     return *ctx->x;
 }
 
-static pddby_image_t* decode_image_bpftcam(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
+static pddby_image_t* pddby_decode_image_bpftcam(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
     // v12 image format
 
     bpftcam_context_t context;
-    if (!decode_image_bpftcam_init(&context, basename, magic))
+    if (!pddby_decode_image_bpftcam_init(&context, basename, magic))
     {
         return NULL;
     }
 
     for (size_t i = 7; i < data_size; i++)
     {
-        data[i] ^= decode_image_bpftcam_next(&context);
+        data[i] ^= pddby_decode_image_bpftcam_next(&context);
     }
 
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 7, data_size - 7);
 }
 
-int decode_image(pddby_t* pddby, char const* path, uint16_t magic)
+int pddby_decode_image(pddby_t* pddby, char const* path, uint16_t magic)
 {
     char* data = NULL;
     size_t data_size;
@@ -255,15 +257,15 @@ int decode_image(pddby_t* pddby, char const* path, uint16_t magic)
 
     if (!strncmp(data, "A8", 2))
     {
-        image = decode_image_a8(pddby, basename, magic, data, data_size);
+        image = pddby_decode_image_a8(pddby, basename, magic, data, data_size);
     }
     else if (!strncmp(data, "BPFTCAM", 7))
     {
-        image = decode_image_bpftcam(pddby, basename, magic, data, data_size);
+        image = pddby_decode_image_bpftcam(pddby, basename, magic, data, data_size);
     }
     else if (!strncmp(data, "BPFT", 4))
     {
-        image = decode_image_bpft(pddby, basename, magic, data, data_size);
+        image = pddby_decode_image_bpft(pddby, basename, magic, data, data_size);
     }
     else
     {

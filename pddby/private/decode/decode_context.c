@@ -96,11 +96,11 @@ static int pddby_decode_init_magic_2006(pddby_decode_context_t* context)
     }
 
     context->data_magic = 0;
-    set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
+    pddby_delphi_set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     for (int i = 0; i < 255; i++)
     {
-        context->data_magic ^= buffer[delphi_random(16 * 1024)];
+        context->data_magic ^= buffer[pddby_delphi_random(16 * 1024)];
     }
     context->data_magic = context->data_magic * buffer[16 * 1024] + 0x1998;
 
@@ -156,7 +156,7 @@ static int pddby_decode_init_magic_2008(pddby_decode_context_t* context)
     }
 
     context->data_magic = 0x2008;
-    set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
+    pddby_delphi_set_randseed((buffer[0] | (buffer[1] << 8)) & 0x0ffff);
 
     while (!feof(f))
     {
@@ -171,7 +171,7 @@ static int pddby_decode_init_magic_2008(pddby_decode_context_t* context)
         }
         for (int i = 0; i < 256; i++)
         {
-            uint8_t ch = buffer[delphi_random(length)];
+            uint8_t ch = buffer[pddby_delphi_random(length)];
             for (int j = 0; j < 8; j++)
             {
                 uint16_t old_magic = context->data_magic;
