@@ -27,7 +27,7 @@ struct pddby_callbacks
 
 typedef struct pddby_callbacks pddby_callbacks_t;
 
-pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callbacks_t* callbacks);
+pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callbacks_t const* callbacks);
 void pddby_close(pddby_t* pddby);
 
 int pddby_decode(pddby_t* pddby, char const* root_path);

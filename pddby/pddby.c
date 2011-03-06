@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callbacks_t* callbacks)
+pddby_t* pddby_init(char const* share_dir, char const* cache_dir, pddby_callbacks_t const* callbacks)
 {
     srand(time(0));
 

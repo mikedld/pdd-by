@@ -37,7 +37,7 @@ typedef int (*pddby_object_set_images_t)(void*, pddby_images_t* images);
 
 int pddby_decode_images(pddby_t* pddby)
 {
-    char** image_dirs = NULL;
+    char** image_dir_names = NULL;
 
     char* raw_image_dirs = pddby_settings_get(pddby, "image_dirs");
     if (!raw_image_dirs)
@@ -45,9 +45,9 @@ int pddby_decode_images(pddby_t* pddby)
         goto error;
     }
 
-    image_dirs = pddby_string_split(pddby, raw_image_dirs, ":");
+    image_dir_names = pddby_string_split(pddby, raw_image_dirs, ":");
     free(raw_image_dirs);
-    if (!image_dirs)
+    if (!image_dir_names)
     {
         goto error;
     }
@@ -58,13 +58,20 @@ int pddby_decode_images(pddby_t* pddby)
     }
 
     int result = 1;
-    char** dir_name = image_dirs;
+    char** dir_name = image_dir_names;
     while (*dir_name)
     {
         DIR* dir = NULL;
+        pddby_array_t* image_dirs = NULL;
 
         char* images_path = pddby_aux_build_filename_ci(pddby, pddby->decode_context->root_path, *dir_name, 0);
         if (!images_path)
+        {
+            goto cycle_error;
+        }
+
+        image_dirs = pddby_array_new(pddby, free);
+        if (!image_dirs)
         {
             goto cycle_error;
         }
@@ -87,13 +94,29 @@ int pddby_decode_images(pddby_t* pddby)
                 }
                 break;
             }
-            
+
             if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
             {
                 continue;
             }
 
-            char* image_path = pddby_aux_build_filename(pddby, images_path, ent->d_name, 0);
+            if (!pddby_array_add(image_dirs, strdup(ent->d_name)))
+            {
+                goto cycle_error;
+            }
+        }
+
+        if (closedir(dir) == -1)
+        {
+            pddby_report(pddby, pddby_message_type_warning, "unable to close directory \"%s\"", *dir_name);
+        }
+        dir = NULL;
+
+        pddby_report_progress_begin(pddby, pddby_array_size(image_dirs));
+
+        for (size_t i = 0, size = pddby_array_size(image_dirs); i < size; i++)
+        {
+            char* image_path = pddby_aux_build_filename(pddby, images_path, pddby_array_index(image_dirs, i), 0);
             if (!image_path)
             {
                 goto cycle_error;
@@ -103,21 +126,16 @@ int pddby_decode_images(pddby_t* pddby)
             free(image_path);
             if (!result)
             {
-                break;
+                goto cycle_error;
             }
+
+            pddby_report_progress(pddby, i + 1);
         }
 
+        pddby_report_progress_end(pddby);
+
+        pddby_array_free(image_dirs, 1);
         free(images_path);
-
-        if (closedir(dir) == -1)
-        {
-            pddby_report(pddby, pddby_message_type_warning, "unable to close directory \"%s\"", *dir_name);
-        }
-
-        if (!result)
-        {
-            break;
-        }
 
         dir_name++;
         continue;
@@ -128,6 +146,10 @@ cycle_error:
         if (images_path)
         {
             free(images_path);
+        }
+        if (image_dirs)
+        {
+            pddby_array_free(image_dirs, 1);
         }
         if (dir)
         {
@@ -145,15 +167,15 @@ cycle_error:
         goto error;
     }
 
-    pddby_stringv_free(image_dirs);
+    pddby_stringv_free(image_dir_names);
     return result;
 
 error:
     pddby_report(pddby, pddby_message_type_error, "unable to decode images");
 
-    if (image_dirs)
+    if (image_dir_names)
     {
-        pddby_stringv_free(image_dirs);
+        pddby_stringv_free(image_dir_names);
     }
 
     return 0;
@@ -441,7 +463,7 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
         }
         if (!object)
         {
-            goto error;
+            goto cycle_error;
         }
 
         if (!object_save(object))
@@ -457,7 +479,7 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
         pddby_images_free(object_images);
         object_free(object);
 
-        pddby_report_progress(pddby, i);
+        pddby_report_progress(pddby, i + 1);
         continue;
 
 cycle_error:

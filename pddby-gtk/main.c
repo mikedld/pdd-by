@@ -1,3 +1,4 @@
+#include "decode_progress_window.h"
 #include "main_window.h"
 #include "pddby/pddby.h"
 #include "settings.h"
@@ -16,13 +17,19 @@ int main(int argc, char *argv[])
     gchar* cache_dir = g_build_filename(g_get_user_cache_dir(), "pddby", NULL);
     g_mkdir_with_parents(cache_dir, 0755);
 
-    pddby_t* pddby = pddby_init(get_share_dir(), cache_dir, NULL);
+    GtkWidget* decode_progress_window = decode_progress_window_new();
+
+    pddby_t* pddby = pddby_init(get_share_dir(), cache_dir,
+        decode_progress_window_get_callbacks(decode_progress_window));
 
     g_free(cache_dir);
+
+    gboolean result = FALSE;
 
     if (pddby_cache_exists(pddby))
     {
         pddby_use_cache(pddby, TRUE);
+        result = TRUE;
     }
     else
     {
@@ -41,16 +48,32 @@ int main(int argc, char *argv[])
         pddby_use_cache(pddby, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_cache_checkbutton)));
         gtk_widget_destroy(directory_dialog);
 
-        if (!pddby_decode(pddby, pdd32_path))
+        gtk_widget_show_all(decode_progress_window);
+
+        while (gtk_events_pending())
         {
-            g_error("ERROR: unable to decode");
+            gtk_main_iteration();
         }
 
+        result = pddby_decode(pddby, pdd32_path);
         g_free(pdd32_path);
+
+        if (result)
+        {
+            gtk_widget_destroy(decode_progress_window);
+        }
+        else
+        {
+            decode_progress_window_enable_close(decode_progress_window);
+        }
     }
 
-    main_window = main_window_new(pddby);
-    gtk_widget_show(main_window);
+    if (result)
+    {
+        main_window = main_window_new(pddby);
+        gtk_widget_show(main_window);
+    }
+
     gtk_main();
 
     pddby_close(pddby);

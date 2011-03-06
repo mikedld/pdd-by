@@ -15,6 +15,7 @@ add_definitions(
 
 set(${PROJECT_NAME}_HEADERS
     chooser_dialog.h
+    decode_progress_window.h
     help_dialog.h
     main_window.h
     question_window.h
@@ -24,6 +25,7 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_SOURCES
     chooser_dialog.c
+    decode_progress_window.c
     help_dialog.c
     main.c
     main_window.c
@@ -34,6 +36,7 @@ set(${PROJECT_NAME}_SOURCES
 
 set(${PROJECT_NAME}_UI_FILES
     ui/chooser_dialog.ui
+    ui/decode_progress_window.ui
     ui/help_dialog.ui
     ui/main_window.ui
     ui/question_window.ui

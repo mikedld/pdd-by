@@ -7,7 +7,7 @@ struct pddby_decode_context;
 
 struct pddby
 {
-    struct pddby_callbacks* callbacks;
+    struct pddby_callbacks const* callbacks;
     struct pddby_db* database;
     struct pddby_decode_context* decode_context;
 };

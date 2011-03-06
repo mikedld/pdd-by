@@ -234,7 +234,7 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
                     {
                         goto cycle_error;
                     }
-    
+
                     question->text = pddby_regex_replace_literal(spaces_regex, question_text, " ");
                     free(question_text);
                     if (!question->text)
@@ -404,7 +404,7 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
         pddby_traffregs_free(question_traffregs);
         pddby_question_free(question);
 
-        pddby_report_progress(context->pddby, i);
+        pddby_report_progress(context->pddby, i + 1);
         continue;
 
 cycle_error:
