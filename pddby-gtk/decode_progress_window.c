@@ -38,7 +38,8 @@ GtkWidget* decode_progress_window_new()
     //gtk_tree_view_insert_column_with_attributes(tv_log, 0, "Type", type_renderer, "text", 0, NULL);
 
     GtkCellRenderer* message_renderer = gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(tv_log, 1, "Message", message_renderer, "text", 1, NULL);
+    gtk_tree_view_insert_column_with_attributes(tv_log, 0, "Message", message_renderer, "text", 1, NULL);
+    gtk_tree_view_column_set_sizing(gtk_tree_view_get_column(tv_log, 0), GTK_TREE_VIEW_COLUMN_GROW_ONLY);
 
     g_object_set_data_full(G_OBJECT(gs_decode_progress_window), "pdd-builder", builder, g_object_unref);
 
