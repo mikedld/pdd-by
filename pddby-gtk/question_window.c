@@ -300,6 +300,7 @@ static void show_results(GtkWindow *window, statistics_t *statistics)
     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(results_dialog), "%s", count_text);
     g_free(count_text);
     gtk_window_set_title(GTK_WINDOW(results_dialog), "Результат");
+    gtk_window_set_position(GTK_WINDOW(results_dialog), GTK_WIN_POS_CENTER);
     gtk_dialog_run(GTK_DIALOG(results_dialog));
     gtk_widget_destroy(results_dialog);
 

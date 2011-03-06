@@ -11,7 +11,7 @@
     </columns>
   </object>
   <object class="GtkWindow" id="decode_progress_window">
-    <property name="width_request">400</property>
+    <property name="width_request">500</property>
     <property name="height_request">150</property>
     <property name="border_width">5</property>
     <property name="title" translatable="yes">&#x423;&#x447;&#x435;&#x431;&#x43D;&#x430;&#x44F; &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x430;&#x43C;&#x43C;&#x430; &#x41F;&#x414;&#x414;</property>
