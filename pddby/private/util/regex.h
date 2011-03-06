@@ -8,7 +8,15 @@
 #define PDDBY_REGEX_NEWLINE_ANY (1 << 2)
 
 struct pddby_regex;
-struct pddby_regex_match;
+
+struct pddby_regex_match
+{
+    pddby_t* pddby;
+
+    int* caps;
+    int count;
+    char const* string;
+};
 
 typedef struct pddby_regex pddby_regex_t;
 typedef struct pddby_regex_match pddby_regex_match_t;

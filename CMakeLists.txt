@@ -6,21 +6,32 @@ set(PDDBY_VERSION "0.4")
 set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
 set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
 
-option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
-option(PDDBY_BUILD_QT_FRONTEND "Build Qt frontend" OFF)
-option(PDDBY_BUILD_COCOA_FRONTEND "Build Cocoa frontend" OFF)
+option(PDDBY_FRONTEND_BUILD_GTK "Build GTK frontend" ON)
+option(PDDBY_FRONTEND_BUILD_QT "Build Qt frontend" OFF)
+option(PDDBY_FRONTEND_BUILD_COCOA "Build Cocoa frontend" OFF)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
+if(APPLE)
+    set(_conv_backend "cfstring")
+else()
+    set(_conv_backend "iconv")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}")
+set(PDDBY_BACKEND_CONV "${_conv_backend}" CACHE STRING "Charset conversion backend (iconv/cfstring).")
+set(PDDBY_BACKEND_REGEX "pcre" CACHE STRING "Regular expressions backend (pcre).")
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (None/Debug/Release/RelWithDebInfo/MinSizeRel)." FORCE)
+endif()
+
+list(APPEND CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}/CMake")
 
 find_package(SQLite3 REQUIRED)
-find_package(PCRE REQUIRED)
 find_package(OpenSSL REQUIRED)
-if(NOT APPLE)
+if(PDDBY_BACKEND_CONV STREQUAL "iconv")
     find_package(Iconv REQUIRED)
+endif()
+if(PDDBY_BACKEND_REGEX STREQUAL "pcre")
+    find_package(PCRE REQUIRED)
 endif()
 
 include(TestBigEndian)
@@ -45,21 +56,24 @@ include_directories(
 
 add_subdirectory(pddby)
 
-if(PDDBY_BUILD_GTK_FRONTEND)
+if(PDDBY_FRONTEND_BUILD_GTK)
     add_subdirectory(pddby-gtk)
 endif()
-if(PDDBY_BUILD_QT_FRONTEND)
+if(PDDBY_FRONTEND_BUILD_QT)
     enable_language(CXX)
     add_subdirectory(pddby-qt)
 endif()
-if(PDDBY_BUILD_COCOA_FRONTEND)
+if(PDDBY_FRONTEND_BUILD_COCOA)
     add_subdirectory(pddby-cocoa)
 endif()
 
 message(STATUS "----------------------------------------")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Options:"
-    " GTK(${PDDBY_BUILD_GTK_FRONTEND})"
-    " QT(${PDDBY_BUILD_QT_FRONTEND})"
-    " COCOA(${PDDBY_BUILD_COCOA_FRONTEND})")
+message(STATUS "Frontends:"
+    " gtk(${PDDBY_FRONTEND_BUILD_GTK})"
+    " qt(${PDDBY_FRONTEND_BUILD_QT})"
+    " cocoa(${PDDBY_FRONTEND_BUILD_COCOA})")
+message(STATUS "Backends:"
+    " conv(${PDDBY_BACKEND_CONV})"
+    " regex(${PDDBY_BACKEND_REGEX})")
 message(STATUS "----------------------------------------")

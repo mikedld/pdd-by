@@ -51,20 +51,12 @@ set(${PROJECT_NAME}_PRIVATE_SOURCES
     private/util/database.c
     private/util/delphi.c
     private/util/regex.c
+    private/util/regex_${PDDBY_BACKEND_REGEX}.c
     private/util/report.c
     private/util/settings.c
     private/util/string.c
+    private/util/string_${PDDBY_BACKEND_CONV}.c
 )
-
-if (APPLE)
-    list(APPEND ${PROJECT_NAME}_PRIVATE_SOURCES
-        private/util/string_mac.c
-    )
-else()
-    list(APPEND ${PROJECT_NAME}_PRIVATE_SOURCES
-        private/util/string_iconv.c
-    )
-endif()
 
 set(${PROJECT_NAME}_SQL_FILES
     ${${PROJECT_NAME}_SOURCE_DIR}/data/10.sql

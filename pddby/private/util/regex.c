@@ -4,7 +4,7 @@
 #include "string.h"
 
 #include <assert.h>
-#include <pcre.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef DMALLOC
@@ -14,85 +14,7 @@
 struct pddby_regex
 {
     pddby_t* pddby;
-
-    pcre* regex;
-    pcre_extra* regex_extra;
-    int cap_count;
 };
-
-struct pddby_regex_match
-{
-    pddby_t* pddby;
-
-    int* caps;
-    int count;
-    char const* string;
-};
-
-pddby_regex_t* pddby_regex_new(pddby_t* pddby, char const* pattern, int options)
-{
-    pddby_regex_t* result = calloc(1, sizeof(pddby_regex_t));
-    if (!result)
-    {
-        pddby_report(pddby, pddby_message_type_error, "unable to create regex");
-        return 0;
-    }
-
-    char const* error_text;
-    int error_offset;
-
-    int pcre_options = 0;
-    pcre_options |= (options & PDDBY_REGEX_MULTILINE) ? PCRE_MULTILINE : 0;
-    pcre_options |= (options & PDDBY_REGEX_DOTALL) ? PCRE_DOTALL : 0;
-    pcre_options |= (options & PDDBY_REGEX_NEWLINE_ANY) ? PCRE_NEWLINE_ANY : 0;
-
-    result->regex = pcre_compile(pattern, pcre_options, &error_text, &error_offset, 0);
-    if (!result->regex)
-    {
-        pddby_report(pddby, pddby_message_type_error, "unable to compile regex: %s (%d)", error_text, error_offset);
-        goto error;
-    }
-
-    result->regex_extra = pcre_study(result->regex, 0, &error_text);
-    if (!result->regex_extra && error_offset)
-    {
-        pddby_report(pddby, pddby_message_type_error, "unable to study regex: %s", error_text);
-        goto error;
-    }
-
-    if (pcre_fullinfo(result->regex, result->regex_extra, PCRE_INFO_CAPTURECOUNT, &result->cap_count))
-    {
-        pddby_report(pddby, pddby_message_type_error, "unable to get regex capturing subpatterns count");
-        goto error;
-    }
-
-    result->pddby = pddby;
-
-    return result;
-
-error:
-    if (result)
-    {
-        pddby_regex_free(result);
-    }
-
-    return NULL;
-}
-
-void pddby_regex_free(pddby_regex_t* regex)
-{
-    assert(regex);
-
-    if (regex->regex_extra)
-    {
-        pcre_free(regex->regex_extra);
-    }
-    if (regex->regex)
-    {
-        pcre_free(regex->regex);
-    }
-    free(regex);
-}
 
 char* pddby_regex_replace(pddby_regex_t* regex, char const* string, char const* replacement)
 {
@@ -273,43 +195,6 @@ error:
     }
 
     return NULL;
-}
-
-int pddby_regex_match(pddby_regex_t* regex, char const* string, pddby_regex_match_t** regex_match)
-{
-    assert(regex);
-    assert(string);
-    assert(regex_match);
-
-    *regex_match = calloc(1, sizeof(pddby_regex_match_t));
-    if (!*regex_match)
-    {
-        return 0;
-    }
-
-    (*regex_match)->caps = malloc((regex->cap_count + 1) * 3 * sizeof(int));
-    if (!(*regex_match)->caps)
-    {
-        pddby_regex_match_free(*regex_match);
-        return 0;
-    }
-
-    (*regex_match)->count = regex->cap_count + 1;
-    (*regex_match)->string = string;
-    (*regex_match)->pddby = regex->pddby;
-    int result = pcre_exec(regex->regex, regex->regex_extra, string, strlen(string), 0, 0, (*regex_match)->caps,
-        (regex->cap_count + 1) * 3);
-    if (result >= 0)
-    {
-        return 1;
-    }
-
-    if (result != PCRE_ERROR_NOMATCH)
-    {
-        pddby_report(regex->pddby, pddby_message_type_error, "unable to match string using regex");
-    }
-    pddby_regex_match_free(*regex_match);
-    return 0;
 }
 
 void pddby_regex_match_free(pddby_regex_match_t* regex_match)
