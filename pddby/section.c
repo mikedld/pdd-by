@@ -1,212 +1,285 @@
 #include "section.h"
+
 #include "config.h"
-#include "database.h"
+#include "private/util/database.h"
+#include "private/util/report.h"
 #include "question.h"
 
-static pdd_section_t *section_new_with_id(gint64 id, const gchar *name, const gchar *title_prefix, const gchar *title)
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
+static pddby_section_t* pddby_section_new_with_id(pddby_t* pddby, int64_t id, char const* name, char const* title_prefix,
+    char const* title)
 {
-    pdd_section_t *section = g_new(pdd_section_t, 1);
+    pddby_section_t* section = calloc(1, sizeof(pddby_section_t));
+    if (!section)
+    {
+        goto error;
+    }
+
+    section->name = name ? strdup(name) : NULL;
+    if (name && !section->name)
+    {
+        goto error;
+    }
+
+    section->title_prefix = title_prefix ? strdup(title_prefix) : NULL;
+    if (title_prefix && !section->title_prefix)
+    {
+        goto error;
+    }
+
+    section->title = title ? strdup(title) : NULL;
+    if (title && !section->title)
+    {
+        goto error;
+    }
+
     section->id = id;
-    section->name = g_strdup(name);
-    section->title_prefix = g_strdup(title_prefix);
-    section->title = g_strdup(title);
+    section->pddby = pddby;
+
     return section;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create section object");
+    return NULL;
 }
 
-static pdd_section_t *section_copy(const pdd_section_t *section)
+pddby_section_t* pddby_section_new(pddby_t* pddby, char const* name, char const* title_prefix, char const* title)
 {
-    return section_new_with_id(section->id, section->name, section->title_prefix, section->title);
+    return pddby_section_new_with_id(pddby, 0, name, title_prefix, title);
 }
 
-pdd_section_t *section_new(const gchar *name, const gchar *title_prefix, const gchar *title)
+void pddby_section_free(pddby_section_t* section)
 {
-    return section_new_with_id(0, name, title_prefix, title);
-}
+    assert(section);
 
-void section_free(pdd_section_t *section)
-{
-    g_free(section->name);
-    g_free(section->title_prefix);
-    g_free(section->title);
-    g_free(section);
-}
-
-gboolean section_save(pdd_section_t *section)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
+    if (section->name)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)", -1,
-            &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        free(section->name);
     }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_text(stmt, 1, section->name, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_bind_text(stmt, 2, section->title_prefix, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_bind_text(stmt, 3, section->title, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-
-    section->id = sqlite3_last_insert_rowid(db);
-
-    return TRUE;
+    if (section->title_prefix)
+    {
+        free(section->title_prefix);
+    }
+    if (section->title)
+    {
+        free(section->title);
+    }
+    free(section);
 }
 
-pdd_section_t *section_find_by_id(gint64 id)
+int pddby_section_save(pddby_section_t* section)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
+    assert(section);
 
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? "
-            "LIMIT 1", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
-    {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return NULL;
-    }
-
-    const gchar *name = (const gchar *)sqlite3_column_text(stmt, 0);
-    const gchar *title_prefix = (const gchar *)sqlite3_column_text(stmt, 1);
-    const gchar *title = (const gchar *)sqlite3_column_text(stmt, 2);
-
-    return section_new_with_id(id, name, title_prefix, title);
-}
-
-pdd_section_t *section_find_by_name(const gchar *name)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? "
-            "LIMIT 1", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_text(stmt, 1, name, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
-    {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return NULL;
-    }
-
-    gint64 id = sqlite3_column_int64(stmt, 0);
-    const gchar *title_prefix = (const gchar *)sqlite3_column_text(stmt, 1);
-    const gchar *title = (const gchar *)sqlite3_column_text(stmt, 2);
-
-    return section_new_with_id(id, name, title_prefix, title);
-}
-
-pdd_sections_t *section_find_all()
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    pdd_sections_t *sections = g_ptr_array_new();
-
-    while (TRUE)
-    {
-        result = sqlite3_step(stmt);
-        if (result == SQLITE_DONE)
+        db_stmt = pddby_db_prepare(section->pddby, "INSERT INTO `sections` (`name`, `title_prefix`, `title`) VALUES (?, ?, ?)");
+        if (!db_stmt)
         {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_text(db_stmt, 1, section->name) ||
+        !pddby_db_bind_text(db_stmt, 2, section->title_prefix) ||
+        !pddby_db_bind_text(db_stmt, 3, section->title))
+    {
+        goto error;
+    }
+
+    int ret = pddby_db_step(db_stmt);
+    if (ret == -1)
+    {
+        goto error;
+    }
+
+    assert(ret == 0);
+
+    section->id = pddby_db_last_insert_id(section->pddby);
+
+    return 1;
+
+error:
+    pddby_report(section->pddby, pddby_message_type_error, "unable to save section object");
+    return 0;
+}
+
+pddby_section_t* pddby_section_find_by_id(pddby_t* pddby, int64_t id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `name`, `title_prefix`, `title` FROM `sections` WHERE `rowid`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, id))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    char const* name = pddby_db_column_text(db_stmt, 0);
+    char const* title_prefix = pddby_db_column_text(db_stmt, 1);
+    char const* title = pddby_db_column_text(db_stmt, 2);
+
+    return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to vind section object with id = %lld", id);
+    return NULL;
+}
+
+pddby_section_t* pddby_section_find_by_name(pddby_t* pddby, char const* name)
+{
+    assert(name);
+
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `title_prefix`, `title` FROM `sections` WHERE `name`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_text(db_stmt, 1, name))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    int64_t id = pddby_db_column_int64(db_stmt, 0);
+    char const* title_prefix = pddby_db_column_text(db_stmt, 1);
+    char const* title = pddby_db_column_text(db_stmt, 2);
+
+    return pddby_section_new_with_id(pddby, id, name, title_prefix, title);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find section object with name = \"%s\"", name);
+    return NULL;
+}
+
+pddby_sections_t* pddby_sections_new(pddby_t* pddby)
+{
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_section_free);
+}
+
+pddby_sections_t* pddby_sections_find_all(pddby_t* pddby)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `name`, `title_prefix`, `title` FROM `sections`");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt))
+    {
+        goto error;
+    }
+
+    pddby_sections_t* sections = pddby_sections_new(pddby);
+    if (!sections)
+    {
+        goto error;
+    }
+
+    int ret;
+    while ((ret = pddby_db_step(db_stmt)) == 1)
+    {
+        int64_t id = pddby_db_column_int64(db_stmt, 0);
+        char const* name = pddby_db_column_text(db_stmt, 1);
+        char const* title_prefix = pddby_db_column_text(db_stmt, 2);
+        char const* title = pddby_db_column_text(db_stmt, 3);
+
+        if (!pddby_array_add(sections, pddby_section_new_with_id(pddby, id, name, title_prefix, title)))
+        {
+            ret = -1;
             break;
         }
-        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+    }
 
-        gint64 id = sqlite3_column_int64(stmt, 0);
-        const gchar *name = (const gchar *)sqlite3_column_text(stmt, 1);
-        const gchar *title_prefix = (const gchar *)sqlite3_column_text(stmt, 2);
-        const gchar *title = (const gchar *)sqlite3_column_text(stmt, 3);
-
-        g_ptr_array_add(sections, section_new_with_id(id, name, title_prefix, title));
+    if (ret == -1)
+    {
+        pddby_sections_free(sections);
+        goto error;
     }
 
     return sections;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find all section objects");
+    return NULL;
 }
 
-pdd_sections_t *section_copy_all(pdd_sections_t *sections)
+void pddby_sections_free(pddby_sections_t* sections)
 {
-    pdd_sections_t *sections_copy = g_ptr_array_new();
-    gsize i;
-    for (i = 0; i < sections->len; i++)
+    assert(sections);
+
+    pddby_array_free(sections, 1);
+}
+
+size_t pddby_section_get_question_count(pddby_section_t* section)
+{
+    assert(section);
+
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        const pdd_section_t *section = g_ptr_array_index(sections, i);
-        g_ptr_array_add(sections_copy, section_copy(section));
-    }
-    return sections_copy;
-}
-
-void section_free_all(pdd_sections_t *sections)
-{
-    g_ptr_array_foreach(sections, (GFunc)section_free, NULL);
-    g_ptr_array_free(sections, TRUE);
-}
-
-gint32 section_get_question_count(pdd_section_t *section)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare(section->pddby, "SELECT COUNT(*) FROM `questions_sections` WHERE `section_id`=?");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, section->id))
+    {
+        goto error;
+    }
 
-    result = sqlite3_bind_int64(stmt, 1, section->id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
+    if (pddby_db_step(db_stmt) != 1)
+    {
+        goto error;
+    }
 
-    result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+    return pddby_db_column_int(db_stmt, 0);
 
-    return sqlite3_column_int(stmt, 0);
+error:
+    pddby_report(section->pddby, pddby_message_type_error, "unable to get questions count of section object");
+    return 0;
 }

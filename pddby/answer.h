@@ -1,30 +1,42 @@
-#ifndef ANSWER_H
-#define ANSWER_H
+#ifndef PDDBY_ANSWER_H
+#define PDDBY_ANSWER_H
 
-#include "comment.h"
-#include "image.h"
-#include "section.h"
-
-#include <glib.h>
-
-typedef struct pdd_answer_s
+#ifdef __cplusplus
+extern "C"
 {
-    gint64 id;
-    gint64 question_id;
-    gchar *text;
-    gboolean is_correct;
-} pdd_answer_t;
+#endif
 
-typedef GPtrArray pdd_answers_t;
+#include "array.h"
+#include "pddby.h"
 
-pdd_answer_t *answer_new(gint64 question_id, const gchar *text, gboolean is_correct);
-void answer_free(pdd_answer_t *answer);
+#include <stdint.h>
 
-gboolean answer_save(pdd_answer_t *answer);
+struct pddby_answer
+{
+    pddby_t* pddby;
 
-pdd_answer_t *answer_find_by_id(gint64 id);
+    int64_t id;
+    int64_t question_id;
+    char* text;
+    int is_correct;
+};
 
-pdd_answers_t *answer_find_by_question(gint64 question_id);
-void answer_free_all(pdd_answers_t *answers);
+typedef struct pddby_answer pddby_answer_t;
+typedef pddby_array_t pddby_answers_t;
 
-#endif // ANSWER_H
+pddby_answer_t* pddby_answer_new(pddby_t* pddby, int64_t question_id, char const* text, int is_correct);
+void pddby_answer_free(pddby_answer_t* answer);
+
+int pddby_answer_save(pddby_answer_t* answer);
+
+pddby_answer_t* pddby_answer_find_by_id(pddby_t* pddby, int64_t id);
+
+pddby_answers_t* pddby_answers_new(pddby_t* pddby);
+pddby_answers_t* pddby_answers_find_by_question(pddby_t* pddby, int64_t question_id);
+void pddby_answers_free(pddby_answers_t* answers);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_ANSWER_H

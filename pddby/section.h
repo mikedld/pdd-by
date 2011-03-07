@@ -1,30 +1,45 @@
-#ifndef SECTION_H
-#define SECTION_H
+#ifndef PDDBY_SECTION_H
+#define PDDBY_SECTION_H
 
-#include <glib.h>
-
-typedef struct pdd_section_s
+#ifdef __cplusplus
+extern "C"
 {
-    gint64 id;
-    gchar *name;
-    gchar *title_prefix;
-    gchar *title;
-} pdd_section_t;
+#endif
 
-typedef GPtrArray pdd_sections_t;
+#include "array.h"
+#include "pddby.h"
 
-pdd_section_t *section_new(const gchar *name, const gchar *title_prefix, const gchar *title);
-void section_free(pdd_section_t *section);
+#include <stdint.h>
 
-gboolean section_save(pdd_section_t *section);
+struct pddby_section
+{
+    pddby_t* pddby;
 
-pdd_section_t *section_find_by_id(gint64 id);
-pdd_section_t *section_find_by_name(const gchar *name);
+    int64_t id;
+    char* name;
+    char* title_prefix;
+    char* title;
+};
 
-pdd_sections_t *section_find_all();
-pdd_sections_t *section_copy_all(pdd_sections_t *sections);
-void section_free_all(pdd_sections_t *sections);
+typedef struct pddby_section pddby_section_t;
+typedef pddby_array_t pddby_sections_t;
 
-gint32 section_get_question_count(pdd_section_t *section);
+pddby_section_t* pddby_section_new(pddby_t* pddby, char const* name, char const* title_prefix, char const* title);
+void pddby_section_free(pddby_section_t* section);
 
-#endif // SECTION_H
+int pddby_section_save(pddby_section_t* section);
+
+pddby_section_t* pddby_section_find_by_id(pddby_t* pddby, int64_t id);
+pddby_section_t* pddby_section_find_by_name(pddby_t* pddby, char const* name);
+
+pddby_sections_t* pddby_sections_new(pddby_t* pddby);
+pddby_sections_t* pddby_sections_find_all(pddby_t* pddby);
+void pddby_sections_free(pddby_sections_t* sections);
+
+size_t pddby_section_get_question_count(pddby_section_t* section);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_SECTION_H

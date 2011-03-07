@@ -1,5 +1,4 @@
 CMake(Files|Cache\.txt)
-bin
+bin/
 Makefile
-.*\.(cmake|pidb|user(prefs|tasks))
-pdd
+.*\.(pidb|user(prefs|tasks))

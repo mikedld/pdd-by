@@ -2,15 +2,20 @@
 #include "config.h"
 #include "pddby/section.h"
 #include "pddby/topic.h"
+#include "platform.h"
 #include "settings.h"
 
 #include <string.h>
 
+#if !GTK_CHECK_VERSION(2, 20, 0)
+#define gtk_widget_get_visible(x) GTK_WIDGET_VISIBLE(x)
+#endif
+
 gint last_index[2] = {0, 0};
 
 void on_chooser_dialog_item_changed(GtkWidget *widget);
-GtkListStore *sections_model_new();
-GtkListStore *topics_model_new();
+GtkListStore *sections_model_new(pddby_t* pddby);
+GtkListStore *topics_model_new(pddby_t* pddby);
 
 static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gint text_column, gint index,
     gboolean need_title)
@@ -49,14 +54,14 @@ static GtkWidget *chooser_dialog_new(const gchar *title, GtkListStore *model, gi
     return dialog;
 }
 
-GtkWidget *chooser_dialog_new_with_sections()
+GtkWidget *chooser_dialog_new_with_sections(pddby_t* pddby)
 {
-    return chooser_dialog_new("Выберите главу", sections_model_new(), 2, last_index[0], TRUE);
+    return chooser_dialog_new("Выберите главу", sections_model_new(pddby), 2, last_index[0], TRUE);
 }
 
-GtkWidget *chooser_dialog_new_with_topics()
+GtkWidget *chooser_dialog_new_with_topics(pddby_t* pddby)
 {
-    return chooser_dialog_new("Выберите тематический раздел", topics_model_new(), 1, last_index[1], FALSE);
+    return chooser_dialog_new("Выберите тематический раздел", topics_model_new(pddby), 1, last_index[1], FALSE);
 }
 
 gint64 chooser_dialog_get_id(GtkWidget *dialog)
@@ -72,36 +77,36 @@ gint64 chooser_dialog_get_id(GtkWidget *dialog)
     return g_value_get_int64(&id);
 }
 
-static void add_section_to_model(pdd_section_t *section, GtkListStore *model)
+static void add_section_to_model(pddby_section_t *section, GtkListStore *model)
 {
     GtkTreeIter iter;
     gtk_list_store_append(model, &iter);
     gtk_list_store_set(model, &iter, 0, section->id, 1, section->name, 2, section->title_prefix, 3, section->title, 4,
-        section_get_question_count(section), -1);
+        pddby_section_get_question_count(section), -1);
 }
 
-GtkListStore *sections_model_new()
+GtkListStore *sections_model_new(pddby_t* pddby)
 {
     GtkListStore *model = gtk_list_store_new(5, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-    pdd_sections_t *sections = section_find_all();
-    g_ptr_array_foreach(sections, (GFunc)add_section_to_model, model);
-    section_free_all(sections);
+    pddby_sections_t *sections = pddby_sections_find_all(pddby);
+    pddby_array_foreach(sections, (GFunc)add_section_to_model, model);
+    pddby_sections_free(sections);
     return model;
 }
 
-static void add_topic_to_model(pdd_topic_t *topic, GtkListStore *model)
+static void add_topic_to_model(pddby_topic_t *topic, GtkListStore *model)
 {
     GtkTreeIter iter;
     gtk_list_store_append(model, &iter);
-    gtk_list_store_set(model, &iter, 0, topic->id, 1, topic->title, 2, (topic_get_question_count(topic) + 9) / 10, -1);
+    gtk_list_store_set(model, &iter, 0, topic->id, 1, topic->title, 2, (pddby_topic_get_question_count(topic) + 9) / 10, -1);
 }
 
-GtkListStore *topics_model_new()
+GtkListStore *topics_model_new(pddby_t* pddby)
 {
     GtkListStore *model = gtk_list_store_new(3, G_TYPE_INT64, G_TYPE_STRING, G_TYPE_INT);
-    pdd_topics_t *topics = topic_find_all();
-    g_ptr_array_foreach(topics, (GFunc)add_topic_to_model, model);
-    topic_free_all(topics);
+    pddby_topics_t *topics = pddby_topics_find_all(pddby);
+    pddby_array_foreach(topics, (GFunc)add_topic_to_model, model);
+    pddby_topics_free(topics);
     return model;
 }
 
@@ -110,7 +115,7 @@ GNUC_VISIBLE void on_chooser_dialog_destroy(GtkWidget *widget)
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(gtk_widget_get_toplevel(widget)), "pdd-builder"));
     GtkComboBox *items_combo = GTK_COMBO_BOX(gtk_builder_get_object(builder, "cb_items"));
     GtkLabel *title_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_title"));
-    last_index[GTK_WIDGET_VISIBLE(title_label) ? 0 : 1] = gtk_combo_box_get_active(items_combo);
+    last_index[gtk_widget_get_visible(GTK_WIDGET(title_label)) ? 0 : 1] = gtk_combo_box_get_active(items_combo);
 }
 
 GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
@@ -122,7 +127,7 @@ GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(gtk_widget_get_toplevel(widget)), "pdd-builder"));
 
     GtkLabel *title_label = GTK_LABEL(gtk_builder_get_object(builder, "lbl_title"));
-    if (GTK_WIDGET_VISIBLE(title_label))
+    if (gtk_widget_get_visible(GTK_WIDGET(title_label)))
     {
         GValue title;
         memset(&title, 0, sizeof(title));
@@ -136,7 +141,7 @@ GNUC_VISIBLE void on_chooser_dialog_item_changed(GtkWidget *widget)
     GValue count;
     memset(&count, 0, sizeof(count));
     gchar *count_text = NULL;
-    if (GTK_WIDGET_VISIBLE(title_label))
+    if (gtk_widget_get_visible(GTK_WIDGET(title_label)))
     {
         gtk_tree_model_get_value(GTK_TREE_MODEL(model), &iter, 4, &count);
         count_text = g_strdup_printf("Количество вопросов: %d", g_value_get_int(&count));

@@ -1,23 +1,38 @@
-#ifndef COMMENT_H
-#define COMMENT_H
+#ifndef PDDBY_COMMENT_H
+#define PDDBY_COMMENT_H
 
-#include <glib.h>
-
-typedef struct pdd_comment_s
+#ifdef __cplusplus
+extern "C"
 {
-    gint64 id;
-    gint32 number;
-    gchar *text;
-} pdd_comment_t;
+#endif
 
-typedef GPtrArray pdd_comments_t;
+#include "array.h"
+#include "pddby.h"
 
-pdd_comment_t *comment_new(gint32 number, const gchar *text);
-void comment_free(pdd_comment_t *comment);
+#include <stdint.h>
 
-gboolean comment_save(pdd_comment_t *comment);
+struct pddby_comment
+{
+    pddby_t* pddby;
 
-pdd_comment_t *comment_find_by_id(gint64 id);
-pdd_comment_t *comment_find_by_number(gint32 number);
+    int64_t id;
+    int32_t number;
+    char* text;
+};
 
-#endif // COMMENT_H
+typedef struct pddby_comment pddby_comment_t;
+typedef pddby_array_t pddby_comments_t;
+
+pddby_comment_t* pddby_comment_new(pddby_t* pddby, int32_t number, char const* text);
+void pddby_comment_free(pddby_comment_t* comment);
+
+int pddby_comment_save(pddby_comment_t* comment);
+
+pddby_comment_t* pddby_comment_find_by_id(pddby_t* pddby, int64_t id);
+pddby_comment_t* pddby_comment_find_by_number(pddby_t* pddby, int32_t number);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_COMMENT_H

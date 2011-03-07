@@ -1,8 +1,8 @@
-#ifndef SETTINGS_H
-#define SETTINGS_H
+#ifndef PDDBY_GTK_SETTINGS_H
+#define PDDBY_GTK_SETTINGS_H
 
 #include <glib.h>
 
 const gchar *get_share_dir();
 
-#endif // SETTINGS_H
+#endif // PDDBY_GTK_SETTINGS_H

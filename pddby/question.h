@@ -1,42 +1,53 @@
-#ifndef QUESTION_H
-#define QUESTION_H
+#ifndef PDDBY_QUESTION_H
+#define PDDBY_QUESTION_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "array.h"
+#include "pddby.h"
 #include "section.h"
 #include "traffreg.h"
 
-#include <glib.h>
+#include <stdint.h>
 
-typedef struct pdd_question_s
+struct pddby_question
 {
-    gint64 id;
-    gint64 topic_id;
-    gchar *text;
-    gint64 image_id;
-    gchar *advice;
-    gint64 comment_id;
-} pdd_question_t;
+    pddby_t* pddby;
 
-typedef GPtrArray pdd_questions_t;
+    int64_t id;
+    int64_t topic_id;
+    char* text;
+    int64_t image_id;
+    char* advice;
+    int64_t comment_id;
+};
 
-pdd_questions_t *get_questions();
-GHashTable *get_questions_sections();
-GHashTable *get_questions_traffregs();
+typedef struct pddby_question pddby_question_t;
+typedef pddby_array_t pddby_questions_t;
 
-pdd_question_t *question_new(gint64 topic_id, const gchar *text, gint64 image_id, const gchar *advice,
-    gint64 comment_id);
-void question_free(pdd_question_t *question);
+pddby_question_t* pddby_question_new(pddby_t* pddby, int64_t topic_id, char const* text, int64_t image_id, char const* advice,
+    int64_t comment_id);
+void pddby_question_free(pddby_question_t* question);
 
-gboolean question_save(pdd_question_t *question);
+int pddby_question_save(pddby_question_t* question);
 
-gboolean question_set_sections(pdd_question_t *question, pdd_sections_t *sections);
-gboolean question_set_traffregs(pdd_question_t *question, pdd_traffregs_t *traffregs);
+int pddby_question_set_sections(pddby_question_t* question, pddby_sections_t* sections);
+int pddby_question_set_traffregs(pddby_question_t* question, pddby_traffregs_t* traffregs);
 
-pdd_question_t *question_find_by_id(gint64 id);
+pddby_question_t* pddby_question_find_by_id(pddby_t* pddby, int64_t id);
 
-pdd_questions_t *question_find_by_section(gint64 section_id);
-pdd_questions_t *question_find_by_topic(gint64 topic_id, gint ticket_number);
-pdd_questions_t *question_find_by_ticket(gint ticket_number);
-pdd_questions_t *question_find_random();
-void question_free_all(pdd_questions_t *questions);
+pddby_questions_t* pddby_questions_new(pddby_t* pddby);
+pddby_questions_t* pddby_questions_find_by_section(pddby_t* pddby, int64_t section_id);
+pddby_questions_t* pddby_questions_find_by_topic(pddby_t* pddby, int64_t topic_id, int ticket_number);
+pddby_questions_t* pddby_questions_find_by_ticket(pddby_t* pddby, int ticket_number);
+pddby_questions_t* pddby_questions_find_random(pddby_t* pddby);
+void pddby_questions_free(pddby_questions_t* questions);
 
-#endif // QUESTION_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_QUESTION_H

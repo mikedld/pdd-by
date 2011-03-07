@@ -2,8 +2,6 @@
 #include "config.h"
 #include "settings.h"
 
-#include <gtk/gtk.h>
-
 GtkWidget *ticket_dialog_new(gint maximum)
 {
     GError *err = NULL;

@@ -3,22 +3,41 @@ project(pddby-main C)
 
 set(PDDBY_VERSION "0.4")
 
-option(PDDBY_BUILD_GTK_FRONTEND "Build GTK frontend" ON)
+set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
+set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
+
+option(PDDBY_FRONTEND_BUILD_GTK "Build GTK frontend" ON)
+option(PDDBY_FRONTEND_BUILD_QT "Build Qt frontend" OFF)
+option(PDDBY_FRONTEND_BUILD_COCOA "Build Cocoa frontend" OFF)
+
+if(APPLE)
+    set(_conv_backend "cfstring")
+else()
+    set(_conv_backend "iconv")
+endif()
+
+set(PDDBY_BACKEND_CONV "${_conv_backend}" CACHE STRING "Charset conversion backend (iconv/cfstring).")
+set(PDDBY_BACKEND_REGEX "pcre" CACHE STRING "Regular expressions backend (pcre).")
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (None/Debug/Release/RelWithDebInfo/MinSizeRel)." FORCE)
 endif()
 
-include(FindPkgConfig)
+list(APPEND CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}/CMake")
 
-pkg_search_module(GLIB2 REQUIRED glib-2.0)
-pkg_search_module(SQLITE3 REQUIRED sqlite3)
-
-if(PDDBY_BUILD_GTK_FRONTEND)
-    pkg_search_module(GTK2 REQUIRED gtk+-2.0)
+find_package(SQLite3 REQUIRED)
+find_package(OpenSSL REQUIRED)
+if(PDDBY_BACKEND_CONV STREQUAL "iconv")
+    find_package(Iconv REQUIRED)
+endif()
+if(PDDBY_BACKEND_REGEX STREQUAL "pcre")
+    find_package(PCRE REQUIRED)
 endif()
 
-add_definitions(-W -Wall -Wextra -std=c99 -fvisibility=hidden)
+include(TestBigEndian)
+test_big_endian(PDDBY_BIG_ENDIAN)
+
+add_definitions(-W -Wall -Wextra -fvisibility=hidden -D_GNU_SOURCE)
 
 if(APPLE)
     add_definitions(-D_DARWIN_PLATFORM_)
@@ -29,6 +48,7 @@ elseif(UNIX)
 endif()
 
 configure_file(config.h.in ${${PROJECT_NAME}_BINARY_DIR}/config.h)
+
 include_directories(
     ${${PROJECT_NAME}_BINARY_DIR}
     ${${PROJECT_NAME}_SOURCE_DIR}
@@ -36,11 +56,24 @@ include_directories(
 
 add_subdirectory(pddby)
 
-if(PDDBY_BUILD_GTK_FRONTEND)
+if(PDDBY_FRONTEND_BUILD_GTK)
     add_subdirectory(pddby-gtk)
 endif()
+if(PDDBY_FRONTEND_BUILD_QT)
+    enable_language(CXX)
+    add_subdirectory(pddby-qt)
+endif()
+if(PDDBY_FRONTEND_BUILD_COCOA)
+    add_subdirectory(pddby-cocoa)
+endif()
 
-message(STATUS "------------------------------")
+message(STATUS "----------------------------------------")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Options: GTK(${PDDBY_BUILD_GTK_FRONTEND})")
-message(STATUS "------------------------------")
+message(STATUS "Frontends:"
+    " gtk(${PDDBY_FRONTEND_BUILD_GTK})"
+    " qt(${PDDBY_FRONTEND_BUILD_QT})"
+    " cocoa(${PDDBY_FRONTEND_BUILD_COCOA})")
+message(STATUS "Backends:"
+    " conv(${PDDBY_BACKEND_CONV})"
+    " regex(${PDDBY_BACKEND_REGEX})")
+message(STATUS "----------------------------------------")

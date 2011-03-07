@@ -4,10 +4,23 @@
 #include "main_window.h"
 #include "pddby/answer.h"
 #include "pddby/question.h"
+#include "platform.h"
 #include "settings.h"
 
+#if GTK_MAJOR_VERSION > 2
+#include <gdk/gdk.h>
+#else
 #include <gdk/gdkkeysyms.h>
+#endif
 #include <math.h>
+
+#if !GTK_CHECK_VERSION(2, 22, 0)
+#define GDK_KEY_Return GDK_Return
+#define GDK_KEY_space  GDK_space
+#define GDK_KEY_Escape GDK_Escape
+#define GDK_KEY_F1     GDK_F1
+#define GDK_KEY_F2     GDK_F2
+#endif
 
 #define EXAM_TIMEOUT (15 * 60)
 
@@ -23,7 +36,8 @@ enum QuestionState
 
 typedef struct statistics_s
 {
-    pdd_questions_t *questions;
+    gboolean is_active;
+    pddby_questions_t *questions;
     GArray *states;
     gboolean is_exam;
     gint index;
@@ -48,7 +62,7 @@ static void on_question_show_comment();
 
 static gboolean on_exam_timer(GtkWindow *window);
 
-static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, gboolean is_exam)
+static GtkWidget *question_window_new(gchar *title, pddby_questions_t *questions, gboolean is_exam)
 {
     GError *err = NULL;
     GtkBuilder *builder = gtk_builder_new();
@@ -73,25 +87,26 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
     g_free(window_title);
 
     GtkAccelGroup *accel_group = gtk_accel_group_new();
-    gtk_accel_group_connect(accel_group, GDK_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer, window,
-        NULL));
-    gtk_accel_group_connect(accel_group, GDK_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window,
+    gtk_accel_group_connect(accel_group, GDK_KEY_Return, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_answer,
+        window, NULL));
+    gtk_accel_group_connect(accel_group, GDK_KEY_space, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_skip, window,
         NULL));
     if (!is_exam)
     {
-        gtk_accel_group_connect(accel_group, GDK_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit, window,
-            NULL));
-        gtk_accel_group_connect(accel_group, GDK_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_traffregs,
+        gtk_accel_group_connect(accel_group, GDK_KEY_Escape, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_quit,
             window, NULL));
-        gtk_accel_group_connect(accel_group, GDK_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment,
+        gtk_accel_group_connect(accel_group, GDK_KEY_F1, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(
+            on_question_show_traffregs, window, NULL));
+        gtk_accel_group_connect(accel_group, GDK_KEY_F2, 0, GTK_ACCEL_VISIBLE, g_cclosure_new(on_question_show_comment,
             window, NULL));
     }
     gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
     statistics_t *statistics = g_new(statistics_t, 1);
-    statistics->questions = quesions;
-    statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), quesions->len);
-    g_array_set_size(statistics->states, quesions->len);
+    statistics->is_active = TRUE;
+    statistics->questions = questions;
+    statistics->states = g_array_sized_new(FALSE, TRUE, sizeof(gint8), pddby_array_size(questions));
+    g_array_set_size(statistics->states, pddby_array_size(questions));
     statistics->is_exam = is_exam;
     statistics->index = -1;
     g_object_set_data_full(G_OBJECT(window), "pdd-statistics", statistics, (GDestroyNotify)statistics_free);
@@ -122,51 +137,50 @@ static GtkWidget *question_window_new(gchar *title, pdd_questions_t *quesions, g
     return window;
 }
 
-GtkWidget *question_window_new_with_section(pdd_section_t *section, gboolean is_exam)
+GtkWidget *question_window_new_with_section(pddby_section_t *section, gboolean is_exam)
 {
     questions_type = 0;
-    return question_window_new(g_strdup(section->title_prefix), question_find_by_section(section->id), is_exam);
+    return question_window_new(g_strdup(section->title_prefix), pddby_questions_find_by_section(section->pddby, section->id), is_exam);
 }
 
-GtkWidget *question_window_new_with_topic(pdd_topic_t *topic, gint ticket_number, gboolean is_exam)
+GtkWidget *question_window_new_with_topic(pddby_topic_t *topic, gint ticket_number, gboolean is_exam)
 {
     questions_type = 1;
     return question_window_new(g_strdup_printf("Раздел %d, билет %d", topic->number, ticket_number),
-        question_find_by_topic(topic->id, ticket_number), is_exam);
+        pddby_questions_find_by_topic(topic->pddby, topic->id, ticket_number), is_exam);
 }
 
-GtkWidget *question_window_new_with_ticket(gint ticket_number, gboolean is_exam)
+GtkWidget *question_window_new_with_ticket(pddby_t* pddby, gint ticket_number, gboolean is_exam)
 {
     questions_type = 2;
     return question_window_new(g_strdup_printf("Билет %d", ticket_number),
-        question_find_by_ticket(ticket_number), is_exam);
+        pddby_questions_find_by_ticket(pddby, ticket_number), is_exam);
 }
 
-GtkWidget *question_window_new_with_random_ticket(gboolean is_exam)
+GtkWidget *question_window_new_with_random_ticket(pddby_t* pddby, gboolean is_exam)
 {
     questions_type = 3;
-    return question_window_new(g_strdup("Случайный билет"), question_find_random(), is_exam);
+    return question_window_new(g_strdup("Случайный билет"), pddby_questions_find_random(pddby), is_exam);
 }
 
 static void statistics_free(statistics_t *statistics)
 {
-    question_free_all(statistics->questions);
+    pddby_questions_free(statistics->questions);
     g_array_free(statistics->states, TRUE);
 }
 
 static void update_question(statistics_t *statistics, GtkWindow *window)
 {
     GtkBuilder *builder = GTK_BUILDER(g_object_get_data(G_OBJECT(window), "pdd-builder"));
-    const pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+    const pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
 
-    gsize i;
     gint count[4] = {0, 0, 0, 0};
-    for (i = 0; i < statistics->states->len; i++)
+    for (gsize i = 0; i < statistics->states->len; i++)
     {
         count[g_array_index(statistics->states, gint8, i)]++;
     }
 
-    gchar *progress_text = g_strdup_printf("Вопрос %d из %d", statistics->index + 1, statistics->questions->len);
+    gchar *progress_text = g_strdup_printf("Вопрос %d из %ld", statistics->index + 1, pddby_array_size(statistics->questions));
     if (count[IncorrectState] || count[SkippedState])
     {
         gchar *new_progress_text;
@@ -207,11 +221,11 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     g_list_free(list);
 
     gtk_container_foreach(GTK_CONTAINER(answers_box), (GtkCallback)gtk_widget_destroy, NULL);
-    pdd_answers_t *answers = answer_find_by_question(question->id);
+    pddby_answers_t *answers = pddby_answers_find_by_question(question->pddby, question->id);
     GtkWidget *answer_radio = NULL;
-    for (i = 0; i < answers->len; i++)
+    for (gsize i = 0, size = pddby_array_size(answers); i < size; i++)
     {
-        const pdd_answer_t *answer = g_ptr_array_index(answers, i);
+        const pddby_answer_t *answer = pddby_array_index(answers, i);
         GtkWidget *radio = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answer_radio), answer->text);
         gtk_label_set_line_wrap(GTK_LABEL(gtk_bin_get_child(GTK_BIN(radio))), TRUE);
         gtk_widget_set_size_request(radio, 400, -1);
@@ -228,7 +242,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
         }
         answer_radio = radio;
     }
-    answer_free_all(answers);
+    pddby_answers_free(answers);
     gtk_widget_show_all(GTK_WIDGET(answers_box));
 
     GtkFrame *image_frame = GTK_FRAME(gtk_builder_get_object(builder, "frm_image"));
@@ -237,7 +251,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     {
         gtk_widget_show_all(GTK_WIDGET(image_frame));
         GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
-        pdd_image_t *image = image_find_by_id(question->image_id);
+        pddby_image_t *image = pddby_image_find_by_id(question->pddby, question->image_id);
         GError *err = NULL;
         if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
         {
@@ -247,7 +261,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
         {
             g_error("%s\n", err->message);
         }
-        image_free(image);
+        pddby_image_free(image);
         GdkPixbuf *pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
         pixbuf = gdk_pixbuf_scale_simple(pixbuf, 350, 350 * gdk_pixbuf_get_height(pixbuf) /
             gdk_pixbuf_get_width(pixbuf), GDK_INTERP_BILINEAR);
@@ -257,7 +271,7 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
     }
     else
     {
-        gtk_widget_hide_all(GTK_WIDGET(image_frame));
+        gtk_widget_hide(GTK_WIDGET(image_frame));
         gtk_image_set_from_pixbuf(question_image, NULL);
     }
 }
@@ -286,6 +300,7 @@ static void show_results(GtkWindow *window, statistics_t *statistics)
     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(results_dialog), "%s", count_text);
     g_free(count_text);
     gtk_window_set_title(GTK_WINDOW(results_dialog), "Результат");
+    gtk_window_set_position(GTK_WINDOW(results_dialog), GTK_WIN_POS_CENTER);
     gtk_dialog_run(GTK_DIALOG(results_dialog));
     gtk_widget_destroy(results_dialog);
 
@@ -295,18 +310,19 @@ static void show_results(GtkWindow *window, statistics_t *statistics)
 static void fetch_next_question(statistics_t *statistics, GtkWindow *window)
 {
     gint old_index = statistics->index;
-    statistics->index = (statistics->index + 1) % statistics->questions->len;
+    statistics->index = (statistics->index + 1) % pddby_array_size(statistics->questions);
     statistics->try_count = 0;
 
     while (statistics->index != old_index &&
         g_array_index(statistics->states, gint8, statistics->index) != UnknownState &&
         g_array_index(statistics->states, gint8, statistics->index) != SkippedState)
     {
-        statistics->index = (statistics->index + 1) % statistics->questions->len;
+        statistics->index = (statistics->index + 1) % pddby_array_size(statistics->questions);
     }
 
     if (statistics->index == old_index)
     {
+        statistics->is_active = FALSE;
         show_results(window, statistics);
         return;
     }
@@ -391,7 +407,7 @@ static void on_question_answer(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
                 GtkWidget *error_dialog = gtk_message_dialog_new_with_markup(window, GTK_DIALOG_MODAL,
                     GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
                     "<span size='large' weight='bold'>Правильный ответ: %d</span>", statistics->correct_index + 1);
-                const gchar *advice = ((pdd_question_t *)g_ptr_array_index(statistics->questions, statistics->index))->
+                const gchar *advice = ((pddby_question_t *)pddby_array_index(statistics->questions, statistics->index))->
                     advice;
                 if (advice)
                 {
@@ -419,7 +435,7 @@ static void on_question_skip(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 static void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+    pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
     GtkWidget *dialog = help_dialog_new_with_traffregs(question);
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
@@ -428,7 +444,7 @@ static void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow 
 static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
 {
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    pdd_question_t *question = g_ptr_array_index(statistics->questions, statistics->index);
+    pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
     GtkWidget *dialog = help_dialog_new_with_comment(question);
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
@@ -438,7 +454,7 @@ GNUC_VISIBLE void on_question_pause(GtkWidget *widget)
 {
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    if (!statistics->is_exam)
+    if (!statistics->is_active || !statistics->is_exam)
     {
         return;
     }
@@ -465,7 +481,7 @@ GNUC_VISIBLE void on_question_resume(GtkWidget *widget)
 {
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
-    if (!statistics->is_exam)
+    if (!statistics->is_active || !statistics->is_exam)
     {
         return;
     }
@@ -499,6 +515,7 @@ static gboolean on_exam_timer(GtkWindow *window)
     if (!approx_remaining)
     {
         statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
+        statistics->is_active = FALSE;
         show_results(window, statistics);
         return FALSE;
     }

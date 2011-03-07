@@ -1,116 +1,168 @@
 #include "comment.h"
-#include "config.h"
-#include "database.h"
 
-static pdd_comment_t *comment_new_with_id(gint64 id, gint32 number, const gchar *text)
+#include "config.h"
+#include "private/util/database.h"
+#include "private/util/report.h"
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
+static pddby_comment_t* pddby_comment_new_with_id(pddby_t* pddby, int64_t id, int32_t number, char const* text)
 {
-    pdd_comment_t *comment = g_new(pdd_comment_t, 1);
+    pddby_comment_t* comment = calloc(1, sizeof(pddby_comment_t));
+    if (!comment)
+    {
+        goto error;
+    }
+
+    comment->text = text ? strdup(text) : NULL;
+    if (text && !comment->text)
+    {
+        goto error;
+    }
+
     comment->id = id;
     comment->number = number;
-    comment->text = g_strdup(text);
+    comment->pddby = pddby;
+
     return comment;
-}
 
-pdd_comment_t *comment_new(gint32 number, const gchar *text)
-{
-    return comment_new_with_id(0, number, text);
-}
-
-void comment_free(pdd_comment_t *comment)
-{
-    g_free(comment->text);
-    g_free(comment);
-}
-
-gboolean comment_save(pdd_comment_t *comment)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create comment object");
+    if (comment)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `comments` (`number`, `text`) VALUES (?, ?)", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        pddby_comment_free(comment);
+    }
+    return NULL;
+}
+
+pddby_comment_t* pddby_comment_new(pddby_t* pddby, int32_t number, char const* text)
+{
+    return pddby_comment_new_with_id(pddby, 0, number, text);
+}
+
+void pddby_comment_free(pddby_comment_t* comment)
+{
+    assert(comment);
+
+    if (comment->text)
+    {
+        free(comment->text);
+    }
+    free(comment);
+}
+
+int pddby_comment_save(pddby_comment_t* comment)
+{
+    assert(comment);
+
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(comment->pddby, "INSERT INTO `comments` (`number`, `text`) VALUES (?, ?)");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int(stmt, 1, comment->number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_bind_text(stmt, 2, comment->text, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-
-    comment->id = sqlite3_last_insert_rowid(db);
-
-    return TRUE;
-}
-
-pdd_comment_t *comment_find_by_id(gint64 id)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int(db_stmt, 1, comment->number) ||
+        !pddby_db_bind_text(db_stmt, 2, comment->text))
     {
-        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        goto error;
     }
 
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
+    int ret = pddby_db_step(db_stmt);
+    if (ret == -1)
     {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        goto error;
+    }
+
+    assert(ret == 0);
+
+    comment->id = pddby_db_last_insert_id(comment->pddby);
+
+    return 1;
+
+error:
+    pddby_report(comment->pddby, pddby_message_type_error, "unable to save comment object");
+    return 0;
+}
+
+pddby_comment_t* pddby_comment_find_by_id(pddby_t* pddby, int64_t id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `number`, `text` FROM `comments` WHERE `rowid`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, id))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
         return NULL;
     }
 
-    gint32 number = sqlite3_column_int(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
+    int32_t number = pddby_db_column_int(db_stmt, 0);
+    char const* text = pddby_db_column_text(db_stmt, 1);
 
-    return comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(pddby, id, number, text);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find comment object with id = %lld", id);
+    return NULL;
 }
 
-pdd_comment_t *comment_find_by_number(gint32 number)
+pddby_comment_t* pddby_comment_find_by_number(pddby_t* pddby, int32_t number)
 {
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text` FROM `comments` WHERE `number`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
     }
 
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int(stmt, 1, number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int(db_stmt, 1, number))
     {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
         return NULL;
     }
 
-    gint32 id = sqlite3_column_int64(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
+    int64_t id = pddby_db_column_int64(db_stmt, 0);
+    char const* text = pddby_db_column_text(db_stmt, 1);
 
-    return comment_new_with_id(id, number, text);
+    return pddby_comment_new_with_id(pddby, id, number, text);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find comment object with number = %d", number);
+    return NULL;
 }

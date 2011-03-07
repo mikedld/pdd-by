@@ -1,214 +1,276 @@
 #include "traffreg.h"
+
 #include "config.h"
-#include "database.h"
+#include "private/util/database.h"
+#include "private/util/report.h"
 #include "question.h"
 
-static pdd_traffreg_t *traffreg_new_with_id(gint64 id, gint32 number, const gchar *text)
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
+static pddby_traffreg_t* pddby_traffreg_new_with_id(pddby_t* pddby, int64_t id, int32_t number, char const* text)
 {
-    pdd_traffreg_t *traffreg = g_new(pdd_traffreg_t, 1);
+    pddby_traffreg_t *traffreg = malloc(sizeof(pddby_traffreg_t));
+    if (!traffreg)
+    {
+        goto error;
+    }
+
+    traffreg->text = text ? strdup(text) : 0;
+    if (text && !traffreg->text)
+    {
+        goto error;
+    }
+
     traffreg->id = id;
     traffreg->number = number;
-    traffreg->text = g_strdup(text);
+    traffreg->pddby = pddby;
+
     return traffreg;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to create traffreg object");
+    if (traffreg)
+    {
+        pddby_traffreg_free(traffreg);
+    }
+    return NULL;
 }
 
-static pdd_traffreg_t *traffreg_copy(const pdd_traffreg_t *traffreg)
+pddby_traffreg_t* pddby_traffreg_new(pddby_t* pddby, int32_t number, char const* text)
 {
-    return traffreg_new_with_id(traffreg->id, traffreg->number, traffreg->text);
+    return pddby_traffreg_new_with_id(pddby, 0, number, text);
 }
 
-pdd_traffreg_t *traffreg_new(gint32 number, const gchar *text)
+void pddby_traffreg_free(pddby_traffreg_t* traffreg)
 {
-    return traffreg_new_with_id(0, number, text);
+    assert(traffreg);
+
+    if (traffreg->text)
+    {
+        free(traffreg->text);
+    }
+    free(traffreg);
 }
 
-void traffreg_free(pdd_traffreg_t *traffreg)
+int pddby_traffreg_save(pddby_traffreg_t* traffreg)
 {
-    g_free(traffreg->text);
-    g_free(traffreg);
-}
+    assert(traffreg);
 
-gboolean traffreg_save(pdd_traffreg_t *traffreg)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
     {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `traffregs` (`number`, `text`) VALUES (?, ?)", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int(stmt, 1, traffreg->number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_bind_text(stmt, 2, traffreg->text, -1, NULL);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-
-    traffreg->id = sqlite3_last_insert_rowid(db);
-
-    return TRUE;
-}
-
-gboolean traffreg_set_images(pdd_traffreg_t *traffreg, pdd_images_t *images)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)", -1,
-            &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    gsize i;
-    for (i = 0; i < images->len; i++)
-    {
-        pdd_image_t *image = ((pdd_image_t **)images->pdata)[i];
-
-        result = sqlite3_reset(stmt);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-        result = sqlite3_bind_int64(stmt, 1, image->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-        result = sqlite3_bind_int64(stmt, 2, traffreg->id);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-        result = sqlite3_step(stmt);
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-    }
-
-    return TRUE;
-}
-
-pdd_traffreg_t *traffreg_find_by_id(gint64 id)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
-    {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return NULL;
-    }
-
-    gint32 number = sqlite3_column_int(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
-
-    return traffreg_new_with_id(id, number, text);
-}
-
-pdd_traffreg_t *traffreg_find_by_number(gint32 number)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1", -1, &stmt,
-            NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int(stmt, 1, number);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    result = sqlite3_step(stmt);
-    if (result != SQLITE_ROW)
-    {
-        database_expect(result, SQLITE_DONE, __FUNCTION__, "unable to perform statement");
-        return NULL;
-    }
-
-    gint64 id = sqlite3_column_int64(stmt, 0);
-    const gchar *text = (const gchar *)sqlite3_column_text(stmt, 1);
-
-    return traffreg_new_with_id(id, number, text);
-}
-
-pdd_traffregs_t *traffreg_find_by_question(G_GNUC_UNUSED gint64 question_id)
-{
-    static sqlite3_stmt *stmt = NULL;
-    sqlite3 *db = database_get();
-    int result;
-
-    if (!stmt)
-    {
-        result = sqlite3_prepare_v2(db, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
-            "`questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?", -1, &stmt, NULL);
-        database_expect(result, SQLITE_OK, __FUNCTION__, "unable to prepare statement");
-    }
-
-    result = sqlite3_reset(stmt);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to reset prepared statement");
-
-    result = sqlite3_bind_int64(stmt, 1, question_id);
-    database_expect(result, SQLITE_OK, __FUNCTION__, "unable to bind param");
-
-    pdd_traffregs_t *traffregs = g_ptr_array_new();
-
-    while (TRUE)
-    {
-        result = sqlite3_step(stmt);
-        if (result == SQLITE_DONE)
+        db_stmt = pddby_db_prepare(traffreg->pddby, "INSERT INTO `traffregs` (`number`, `text`) VALUES (?, ?)");
+        if (!db_stmt)
         {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int(db_stmt, 1, traffreg->number) ||
+        !pddby_db_bind_text(db_stmt, 2, traffreg->text))
+    {
+        goto error;
+    }
+
+    int ret = pddby_db_step(db_stmt);
+    if (ret == -1)
+    {
+        goto error;
+    }
+
+    assert(ret == 0);
+
+    traffreg->id = pddby_db_last_insert_id(traffreg->pddby);
+
+    return 1;
+
+error:
+    pddby_report(traffreg->pddby, pddby_message_type_error, "unable to save traffreg object");
+    return 0;
+}
+
+int pddby_traffreg_set_images(pddby_traffreg_t* traffreg, pddby_images_t* images)
+{
+    assert(traffreg);
+    assert(images);
+
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(traffreg->pddby, "INSERT INTO `images_traffregs` (`image_id`, `traffreg_id`) VALUES (?, ?)");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    for (size_t i = 0, size = pddby_array_size(images); i < size; i++)
+    {
+        pddby_image_t* image = pddby_array_index(images, i);
+
+        if (!pddby_db_reset(db_stmt) ||
+            !pddby_db_bind_int64(db_stmt, 1, image->id) ||
+            !pddby_db_bind_int64(db_stmt, 2, traffreg->id))
+        {
+            goto error;
+        }
+
+        int ret = pddby_db_step(db_stmt);
+        if (ret == -1)
+        {
+            goto error;
+        }
+
+        assert(ret == 0);
+    }
+
+    return 1;
+
+error:
+    pddby_report(traffreg->pddby, pddby_message_type_error, "unable to set traffreg object images");
+    return 0;
+}
+
+pddby_traffreg_t* pddby_traffreg_find_by_id(pddby_t* pddby, int64_t id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `number`, `text` FROM `traffregs` WHERE `rowid`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, id))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    int32_t number = pddby_db_column_int(db_stmt, 0);
+    char const*text = pddby_db_column_text(db_stmt, 1);
+
+    return pddby_traffreg_new_with_id(pddby, id, number, text);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg object with id = %lld", id);
+    return NULL;
+}
+
+pddby_traffreg_t* pddby_traffreg_find_by_number(pddby_t* pddby, int32_t number)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT `rowid`, `text` FROM `traffregs` WHERE `number`=? LIMIT 1");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int(db_stmt, 1, number))
+    {
+        goto error;
+    }
+
+    switch (pddby_db_step(db_stmt))
+    {
+    case -1:
+        goto error;
+    case 0:
+        return NULL;
+    }
+
+    int64_t id = pddby_db_column_int64(db_stmt, 0);
+    char const*text = pddby_db_column_text(db_stmt, 1);
+
+    return pddby_traffreg_new_with_id(pddby, id, number, text);
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg object with number = %d", number);
+    return NULL;
+}
+
+pddby_traffregs_t* pddby_traffregs_new(pddby_t* pddby)
+{
+    return pddby_array_new(pddby, (pddby_array_free_func_t)pddby_traffreg_free);
+}
+
+pddby_traffregs_t* pddby_traffregs_find_by_question(pddby_t* pddby, int64_t question_id)
+{
+    static pddby_db_stmt_t* db_stmt = NULL;
+    if (!db_stmt)
+    {
+        db_stmt = pddby_db_prepare(pddby, "SELECT t.`rowid`, t.`number`, t.`text` FROM `traffregs` t INNER JOIN "
+            "`questions_traffregs` qt ON t.`rowid`=qt.`traffreg_id` WHERE qt.`question_id`=?");
+        if (!db_stmt)
+        {
+            goto error;
+        }
+    }
+
+    if (!pddby_db_reset(db_stmt) ||
+        !pddby_db_bind_int64(db_stmt, 1, question_id))
+    {
+        goto error;
+    }
+
+    pddby_traffregs_t* traffregs = pddby_traffregs_new(pddby);
+    if (!traffregs)
+    {
+        goto error;
+    }
+
+    int ret;
+    while ((ret = pddby_db_step(db_stmt)) == 1)
+    {
+        int64_t id = pddby_db_column_int64(db_stmt, 0);
+        int32_t number = pddby_db_column_int(db_stmt, 1);
+        char const*text = pddby_db_column_text(db_stmt, 2);
+
+        if (!pddby_array_add(traffregs, pddby_traffreg_new_with_id(pddby, id, number, text)))
+        {
+            ret = -1;
             break;
         }
-        database_expect(result, SQLITE_ROW, __FUNCTION__, "unable to perform statement");
+    }
 
-        gint64 id = sqlite3_column_int64(stmt, 0);
-        gint number = sqlite3_column_int(stmt, 1);
-        const gchar *text = (const gchar *)sqlite3_column_text(stmt, 2);
-
-        g_ptr_array_add(traffregs, traffreg_new_with_id(id, number, text));
+    if (ret == -1)
+    {
+        pddby_traffregs_free(traffregs);
+        goto error;
     }
 
     return traffregs;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to find traffreg objects with question id = %lld",
+        question_id);
+    return NULL;
 }
 
-pdd_traffregs_t *traffreg_copy_all(pdd_traffregs_t *traffregs)
+void pddby_traffregs_free(pddby_traffregs_t* traffregs)
 {
-    pdd_traffregs_t *traffregs_copy = g_ptr_array_new();
-    gsize i;
-    for (i = 0; i < traffregs->len; i++)
-    {
-        const pdd_traffreg_t *traffreg = g_ptr_array_index(traffregs, i);
-        g_ptr_array_add(traffregs_copy, traffreg_copy(traffreg));
-    }
-    return traffregs_copy;
-}
+    assert(traffregs);
 
-void traffreg_free_all(pdd_traffregs_t *traffregs)
-{
-    g_ptr_array_foreach(traffregs, (GFunc)traffreg_free, NULL);
-    g_ptr_array_free(traffregs, TRUE);
+    pddby_array_free(traffregs, 1);
 }

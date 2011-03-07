@@ -1,11 +1,21 @@
-project(pddby-gtk C)
+project(pddby-gtk NONE)
+
+find_package(GTK2 REQUIRED COMPONENTS gtk)
 
 set(MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}")
-set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
-set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
+
+add_definitions(-std=c99)
+
+add_definitions(
+    -DGTK_DISABLE_SINGLE_INCLUDES
+    -DGDK_DISABLE_DEPRECATED
+    -DGTK_DISABLE_DEPRECATED
+    -DGSEAL_ENABLE
+)
 
 set(${PROJECT_NAME}_HEADERS
     chooser_dialog.h
+    decode_progress_window.h
     help_dialog.h
     main_window.h
     question_window.h
@@ -15,6 +25,7 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_SOURCES
     chooser_dialog.c
+    decode_progress_window.c
     help_dialog.c
     main.c
     main_window.c
@@ -25,6 +36,7 @@ set(${PROJECT_NAME}_SOURCES
 
 set(${PROJECT_NAME}_UI_FILES
     ui/chooser_dialog.ui
+    ui/decode_progress_window.ui
     ui/help_dialog.ui
     ui/main_window.ui
     ui/question_window.ui
@@ -40,12 +52,11 @@ set_source_files_properties(${pddby_SQL_FILES} PROPERTIES
 )
 
 include_directories(
-    ${GTK2_INCLUDE_DIRS}
     ${SQLITE3_INCLUDE_DIRS}
+    ${GTK2_INCLUDE_DIRS}
 )
 
 link_directories(
-    ${GTK2_LIBRARY_DIRS}
     ${SQLITE3_LIBRARY_DIRS}
 )
 
@@ -62,8 +73,11 @@ add_dependencies(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     pddby
-    ${GTK2_LIBRARIES}
     ${SQLITE3_LIBRARIES}
+    ${PCRE_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    ${ICONV_LIBRARIES}
+    ${GTK2_LIBRARIES}
 )
 
 if(APPLE)

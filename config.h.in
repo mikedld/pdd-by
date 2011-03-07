@@ -1,18 +1,9 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef PDDBY_CONFIG_H
+#define PDDBY_CONFIG_H
 
 #cmakedefine PDDBY_VERSION "${PDDBY_VERSION}"
-
 #cmakedefine PDDBY_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/${PDDBY_SHARE_DIR}"
 
-#if __GNUC__ >= 4
-#define GNUC_VISIBLE __attribute__((visibility("default")))
-#else
-#define GNUC_VISIBLE
-#endif
+#cmakedefine PDDBY_BIG_ENDIAN
 
-#ifndef sqlite3_prepare_v2
-#define sqlite3_prepare_v2 sqlite3_prepare
-#endif
-
-#endif // CONFIG_H
+#endif // PDDBY_CONFIG_H

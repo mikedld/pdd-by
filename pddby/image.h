@@ -1,28 +1,43 @@
-#ifndef IMAGE_H
-#define IMAGE_H
+#ifndef PDDBY_IMAGE_H
+#define PDDBY_IMAGE_H
 
-#include <glib.h>
-
-typedef struct pdd_image_s
+#ifdef __cplusplus
+extern "C"
 {
-    gint64 id;
-    gchar *name;
-    gpointer data;
-    gsize data_length;
-} pdd_image_t;
+#endif
 
-typedef GPtrArray pdd_images_t;
+#include "array.h"
+#include "pddby.h"
 
-pdd_image_t *image_new(const gchar *name, gconstpointer data, gsize data_length);
-void image_free(pdd_image_t *image);
+#include <stdint.h>
 
-gboolean image_save(pdd_image_t *image);
+struct pddby_image
+{
+    pddby_t* pddby;
 
-pdd_image_t *image_find_by_id(gint64 id);
-pdd_image_t *image_find_by_name(const gchar *name);
+    int64_t id;
+    char* name;
+    void* data;
+    size_t data_length;
+};
 
-pdd_images_t *image_find_by_traffreg(gint64 traffreg_id);
-pdd_images_t *image_copy_all(const pdd_images_t *images);
-void image_free_all(pdd_images_t *images);
+typedef struct pddby_image pddby_image_t;
+typedef pddby_array_t pddby_images_t;
 
-#endif // IMAGE_H
+pddby_image_t* pddby_image_new(pddby_t* pddby, char const* name, void const* data, size_t data_length);
+void pddby_image_free(pddby_image_t* image);
+
+int pddby_image_save(pddby_image_t* image);
+
+pddby_image_t* pddby_image_find_by_id(pddby_t* pddby, int64_t id);
+pddby_image_t* pddby_image_find_by_name(pddby_t* pddby, char const* name);
+
+pddby_images_t* pddby_images_new(pddby_t* pddby);
+pddby_images_t* pddby_images_find_by_traffreg(pddby_t* pddby, int64_t traffreg_id);
+void pddby_images_free(pddby_images_t* images);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // PDDBY_IMAGE_H
