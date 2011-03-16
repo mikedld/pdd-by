@@ -84,6 +84,11 @@ if(APPLE)
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreFoundation"
     )
+
+    install(CODE "
+        include(BundleUtilities)
+        fixup_bundle(\"${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.app\" \"\" \"\")
+    ")
 elseif(UNIX)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         LINK_FLAGS "-export-dynamic"
