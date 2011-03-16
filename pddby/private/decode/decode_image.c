@@ -144,10 +144,10 @@ static int pddby_decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* b
     }
 
     ctx->a[0] = pddby_delphi_get_randseed();
-    // initializes both `a` and `x`
-    for (size_t i = 1; i < 12; i++)
+    for (size_t i = 0; i < 11; i++)
     {
-        ctx->a[i] = ctx->a[i - 1] * 69069 + 1;
+        uint32_t* p = i < 7 ? &ctx->a[i] : &ctx->x[i - 7];
+        p[1] = p[0] * 69069 + 1;
     }
 
     ctx->c1 = 0;
