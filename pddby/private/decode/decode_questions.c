@@ -77,6 +77,7 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
 
     pddby_regex_t* question_data_regex = NULL;
     pddby_regex_t* answers_regex = NULL;
+    pddby_regex_t* answer_regex = NULL;
     pddby_regex_t* word_break_regex = NULL;
     pddby_regex_t* spaces_regex = NULL;
     char* str = NULL;
@@ -94,9 +95,16 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
         goto error;
     }
 
-    answers_regex = pddby_regex_new(context->pddby, "^($^$)?\\d\\.?\\s+", PDDBY_REGEX_MULTILINE |
-        PDDBY_REGEX_NEWLINE_ANY);
+    answers_regex = pddby_regex_new(context->pddby, "\r\n\r\n", PDDBY_REGEX_NEWLINE_ANY);
     if (!answers_regex)
+    {
+        goto error;
+    }
+
+    // for those curious, \xd0\x97 stands for russian letter 'Z' which looks quite similar to digit '3'
+    answer_regex = pddby_regex_new(context->pddby, "^(?:\\d+|\xd0\x97)\\.?\\s+(.*)$", PDDBY_REGEX_DOTALL |
+        PDDBY_REGEX_NEWLINE_ANY);
+    if (!answer_regex)
     {
         goto error;
     }
@@ -256,17 +264,27 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
                         goto cycle_error;
                     }
 
-                    char** a = answers + 1;
+                    char** a = answers;
                     while (*a)
                     {
-                        char* answer_text = pddby_regex_replace_literal(word_break_regex, *a, "");
-                        if (!answer_text)
+                        pddby_regex_match_t* match;
+                        if (!pddby_regex_match(answer_regex, *a, &match))
                         {
                             pddby_stringv_free(answers);
                             goto cycle_error;
                         }
 
-                        char* answer_text2 = pddby_regex_replace_literal(spaces_regex, answer_text, " ");
+                        char* answer_text = pddby_string_chomp(pddby_regex_match_fetch(match, 1));
+                        if (!answer_text)
+                        {
+                            pddby_regex_match_free(match);
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
+                        pddby_regex_match_free(match);
+
+                        char* answer_text2 = pddby_regex_replace_literal(word_break_regex, answer_text, "");
                         free(answer_text);
                         if (!answer_text2)
                         {
@@ -274,8 +292,16 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
                             goto cycle_error;
                         }
 
-                        pddby_answer_t *answer = pddby_answer_new(context->pddby, 0, answer_text2, 0);
+                        char* answer_text3 = pddby_regex_replace_literal(spaces_regex, answer_text2, " ");
                         free(answer_text2);
+                        if (!answer_text3)
+                        {
+                            pddby_stringv_free(answers);
+                            goto cycle_error;
+                        }
+
+                        pddby_answer_t *answer = pddby_answer_new(context->pddby, 0, answer_text3, 0);
+                        free(answer_text3);
                         if (!answer)
                         {
                             pddby_stringv_free(answers);
@@ -445,6 +471,7 @@ cycle_error:
     free(str);
     pddby_regex_free(spaces_regex);
     pddby_regex_free(word_break_regex);
+    pddby_regex_free(answer_regex);
     pddby_regex_free(answers_regex);
     pddby_regex_free(question_data_regex);
 
@@ -464,6 +491,10 @@ error:
     if (word_break_regex)
     {
         pddby_regex_free(word_break_regex);
+    }
+    if (answer_regex)
+    {
+        pddby_regex_free(answer_regex);
     }
     if (answers_regex)
     {
