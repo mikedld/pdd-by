@@ -33,7 +33,7 @@ pddby_regex_t* pddby_regex_new(pddby_t* pddby, char const* pattern, int options)
     char const* error_text;
     int error_offset;
 
-    int pcre_options = 0;
+    int pcre_options = PCRE_UTF8;
     pcre_options |= (options & PDDBY_REGEX_MULTILINE) ? PCRE_MULTILINE : 0;
     pcre_options |= (options & PDDBY_REGEX_DOTALL) ? PCRE_DOTALL : 0;
     pcre_options |= (options & PDDBY_REGEX_NEWLINE_ANY) ? PCRE_NEWLINE_ANY : 0;

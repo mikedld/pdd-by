@@ -245,22 +245,22 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
         {
             "^~\\s*.+?$\\s*",
             "",
-            PDDBY_REGEX_NEWLINE_ANY
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
         },
         {
             "^\\^R\\^(.+?)$\\s*",
             "<span underline='single' underline_color='#cc0000'><b>\\1</b></span>",
-            PDDBY_REGEX_NEWLINE_ANY
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
         },
         {
             "^\\^G\\^(.+?)$\\s*",
             "<span underline='single' underline_color='#00cc00'><b>\\1</b></span>",
-            PDDBY_REGEX_NEWLINE_ANY
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
         },
         {
             "^\\^B\\^(.+?)$\\s*",
             "<span underline='single' underline_color='#0000cc'><b>\\1</b></span>",
-            PDDBY_REGEX_NEWLINE_ANY
+            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
         },
         {
             "\\^R(.+?)\\^K",

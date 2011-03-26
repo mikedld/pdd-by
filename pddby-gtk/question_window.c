@@ -437,8 +437,11 @@ static void on_question_show_traffregs(G_GNUC_UNUSED gpointer unused, GtkWindow 
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
     pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
     GtkWidget *dialog = help_dialog_new_with_traffregs(question);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
+    if (dialog)
+    {
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+    }
 }
 
 static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *window)
@@ -446,8 +449,11 @@ static void on_question_show_comment(G_GNUC_UNUSED gpointer unused, GtkWindow *w
     statistics_t *statistics = g_object_get_data(G_OBJECT(window), "pdd-statistics");
     pddby_question_t *question = pddby_array_index(statistics->questions, statistics->index);
     GtkWidget *dialog = help_dialog_new_with_comment(question);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
+    if (dialog)
+    {
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+    }
 }
 
 GNUC_VISIBLE void on_question_pause(GtkWidget *widget)

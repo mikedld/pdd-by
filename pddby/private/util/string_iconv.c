@@ -103,7 +103,7 @@ char* pddby_string_convert(pddby_iconv_t* conv, char const* string, size_t lengt
         dst_len = length;
     }
 
-    result_len -= dst_len;
+    result_len -= dst_len + 1;
     result = realloc(result, result_len);
     if (!result)
     {
