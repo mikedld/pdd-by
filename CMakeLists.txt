@@ -6,9 +6,11 @@ set(PDDBY_VERSION "0.4")
 set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PDDBY_VERSION}")
 set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2009-2011 mike.dld")
 
-option(PDDBY_FRONTEND_BUILD_GTK "Build GTK frontend" ON)
-option(PDDBY_FRONTEND_BUILD_QT "Build Qt frontend" OFF)
-option(PDDBY_FRONTEND_BUILD_COCOA "Build Cocoa frontend" OFF)
+option(PDDBY_FRONTEND_GTK "Build GTK frontend." ON)
+option(PDDBY_FRONTEND_QT "Build Qt frontend." OFF)
+option(PDDBY_FRONTEND_COCOA "Build Cocoa frontend." OFF)
+
+option(PDDBY_STATIC_LIBS "Install static libraries." ON)
 
 if(APPLE)
     set(_conv_backend "cfstring")
@@ -56,23 +58,23 @@ include_directories(
 
 add_subdirectory(pddby)
 
-if(PDDBY_FRONTEND_BUILD_GTK)
+if(PDDBY_FRONTEND_GTK)
     add_subdirectory(pddby-gtk)
 endif()
-if(PDDBY_FRONTEND_BUILD_QT)
+if(PDDBY_FRONTEND_QT)
     enable_language(CXX)
     add_subdirectory(pddby-qt)
 endif()
-if(PDDBY_FRONTEND_BUILD_COCOA)
+if(PDDBY_FRONTEND_COCOA)
     add_subdirectory(pddby-cocoa)
 endif()
 
 message(STATUS "----------------------------------------")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Frontends:"
-    " gtk(${PDDBY_FRONTEND_BUILD_GTK})"
-    " qt(${PDDBY_FRONTEND_BUILD_QT})"
-    " cocoa(${PDDBY_FRONTEND_BUILD_COCOA})")
+    " gtk(${PDDBY_FRONTEND_GTK})"
+    " qt(${PDDBY_FRONTEND_QT})"
+    " cocoa(${PDDBY_FRONTEND_COCOA})")
 message(STATUS "Backends:"
     " conv(${PDDBY_BACKEND_CONV})"
     " regex(${PDDBY_BACKEND_REGEX})")

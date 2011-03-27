@@ -79,3 +79,7 @@ add_library(${PROJECT_NAME}
     ${${PROJECT_NAME}_PRIVATE_SOURCES}
     ${${PROJECT_NAME}_SQL_FILES}
 )
+
+if(PDDBY_STATIC_LIBS)
+    install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+endif()
