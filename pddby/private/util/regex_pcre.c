@@ -46,7 +46,7 @@ pddby_regex_t* pddby_regex_new(pddby_t* pddby, char const* pattern, int options)
     }
 
     D(result)->regex_extra = pcre_study(D(result)->regex, 0, &error_text);
-    if (!D(result)->regex_extra && error_offset)
+    if (!D(result)->regex_extra && error_text)
     {
         pddby_report(pddby, pddby_message_type_error, "unable to study regex: %s", error_text);
         goto error;
