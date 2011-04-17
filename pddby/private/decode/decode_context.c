@@ -244,6 +244,7 @@ static int pddby_decode_init_magic(pddby_decode_context_t* context)
             {
                 // v12
                 {"2d8a027c323c8a8688c42fe5ccd57c5d", 0x1e35, 0x04b5, pddby_decode_string_v12},
+                {"53c99a5ef1df3070ad487d4aff4fc400", 0xaeb0, 0xb430, pddby_decode_string_v12},
                 {"fa3f431b556b9e2529a79eb649531af6", 0x4184, 0x5b04, pddby_decode_string_v12},
                 // v13
                 {"7444b8c559cf5a003e1058ece7b267dc", 0x3492, 0x2e12, pddby_decode_string_v13}

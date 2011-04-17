@@ -53,12 +53,16 @@ int pddby_decode(pddby_t* pddby, char const* root_path)
     };
 
     pddby->decode_context = pddby_decode_context_new(pddby, root_path);
+    if (!pddby->decode_context)
+    {
+        goto error;
+    }
 
     for (pddby_decode_stage_t const* stage = s_decode_stages; *stage; stage++)
     {
         if (!(*stage)(pddby))
         {
-            return 0;
+            goto error;
         }
     }
 
@@ -66,6 +70,17 @@ int pddby_decode(pddby_t* pddby, char const* root_path)
     pddby->decode_context = NULL;
 
     return 1;
+
+error:
+    pddby_report(pddby, pddby_message_type_error, "unable to decode");
+
+    if (pddby->decode_context)
+    {
+        pddby_decode_context_free(pddby->decode_context);
+        pddby->decode_context = NULL;
+    }
+
+    return 0;
 }
 
 int pddby_cache_exists(pddby_t* pddby)
