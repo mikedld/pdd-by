@@ -4,6 +4,7 @@
 #include "private/decode/decode_context.h"
 #include "private/pddby.h"
 #include "private/util/database.h"
+#include "private/util/report.h"
 
 #include <assert.h>
 #include <stdlib.h>
