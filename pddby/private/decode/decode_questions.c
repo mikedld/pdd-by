@@ -18,34 +18,105 @@
 
 #include <stdlib.h>
 
-pddby_topic_question_t* pddby_decode_topic_questions_table(pddby_decode_context_t* context, char const* path, size_t* table_size)
+pddby_topic_question_t* pddby_decode_topic_questions_table(pddby_decode_context_t* context, char const* path,
+    size_t* table_size)
 {
+    struct __attribute__((__packed__)) record
+    {
+        int8_t topic_number;
+        int32_t question_offset;
+    };
+
+    struct record* t = NULL;
     pddby_topic_question_t* table = NULL;
 
-    char* t = NULL;
-    if (!pddby_aux_file_get_contents(context->pddby, path, &t, table_size))
+    if (!pddby_aux_file_get_contents(context->pddby, path, (char**)&t, table_size))
     {
         goto error;
     }
 
-    table = (pddby_topic_question_t*)t;
-
-    if (*table_size % sizeof(pddby_topic_question_t))
+    if (*table_size % sizeof(struct record))
     {
         pddby_report(context->pddby, pddby_message_type_error, "invalid file size: %s (should be multiple of %ld)",
-            path, sizeof(pddby_topic_question_t));
+            path, sizeof(struct record));
         goto error;
     }
 
-    *table_size /= sizeof(pddby_topic_question_t);
+    table = malloc(*table_size * sizeof(pddby_topic_question_t));
+    if (!table)
+    {
+        goto error;
+    }
+
+    *table_size /= sizeof(struct record);
 
     for (size_t i = 0; i < *table_size; i++)
     {
-        table[i].question_offset = PDDBY_INT32_FROM_LE(table[i].question_offset) ^ context->data_magic;
+        table[i].topic_number = t[i].topic_number;
+        table[i].question_offset = PDDBY_INT32_FROM_LE(t[i].question_offset) ^ context->part_magic;
         // delphi has file offsets starting from 1, we need 0
         // have to subtract another 1 from it (tell me why it points to 'R', not '[')
-        table[i].question_offset -= 2;
+        //table[i].question_offset -= 2;
     }
+
+    free(t);
+
+    return table;
+
+error:
+    pddby_report(context->pddby, pddby_message_type_error, "unable to decode topic questions table");
+
+    if (table)
+    {
+        free(table);
+    }
+    if (t)
+    {
+        free(t);
+    }
+
+    return NULL;
+}
+
+pddby_topic_question_t* pddby_decode_topic_questions_table_v13(pddby_decode_context_t* context, char const* path,
+    size_t* table_size)
+{
+    struct __attribute__((__packed__)) record
+    {
+        int32_t topic_number;
+        int32_t question_offset;
+    };
+
+    pddby_topic_question_t* table = NULL;
+    struct record* t = NULL;
+
+    if (!pddby_aux_file_get_contents(context->pddby, path, (char**)&t, table_size))
+    {
+        goto error;
+    }
+
+    if (*table_size % sizeof(struct record))
+    {
+        pddby_report(context->pddby, pddby_message_type_error, "invalid file size: %s (should be multiple of %ld)",
+            path, sizeof(struct record));
+        goto error;
+    }
+
+    table = malloc(*table_size * sizeof(pddby_topic_question_t));
+    if (!table)
+    {
+        goto error;
+    }
+
+    *table_size /= sizeof(struct record);
+
+    for (size_t i = 0; i < *table_size; i++)
+    {
+        table[i].topic_number = PDDBY_INT32_FROM_LE(t[i].topic_number) ^ context->magic;
+        table[i].question_offset = PDDBY_INT32_FROM_LE(t[i].question_offset) ^ context->part_magic;
+    }
+
+    free(t);
 
     return table;
 
@@ -60,7 +131,7 @@ error:
     return NULL;
 }
 
-int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt_path, int8_t topic_number,
+int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt_path, int32_t topic_number,
     pddby_topic_question_t* sections_data, size_t sections_data_size)
 {
     pddby_topic_question_t* table = sections_data;
@@ -80,11 +151,10 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
     pddby_regex_t* answer_regex = NULL;
     pddby_regex_t* word_break_regex = NULL;
     pddby_regex_t* spaces_regex = NULL;
-    char* str = NULL;
+    char* dbt_content = NULL;
 
-    size_t str_size;
-    str = context->pddby->decode_context->decode_string(context, dbt_path, &str_size, topic_number);
-    if (!str)
+    size_t dbt_content_size;
+    if (!pddby_aux_file_get_contents(context->pddby, dbt_path, &dbt_content, &dbt_content_size))
     {
         goto error;
     }
@@ -131,7 +201,7 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
     int result = 1;
     for (size_t i = 0; i < table_size; i++)
     {
-        int32_t next_offset = str_size;
+        int32_t next_offset = dbt_content_size;
         for (size_t j = 0; j < table_size; j++)
         {
             if (table[j].question_offset > table[i].question_offset && table[j].question_offset < next_offset)
@@ -140,8 +210,16 @@ int pddby_decode_questions_data(pddby_decode_context_t* context, char const* dbt
             }
         }
 
-        char* text = pddby_string_convert(context->iconv, str + table[i].question_offset, next_offset -
-            table[i].question_offset);
+        size_t str_size = next_offset - table[i].question_offset;
+        char* str = context->decode_question_string(context, dbt_content + table[i].question_offset, &str_size,
+            topic_number, table[i].question_offset);
+        if (!str)
+        {
+            goto error;
+        }
+
+        char* text = pddby_string_convert(context->iconv, str, str_size);
+        free(str);
         if (!text)
         {
             goto error;
@@ -468,7 +546,7 @@ cycle_error:
         goto error;
     }
 
-    free(str);
+    free(dbt_content);
     pddby_regex_free(spaces_regex);
     pddby_regex_free(word_break_regex);
     pddby_regex_free(answer_regex);
@@ -480,9 +558,9 @@ cycle_error:
 error:
     pddby_report(context->pddby, pddby_message_type_error, "unable to decode questions data");
 
-    if (str)
+    if (dbt_content)
     {
-        free(str);
+        free(dbt_content);
     }
     if (spaces_regex)
     {

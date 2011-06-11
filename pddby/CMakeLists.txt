@@ -31,6 +31,8 @@ set(${PROJECT_NAME}_PRIVATE_HEADERS
     private/decode/decode_context.h
     private/decode/decode_image.h
     private/decode/decode_questions.h
+    private/decode/rolling_stones.h
+    private/decode/simple_data_parser.h
     private/pddby.h
     private/platform.h
     private/util/aux.h
@@ -47,6 +49,8 @@ set(${PROJECT_NAME}_PRIVATE_SOURCES
     private/decode/decode_context.c
     private/decode/decode_image.c
     private/decode/decode_questions.c
+    private/decode/rolling_stones.c
+    private/decode/simple_data_parser.c
     private/util/aux.c
     private/util/database.c
     private/util/delphi.c

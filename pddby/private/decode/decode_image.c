@@ -1,5 +1,7 @@
 #include "decode_image.h"
 
+#include "rolling_stones.h"
+
 #include "image.h"
 #include "private/util/aux.h"
 #include "private/util/delphi.h"
@@ -14,37 +16,6 @@
 #ifdef DMALLOC
 #include <dmalloc.h>
 #endif
-
-struct bpftcam_context
-{
-    uint32_t c1;
-    uint32_t c2;
-    uint32_t c3;
-    uint32_t i1[4];
-    uint32_t i2[4];
-    uint32_t r[8];
-    uint32_t a[8];
-    uint32_t x[4];
-};
-
-typedef struct bpftcam_context bpftcam_context_t;
-
-static inline uint32_t rol(uint32_t value, uint8_t shift)
-{
-    return (value << shift) | (value >> (32 - shift));
-}
-
-static inline uint32_t ror(uint32_t value, uint8_t shift)
-{
-    return (value >> shift) | (value << (32 - shift));
-}
-
-static inline void swap(uint32_t* left, uint32_t* right)
-{
-    uint32_t const temp = *left;
-    *left = *right;
-    *right = temp;
-}
 
 static int pddby_init_randseed_for_image(char const* name, uint16_t magic)
 {
@@ -136,104 +107,27 @@ static pddby_image_t* pddby_decode_image_bpft(pddby_t* pddby, char* basename, ui
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 4, data_size - 4);
 }
 
-static int pddby_decode_image_bpftcam_init(bpftcam_context_t* ctx, char const* basename, uint16_t magic)
-{
-    if (!pddby_init_randseed_for_image(basename, magic))
-    {
-        return 0;
-    }
-
-    ctx->a[0] = pddby_delphi_get_randseed();
-    for (size_t i = 1; i < 12; i++)
-    {
-        uint32_t const* prev = i < 9 ? &ctx->a[i - 1] : &ctx->x[i - 9];
-        uint32_t* curr = i < 8 ? &ctx->a[i] : &ctx->x[i - 8];
-        *curr = *prev * 69069 + 1;
-    }
-
-    ctx->c1 = 0;
-    ctx->c2 = 0;
-    ctx->c3 = 0;
-    for (size_t i = 0; i < 4; i++)
-    {
-        ctx->i1[i] = ror((ctx->a[i] >> 5) ^ (ctx->a[i] * 17), i + 1) % 3;
-        ctx->c1 = ctx->a[i] + ((ctx->c1 * (ctx->c1 + 1)) >> 1);
-    }
-    for (size_t i = 4; i < 8; i++)
-    {
-        ctx->i2[7 - i] = rol((ctx->a[i] >> 5) ^ (ctx->a[i] * 17), i + 1) % 3;
-        ctx->c2 = ctx->a[i] + ((ctx->c2 * (ctx->c2 + 1)) >> 1);
-    }
-    for (size_t i = 0; i < 8; i++)
-    {
-        ctx->r[i] = (rol((i + 1) ^ ctx->a[i], 8 - i) % 0x1f) + 1;
-        ctx->c3 += (i + 1) * ctx->a[i];
-    }
-    ctx->c1 = (ctx->c1 ^ (ctx->c1 >> 16)) & 3;
-    ctx->c2 = (ctx->c2 ^ (ctx->c2 >> 16)) & 3;
-    ctx->c3 = (ctx->c3 ^ (ctx->c3 >> 16)) & 3;
-
-    return 1;
-}
-
-static uint8_t pddby_decode_image_bpftcam_next(bpftcam_context_t* ctx)
-{
-    for (size_t i = 0; i < 4; i++)
-    {
-        uint32_t j = ctx->i1[i];
-        uint32_t k = ctx->i2[i];
-        for (size_t l = 0; l < 4; l++)
-        {
-            if (j == ctx->c1)
-            {
-                ctx->x[0] += ctx->a[j] + ctx->x[3] + ror((ctx->x[1] >> 9) ^ (ctx->x[1] * 65), ctx->r[k + j]);
-            }
-            else
-            {
-                ctx->x[0] += ctx->x[3] + ror(ctx->a[j] + ((ctx->x[1] >> 9) ^ (ctx->x[1] * 65)), ctx->r[k + j]);
-            }
-            if (k == ctx->c2)
-            {
-                ctx->x[1] += ctx->a[j + 1] + ctx->x[2] + ror((ctx->x[0] >> 9) ^ (ctx->x[0] * 65), ctx->r[k + j + 1]);
-            }
-            else
-            {
-                ctx->x[1] += ctx->x[2] + ror(ctx->a[j + 1] + ((ctx->x[0] >> 9) ^ (ctx->x[0] * 65)), ctx->r[k + j + 1]);
-            }
-            if (l == ctx->c3)
-            {
-                ctx->x[2] += ctx->a[k + 4] + ((ctx->x[0] >> 5) ^ (ctx->x[0] * 17));
-                ctx->x[3] += ctx->a[k + 5] + ((ctx->x[1] >> 5) ^ (ctx->x[1] * 17));
-            }
-            else
-            {
-                ctx->x[2] ^= ctx->a[k + 4] + ((ctx->x[0] >> 5) ^ (ctx->x[0] * 17));
-                ctx->x[3] ^= ctx->a[k + 5] + ((ctx->x[1] >> 5) ^ (ctx->x[1] * 17));
-            }
-            swap(&ctx->x[0], &ctx->x[2]);
-            swap(&ctx->x[1], &ctx->x[3]);
-            j = (j + 1) % 3;
-            k = (k + 1) % 3;
-        }
-    }
-
-    return *ctx->x;
-}
-
 static pddby_image_t* pddby_decode_image_bpftcam(pddby_t* pddby, char* basename, uint16_t magic, char* data, size_t data_size)
 {
-    // v12 image format
+    // v12/v13 image format
 
-    bpftcam_context_t context;
-    if (!pddby_decode_image_bpftcam_init(&context, basename, magic))
+    if (!pddby_init_randseed_for_image(basename, magic))
+    {
+        return NULL;
+    }
+
+    pddby_rolling_rocks_t* rocks = pddby_rolling_rocks_new(pddby_delphi_get_randseed());
+    if (!rocks)
     {
         return NULL;
     }
 
     for (size_t i = 7; i < data_size; i++)
     {
-        data[i] ^= pddby_decode_image_bpftcam_next(&context);
+        data[i] ^= pddby_rolling_rocks_next(rocks);
     }
+
+    pddby_rolling_rocks_free(rocks);
 
     return pddby_image_new(pddby, pddby_string_delimit(basename, ".", '\0'), data + 7, data_size - 7);
 }

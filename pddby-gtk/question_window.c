@@ -255,7 +255,10 @@ static void update_question(statistics_t *statistics, GtkWindow *window)
         GError *err = NULL;
         if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
         {
-            g_error("%s\n", err->message);
+            //g_error("%s\n", err->message);
+            gtk_widget_hide(GTK_WIDGET(image_frame));
+            gtk_image_set_from_pixbuf(question_image, NULL);
+            return;
         }
         if (!gdk_pixbuf_loader_close(loader, &err))
         {

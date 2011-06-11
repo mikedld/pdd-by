@@ -4,7 +4,7 @@
 #include <dmalloc.h>
 #endif
 
-static uint64_t rand_seed = 0xccba8e81;
+static uint64_t rand_seed = 0;
 
 inline uint32_t pddby_delphi_random(uint32_t limit)
 {

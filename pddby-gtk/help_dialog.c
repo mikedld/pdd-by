@@ -35,7 +35,8 @@ static void add_images_to_box(GtkWidget *box, const pddby_images_t *images)
         GError *err = NULL;
         if (!gdk_pixbuf_loader_write(loader, image->data, image->data_length, &err))
         {
-            g_error("%s\n", err->message);
+            //g_error("%s\n", err->message);
+            continue;
         }
         if (!gdk_pixbuf_loader_close(loader, &err))
         {

@@ -3,6 +3,7 @@
 #include "decode_context.h"
 #include "decode_image.h"
 #include "decode_questions.h"
+#include "simple_data_parser.h"
 
 #include "comment.h"
 #include "config.h"
@@ -208,7 +209,7 @@ static int32_t* pddby_decode_table(pddby_t* pddby, uint16_t magic, char const* p
         {
             table[i] ^= magic;
             // delphi has file offsets starting from 1, we need 0
-            table[i]--;
+            //table[i]--;
         }
     }
 
@@ -229,112 +230,27 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
     pddby_object_new_t object_new, pddby_object_save_t object_save, pddby_object_free_t object_free,
     pddby_object_set_images_t object_set_images)
 {
-    struct markup_regex_data
-    {
-        char const* regex_text;
-        char const* replacement_text;
-        int regex_options;
-    };
-    static struct markup_regex_data const s_markup_regexes_data[] =
-    {
-        {
-            "@(.+?)@",
-            "<span underline='single' underline_color='#ff0000'>\\1</span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "^~\\s*.+?$\\s*",
-            "",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "^\\^R\\^(.+?)$\\s*",
-            "<span underline='single' underline_color='#cc0000'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "^\\^G\\^(.+?)$\\s*",
-            "<span underline='single' underline_color='#00cc00'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "^\\^B\\^(.+?)$\\s*",
-            "<span underline='single' underline_color='#0000cc'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "\\^R(.+?)\\^K",
-            "<span color='#cc0000'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "\\^G(.+?)\\^K",
-            "<span color='#00cc00'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "\\^B(.+?)\\^K",
-            "<span color='#0000cc'><b>\\1</b></span>",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_DOTALL | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "-\\s*$\\s*",
-            "",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "([^.> \t])\\s*$\\s*",
-            "\\1 ",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        },
-        {
-            "[ \t]{2,}",
-            " ",
-            PDDBY_REGEX_MULTILINE | PDDBY_REGEX_NEWLINE_ANY
-        }
-    };
-
-    size_t const markup_regexes_size = sizeof(s_markup_regexes_data) / sizeof(*s_markup_regexes_data);
-
+    pddby_simple_data_parser_t* parser = NULL;
     int32_t* table = NULL;
-    char* str = NULL;
-    pddby_regex_t* simple_data_regex = NULL;
-    pddby_regex_t** markup_regexes = NULL;
+    char* dbt_content = NULL;
+
+    parser = pddby_simple_data_parser_new(pddby);
+    if (!parser)
+    {
+        goto error;
+    }
 
     size_t table_size;
-    table = pddby_decode_table(pddby, pddby->decode_context->data_magic, dat_path, &table_size);
+    table = pddby_decode_table(pddby, pddby->decode_context->simple_table_magic, dat_path, &table_size);
     if (!table)
     {
         goto error;
     }
 
-    size_t str_size;
-    str = pddby->decode_context->decode_string(pddby->decode_context, dbt_path, &str_size, 0);
-    if (!str)
+    size_t dbt_content_size;
+    if (!pddby_aux_file_get_contents(pddby, dbt_path, &dbt_content, &dbt_content_size))
     {
         goto error;
-    }
-
-    simple_data_regex = pddby_regex_new(pddby, "^#(\\d+)\\s*((?:&[a-zA-Z0-9_-]+\\s*)*)(.+)$", PDDBY_REGEX_DOTALL);
-    if (!simple_data_regex)
-    {
-        goto error;
-    }
-
-    markup_regexes = calloc(markup_regexes_size, sizeof(pddby_regex_t*));
-    if (!markup_regexes)
-    {
-        goto error;
-    }
-
-    for (size_t i = 0; i < markup_regexes_size; i++)
-    {
-        markup_regexes[i] = pddby_regex_new(pddby, s_markup_regexes_data[i].regex_text,
-            s_markup_regexes_data[i].regex_options);
-        if (!markup_regexes[i])
-        {
-            goto error;
-        }
     }
 
     if (!pddby_db_tx_begin(pddby))
@@ -348,8 +264,8 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
     for (size_t i = 0; i < table_size; i++)
     {
         void* object = NULL;
-        char* number = NULL;
-        char* images = NULL;
+        int32_t number = 0;
+        char** image_names = NULL;
         char* text = NULL;
 
         pddby_images_t* object_images = pddby_images_new(pddby);
@@ -364,7 +280,7 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
         }
         else
         {
-            int32_t next_offset = str_size;
+            int32_t next_offset = dbt_content_size;
             for (size_t j = 0; j < table_size; j++)
             {
                 if (table[j] > table[i] && table[j] < next_offset)
@@ -373,93 +289,53 @@ static int pddby_decode_simple_data(pddby_t* pddby, char const* dat_path, char c
                 }
             }
 
-            char* data = pddby_string_convert(pddby->decode_context->iconv, str + table[i], next_offset - table[i]);
+            size_t str_size = next_offset - table[i];
+            char* str = pddby->decode_context->decode_string(pddby->decode_context, dbt_content + table[i], &str_size,
+                0, table[i]);
+            if (!str)
+            {
+                goto cycle_error;
+            }
+
+            char* data = pddby_string_convert(pddby->decode_context->iconv, str, str_size);
+            free(str);
             if (!data)
             {
                 goto cycle_error;
             }
 
-            pddby_regex_match_t* match;
-            if (!pddby_regex_match(simple_data_regex, data, &match))
-            {
-                free(data);
-                goto cycle_error;
-            }
-
-            number = pddby_string_chomp(pddby_regex_match_fetch(match, 1));
-            if (!number)
-            {
-                pddby_regex_match_free(match);
-                free(data);
-                goto cycle_error;
-            }
-
-            images = pddby_string_chomp(pddby_regex_match_fetch(match, 2));
-            if (!images)
-            {
-                pddby_regex_match_free(match);
-                free(data);
-                goto cycle_error;
-            }
-
-            text = pddby_string_chomp(pddby_regex_match_fetch(match, 3));
+            text = pddby_simple_data_parser_parse(parser, data, &number, &image_names);
+            free(data);
             if (!text)
             {
-                pddby_regex_match_free(match);
-                free(data);
                 goto cycle_error;
             }
 
-            pddby_regex_match_free(match);
-            free(data);
-
-            if (*images)
+            if (image_names)
             {
-                char** image_names = pddby_string_split(pddby, images, "\n");
-                if (!image_names)
-                {
-                    goto cycle_error;
-                }
-
                 char** in = image_names;
                 while (*in)
                 {
-                    pddby_image_t* image = pddby_image_find_by_name(pddby, pddby_string_chomp(*in + 1));
+                    pddby_image_t* image = pddby_image_find_by_name(pddby, *in);
                     if (!image)
                     {
-                        pddby_stringv_free(image_names);
                         goto cycle_error;
                     }
                     if (!pddby_array_add(object_images, image))
                     {
-                        pddby_stringv_free(image_names);
                         goto cycle_error;
                     }
                     in++;
                 }
+
                 pddby_stringv_free(image_names);
+                image_names = NULL;
             }
 
-            for (size_t j = 0; j < markup_regexes_size; j++)
-            {
-                char* new_text = pddby_regex_replace(markup_regexes[j], text,
-                    s_markup_regexes_data[j].replacement_text);
-                if (!new_text)
-                {
-                    goto cycle_error;
-                }
-
-                free(text);
-                text = new_text;
-            }
-
-            object = object_new(pddby, atoi(number), pddby_string_chomp(text));
+            object = object_new(pddby, number, text);
 
             free(text);
-            free(images);
-            free(number);
-
-            number = images = text = NULL;
+            text = NULL;
         }
         if (!object)
         {
@@ -493,13 +369,9 @@ cycle_error:
         {
             free(text);
         }
-        if (images)
+        if (image_names)
         {
-            free(images);
-        }
-        if (number)
-        {
-            free(number);
+            pddby_stringv_free(image_names);
         }
         if (object)
         {
@@ -516,43 +388,26 @@ cycle_error:
         goto error;
     }
 
-    for (size_t i = 0; i < markup_regexes_size; i++)
-    {
-        pddby_regex_free(markup_regexes[i]);
-    }
-
-    free(markup_regexes);
-    pddby_regex_free(simple_data_regex);
-    free(str);
+    free(dbt_content);
     free(table);
+    pddby_simple_data_parser_free(parser);
 
     return result;
 
 error:
     pddby_report(pddby, pddby_message_type_error, "unable to decode simple data");
 
-    if (markup_regexes)
+    if (dbt_content)
     {
-        for (size_t i = 0; i < markup_regexes_size; i++)
-        {
-            if (markup_regexes[i])
-            {
-                pddby_regex_free(markup_regexes[i]);
-            }
-        }
-        free(markup_regexes);
-    }
-    if (simple_data_regex)
-    {
-        pddby_regex_free(simple_data_regex);
-    }
-    if (str)
-    {
-        free(str);
+        free(dbt_content);
     }
     if (table)
     {
         free(table);
+    }
+    if (parser)
+    {
+        pddby_simple_data_parser_free(parser);
     }
 
     return 0;
@@ -682,8 +537,8 @@ int pddby_decode_questions(pddby_t* pddby)
         }
 
         size_t size;
-        pddby_topic_question_t* data = pddby_decode_topic_questions_table(pddby->decode_context, section_dat_path,
-            &size);
+        pddby_topic_question_t* data = pddby->decode_context->decode_topic_questions_table(pddby->decode_context,
+            section_dat_path, &size);
         free(section_dat_path);
         if (!data)
         {
