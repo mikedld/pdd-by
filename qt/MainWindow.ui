@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>292</width>
+    <height>341</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Учебная программа ПДД</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="windowLayout">
+    <property name="sizeConstraint">
+     <enum>QLayout::SetFixedSize</enum>
+    </property>
+    <item row="4" column="0">
+     <widget class="QGroupBox" name="trainingGroup">
+      <property name="title">
+       <string>Тренировка</string>
+      </property>
+      <layout class="QVBoxLayout" name="trainingGroupLayout">
+       <item>
+        <widget class="QPushButton" name="sectionTrainingButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Главы ПДД</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="topicTrainingButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Тематические билеты</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ticketTrainingButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Билет №</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="randomTicketTrainingButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Случайный билет</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QGroupBox" name="examGroup">
+      <property name="title">
+       <string>Контроль</string>
+      </property>
+      <layout class="QVBoxLayout" name="examGroupLayout">
+       <item>
+        <widget class="QPushButton" name="topicExamButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Тематические билеты</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ticketExamButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Билет №</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="randomTicketExamButton">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Случайный билет</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>292</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="trainingMenu">
+    <property name="title">
+     <string>Training</string>
+    </property>
+    <addaction name="sectionTrainingAction"/>
+    <addaction name="topicTrainingAction"/>
+    <addaction name="ticketTrainingAction"/>
+    <addaction name="randomTicketTrainingAction"/>
+   </widget>
+   <widget class="QMenu" name="examMenu">
+    <property name="title">
+     <string>Exam</string>
+    </property>
+    <addaction name="topicExamAction"/>
+    <addaction name="ticketExamAction"/>
+    <addaction name="randomTicketExamAction"/>
+   </widget>
+   <widget class="QMenu" name="helpMenu">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="aboutAction"/>
+    <addaction name="aboutQtAction"/>
+   </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="openAction"/>
+    <addaction name="separator"/>
+    <addaction name="saveAction"/>
+    <addaction name="saveAsAction"/>
+    <addaction name="separator"/>
+    <addaction name="separator"/>
+    <addaction name="quitAction"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="trainingMenu"/>
+   <addaction name="examMenu"/>
+   <addaction name="helpMenu"/>
+  </widget>
+  <action name="aboutAction">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="aboutQtAction">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </action>
+  <action name="topicTrainingAction">
+   <property name="text">
+    <string>Topic</string>
+   </property>
+  </action>
+  <action name="ticketTrainingAction">
+   <property name="text">
+    <string>Ticket</string>
+   </property>
+  </action>
+  <action name="randomTicketTrainingAction">
+   <property name="text">
+    <string>Random Ticket</string>
+   </property>
+  </action>
+  <action name="sectionTrainingAction">
+   <property name="text">
+    <string>Section</string>
+   </property>
+  </action>
+  <action name="topicExamAction">
+   <property name="text">
+    <string>Topic</string>
+   </property>
+  </action>
+  <action name="ticketExamAction">
+   <property name="text">
+    <string>Ticket</string>
+   </property>
+  </action>
+  <action name="randomTicketExamAction">
+   <property name="text">
+    <string>Random Ticket</string>
+   </property>
+  </action>
+  <action name="quitAction">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
+  <action name="openAction">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="saveAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="saveAsAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

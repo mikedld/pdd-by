@@ -1,37 +1,17 @@
-cmake_minimum_required(VERSION 2.6)
-project(PDD)
+project(pddby-project)
+cmake_minimum_required(VERSION 2.8)
 
-include(FindPkgConfig)
+add_definitions(-std=c++98
+    -Wall -Wextra -Werror -pedantic
+    -Wno-long-long)
 
-pkg_check_modules(PDD glib-2.0 sqlite3 gmodule-2.0 gtk+-2.0)
+set(CMAKE_OSX_ARCHITECTURES x86_64)
 
-find_library(YAML_LIBRARY yaml)
+find_package(Boost 1.49 REQUIRED filesystem system unit_test_framework)
+include_directories(${Boost_INCLUDE_DIRS})
 
-include_directories(${PDD_INCLUDE_DIRS} ${YAML_INCLUDE_DIR})
-link_directories(${PDD_LIBRARY_DIRS} ${YAML_LIBRARY_DIR})
+include_directories(include/pddby)
 
-add_executable(pdd
-    answer.c
-    chooser_dialog.c
-    comment.c
-    database.c
-    decode.c
-    delphi_helper.c
-    image.c
-    main.c
-    main_window.c
-    question.c
-    question_window.c
-    section.c
-    ticket_dialog.c
-    topic.c
-    traffreg.c
-    yaml_helper.c
-)
-
-target_link_libraries(pdd ${PDD_LIBRARIES} ${YAML_LIBRARY})
-
-set_target_properties (pdd
-PROPERTIES
-    LINK_FLAGS "-export-dynamic"
-)
+add_subdirectory(lib)
+add_subdirectory(qt)
+add_subdirectory(test)
